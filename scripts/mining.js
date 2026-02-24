@@ -1,0 +1,140 @@
+const notify = (text) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + text);
+
+const state = {
+    units: { mono: true, poly: true, pulsar: true, mega: true, quasar: true },
+    items: { copper: true, lead: true, sand: true, coal: true, titanium: true, beryllium: true, scrap: true },
+    itemTiers: { copper: 1, lead: 1, sand: 1, scrap: 1, beryllium: 1, coal: 2, titanium: 3 },
+    interval: 0
+};
+
+let miningTask = null;
+
+function runMining() {
+    const player = Vars.player;
+    if (!player || !player.team() || !Vars.state.isGame()) return;
+    
+    const core = player.team().core();
+    if (!core) return;
+
+    const validItems = [];
+    const priorities = new ObjectMap();
+    
+    Vars.content.items().each(it => {
+        if (state.items[it.name] && (Vars.indexer.hasOre(it) || (Vars.indexer.hasWallOre && Vars.indexer.hasWallOre(it)))) {
+            validItems.push(it);
+            priorities.put(it, 1 / Math.max(core.items.get(it), 1));
+        }
+    });
+
+    if (validItems.length === 0) return;
+
+    const unitGroups = {};
+    Groups.unit.each(u => {
+        if (u.team === player.team() && !u.dead && u.type.mineTier > 0 && 
+            u.player == null && state.units[u.type.name] && !(u.controller() instanceof LogicAI)) {
+            if (!unitGroups[u.type.name]) unitGroups[u.type.name] = [];
+            unitGroups[u.type.name].push(u);
+        }
+    });
+
+    for (let typeName in unitGroups) {
+        let list = unitGroups[typeName];
+        let tier = list[0].type.mineTier;
+        let availableForUnit = validItems.filter(it => (state.itemTiers[it.name] || 1) <= tier);
+        if (availableForUnit.length === 0) continue;
+
+        let totalPriority = 0;
+        availableForUnit.forEach(it => totalPriority += priorities.get(it));
+
+        let idx = 0, sumAssigned = 0, assignments = [];
+
+        availableForUnit.forEach(it => {
+            let count = Math.floor((priorities.get(it) / totalPriority) * list.length);
+            assignments.push({ item: it, count: count, mod: ((priorities.get(it) / totalPriority) * list.length) - count });
+            sumAssigned += count;
+        });
+
+        if (sumAssigned < list.length) {
+            assignments.sort((a, b) => b.mod - a.mod);
+            for (let i = 0; i < (list.length - sumAssigned); i++) assignments[i].count++;
+        }
+
+        assignments.forEach(as => {
+            if (as.count <= 0) return;
+            let ids = new IntSeq();
+            for (let j = 0; j < as.count; j++) {
+                if (list[idx]) ids.add(list[idx].id);
+                idx++;
+            }
+            if (ids.size > 0) {
+                Call.setUnitCommand(player, ids.toArray(), UnitCommand.mineCommand);
+                let stance = ItemUnitStance.getByItem(as.item);
+                if (stance) {
+                    Call.setUnitStance(player, ids.toArray(), UnitStance.mineAuto, false);
+                    Call.setUnitStance(player, ids.toArray(), stance, true);
+                }
+            }
+        });
+    }
+}
+
+Events.on(EventType.ClientChatEvent, e => {
+    let args = String(e.message).trim().toLowerCase().split(" ");
+    if (args[0] !== "/mining") return;
+
+    if (args[1] === "stop") {
+        if (miningTask) {
+            miningTask.cancel();
+            miningTask = null;
+            notify("Mining: [scarlet]Stopped");
+        } else notify("Mining: [lightgray]Not running");
+        return;
+    }
+
+    if (args[1] === "set") {
+        let time = parseFloat(args[2]);
+        if (isNaN(time) || time < 0) return notify("Usage: [accent]/mining set <sec>");
+        
+        state.interval = time;
+        if (time === 0) {
+            runMining();
+            notify("Mining: [green]Executed once");
+        } else {
+            if (miningTask) miningTask.cancel();
+            miningTask = Timer.schedule(() => {
+                try { runMining(); } catch(e) { if (miningTask) miningTask.cancel(); miningTask = null; }
+            }, 0, time);
+            notify("Mining: [green]Started [white](" + time + "s)");
+        }
+        return;
+    }
+
+    if (args[1] === "status") {
+        let uStr = "", iStr = "";
+        for (let k in state.units) uStr += (state.units[k] ? "[green]" : "[scarlet]") + k + " ";
+        for (let k in state.items) iStr += (state.items[k] ? "[green]" : "[scarlet]") + k + " ";
+        
+        notify("\n[accent]STATUS" +
+               "\n[white]State: " + (miningTask ? "[green]Active (" + state.interval + "s)" : "[scarlet]Inactive") +
+               "\n[white]Units: " + uStr +
+               "\n[white]Items: " + iStr);
+        return;
+    }
+
+    if (args.length > 1) {
+        let changed = [];
+        for (let i = 1; i < args.length; i++) {
+            let key = args[i];
+            if (state.units.hasOwnProperty(key)) {
+                state.units[key] = !state.units[key];
+                changed.push((state.units[key] ? "[green]" : "[scarlet]") + key);
+            } else if (state.items.hasOwnProperty(key)) {
+                state.items[key] = !state.items[key];
+                changed.push((state.items[key] ? "[green]" : "[scarlet]") + key);
+            }
+        }
+        if (changed.length > 0) return notify("Toggle: " + changed.join("[white], "));
+    }
+
+    notify("[accent]Mining:\n[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop");
+});
