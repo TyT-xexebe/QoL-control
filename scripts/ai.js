@@ -15,6 +15,7 @@ const buildOreTree = () => {
     oreData = {};
     if (!Vars.world) return;
     let w = Vars.world.width(), h = Vars.world.height();
+    let count = 0;
     for (let x = 0; x < w; x++) {
         for (let y = 0; y < h; y++) {
             let tile = Vars.world.tile(x, y);
@@ -23,9 +24,11 @@ const buildOreTree = () => {
             if (drop) {
                 if (!oreData[drop.name]) oreData[drop.name] = [];
                 oreData[drop.name].push(tile);
+                count++;
             }
         }
     }
+    notify("[lightgrey]Ore Tree: [accent]" + count + "[lightgrey] ores was found");
 };
 
 const findClosestFreeOre = (u, item) => {
@@ -191,18 +194,19 @@ Events.on(EventType.ClientChatEvent, e => {
             let u = Vars.player.unit(), isErekir = u.type.name.match(/evoke|incite|emanate/), res = "", items = Vars.content.items();
             for (let i = 0; i < items.size; i++) {
                 let it = items.get(i);
-                if (it.hardness > u.type.mineTier) continue;
+                if (!allowedItems.hasOwnProperty(it.name) || it.hardness > u.type.mineTier) continue;
                 
                 let wall = Vars.indexer.hasWallOre(it);
                 let floor = oreData[it.name] && oreData[it.name].length > 0;
-                let exists = isErekir ? wall : floor;
-                let active = allowedItems[it.name];
+                
+                let canMineCurrentType = isErekir ? wall : floor;
+                if (!canMineCurrentType) continue; 
 
-                let color = "[lightgray]";
-                if (exists) color = active ? "[green]" : "[scarlet]";
+                let active = allowedItems[it.name];
+                let color = active ? "[green]" : "[scarlet]";
                 if (targetItem === it) color = "[accent]";
                 
-                if (active || exists) res += color + it.name + " ";
+                res += color + it.name + " ";
             }
             let bTrg = followTarget ? (manualTarget ? "[accent]" : "[green]") + Strings.stripColors(followTarget.name) : "[scarlet]none";
             notify("\n[accent]STATUS\n[white]Lock: " + (lockEnabled ? "[green]ON" : "[scarlet]OFF") + 
