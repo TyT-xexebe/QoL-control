@@ -12,6 +12,7 @@ const allowedItems = {
 const notify = (msg) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + msg);
 
 const buildOreTree = () => {
+    let start = Time.millis();
     oreData = {};
     if (!Vars.world) return;
     let w = Vars.world.width(), h = Vars.world.height();
@@ -28,7 +29,8 @@ const buildOreTree = () => {
             }
         }
     }
-    notify("[lightgrey]Ore Tree: [accent]" + count + "[lightgrey] ores was found");
+    let elapsed = (Time.millis() - start) / 1000;
+    notify("[lightgrey]Ore Tree: [accent]" + count + "[lightgrey] ores was found | [accent]" + elapsed.toFixed(4) + "[lightgrey]s");
 };
 
 const findClosestFreeOre = (u, item) => {

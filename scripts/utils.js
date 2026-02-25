@@ -1,16 +1,19 @@
 const notify = (text) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + text);
 
 let hpEnabled = true;
+let trangeEnabled = true;
 let targetCache = null;
 let trackedPlayer = null;
 let targetTimer = 0;
+let trangeUpdateTimer = 0;
+let cachedTurrets = [];
 let coordHistory = [];
 
 function drawHP(unit) {
     if (!unit || !unit.isAdded() || unit.health <= 0) return;
     let hpText = Math.floor(unit.health) + "/" + Math.floor(unit.maxHealth);
     if (unit.shield > 0) hpText += " [accent](" + Math.floor(unit.shield) + ")";
-    let scale = 0.23, yOffset = unit.hitSize * 1.3 + 4;
+    let scale = 0.24, yOffset = unit.hitSize * 1.1 + 4;
     Draw.z(Layer.max);
     Fonts.outline.draw(hpText, unit.x, unit.y + yOffset, Color.white, scale, true, Align.center);
 }
@@ -33,6 +36,7 @@ Events.on(PlayerChatEvent, e => {
 
 Events.on(WorldLoadEvent, () => {
     coordHistory = [];
+    cachedTurrets = [];
 });
 
 Events.on(ClientChatEvent, e => {
@@ -55,6 +59,12 @@ Events.on(ClientChatEvent, e => {
             if (!hpEnabled) { targetCache = null; trackedPlayer = null; }
             notify("HP Display: " + (hpEnabled ? "[green]ON" : "[scarlet]OFF"));
         }
+    }
+
+    if (cmd === "/trange") {
+        trangeEnabled = !trangeEnabled;
+        if (!trangeEnabled) cachedTurrets = [];
+        notify("Turret Ranges: " + (trangeEnabled ? "[green]ON" : "[scarlet]OFF"));
     }
 
     if (cmd === "/lookat") {
@@ -116,8 +126,37 @@ Events.on(ClientChatEvent, e => {
 });
 
 Events.run(Trigger.draw, () => {
-    if (!hpEnabled || !Vars.state.isGame()) return;
+    if (!Vars.state.isGame()) return;
     let u = Vars.player.unit();
+
+    if (trangeEnabled && u) {
+        if (trangeUpdateTimer++ >= 10) {
+            trangeUpdateTimer = 0;
+            cachedTurrets = [];
+            Vars.indexer.allBuildings(u.x, u.y, 800, b => {
+                if (b.team !== u.team && b.block.range) {
+                    let r = b.block.range;
+                    let limit = r + 100;
+                    if (u.dst2(b) <= limit * limit) {
+                        let color = Color.valueOf("eab678");
+                        if (b.block.targetAir && b.block.targetGround) color = Color.valueOf("cc81f5");
+                        else if (b.block.targetAir) color = Color.valueOf("84f5f5");
+                        cachedTurrets.push({x: b.x, y: b.y, r: r, color: color});
+                    }
+                }
+            });
+        }
+
+        Draw.z(Layer.max);
+        Lines.stroke(0.9);
+        for (let i = 0, len = cachedTurrets.length; i < len; i++) {
+            let t = cachedTurrets[i];
+            Draw.color(t.color, 0.3);
+            Lines.circle(t.x, t.y, t.r);
+        }
+    }
+
+    if (!hpEnabled) return;
     if (trackedPlayer && trackedPlayer.unit()) {
         let tu = trackedPlayer.unit();
         if (u && u.isAdded() && tu.isAdded()) {
@@ -141,6 +180,4 @@ Events.run(Trigger.draw, () => {
 
 Events.on(ClientLoadEvent, () => {
     Vars.content.units().each(u => { u.rotateSpeed = 1000; u.omniMovement = true; });
-    UnitTypes.omura.faceTarget = true;
-    UnitTypes.conquer.faceTarget = true;
 });
