@@ -1,0 +1,373 @@
+jump 15 equal INIT 1
+print "Ultimate UnitMaker"
+print "Can be connected any T1-5 recons"
+print "in any count"
+print "By TyT|xexebe"
+set INIT 1
+set MULTIPLIER 1.0
+op add MAIN.X @thisx 0
+op add MAIN.Y @thisy 0
+jump 7 equal MAIN.X 0
+jump 7 equal MAIN.Y 0
+op add _temp @thisx @maph
+op add FLAGGER _temp @thisy
+set UNITTYPE @
+set UNITCOUNT 0
+jump 218 greaterThanEq timeout @time
+set using 0
+set _silicon 0
+set _lead 0
+set _coal 0
+set _graphite 0
+set _metaglass 0
+set _titanium 0
+set _plastanium 0
+set _phase 0
+set _surge 0
+ubind UNITTYPE
+jump 13 equal @unit 0
+set anchor @unit
+jump 33 always @unit 0
+sensor anchor.dead anchor @dead
+jump 16 equal anchor.dead 1
+jump 76 equal anchor @unit
+ubind UNITTYPE
+sensor unit.flag @unit @flag
+jump 30 notEqual unit.flag FLAGGER
+sensor unit.cntr @unit @controller
+jump 41 equal unit.cntr @this
+ucontrol flag 0 0 0 0 0
+ucontrol unbind 0 0 0 0 0
+jump 30 always x false
+jump 45 lessThan using UNITCOUNT
+ucontrol flag 0 0 0 0 0
+ucontrol unbind 0 0 0 0 0
+jump 30 always x false
+op add using using 1
+sensor unit.fi @unit @firstItem
+jump 30 equal unit.fi 0
+sensor unit.ti @unit @totalItems
+jump 52 notEqual unit.fi @silicon
+op sub _silicon _silicon unit.ti
+jump 30 always x false
+jump 55 notEqual unit.fi @lead
+op sub _lead _lead unit.ti
+jump 30 always x false
+jump 58 notEqual unit.fi @coal
+op sub _coal _coal unit.ti
+jump 30 always x false
+jump 61 notEqual unit.fi @graphite
+op sub _graphite _graphite unit.ti
+jump 30 always x false
+jump 64 notEqual unit.fi @metaglass
+op sub _metaglass _metaglass unit.ti
+jump 30 always x false
+jump 67 notEqual unit.fi @titanium
+op sub _titanium _titanium unit.ti
+jump 30 always x false
+jump 70 notEqual unit.fi @plastanium
+op sub _plastanium _plastanium unit.ti
+jump 30 always x false
+jump 73 notEqual unit.fi @phase-fabric
+op sub _phase _phase unit.ti
+jump 30 always x false
+jump 75 notEqual unit.fi @surge-alloy
+op sub _surge _surge unit.ti
+jump 30 always x false
+jump 92 equal using UNITCOUNT
+ubind UNITTYPE
+jump 13 equal @unit 0
+set anchor @unit
+jump 84 always anchor.dead 1
+sensor anchor.dead anchor @dead
+jump 77 equal anchor.dead 1
+jump 92 equal anchor @unit
+ubind UNITTYPE
+sensor unit.flag @unit @flag
+jump 89 equal unit.flag 0
+sensor unit.cntr @unit @controller
+jump 81 notEqual unit.cntr @unit
+ucontrol flag FLAGGER 0 0 0 0
+op add using using 1
+jump 81 notEqual using UNITCOUNT
+set getlink 0
+getlink block getlink
+sensor block.type block @type
+op add getlink getlink 1
+jump 174 equal block.type @air-factory
+jump 191 equal block.type @ground-factory
+jump 158 equal block.type @naval-factory
+jump 149 equal block.type @additive-reconstructor
+jump 136 equal block.type @multiplicative-reconstructor
+jump 123 equal block.type @exponential-reconstructor
+jump 106 equal block.type @tetrative-reconstructor
+jump 93 lessThan getlink @links
+op add timeout @time 3000
+end
+op mul _temp 2000 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+op mul _temp 1200 MULTIPLIER
+sensor _have block @plastanium
+op sub _temp _temp _have
+op add _plastanium _plastanium _temp
+op mul _temp 1000 MULTIPLIER
+sensor _have block @surge-alloy
+op sub _temp _temp _have
+op add _surge _surge _temp
+op mul _temp 700 MULTIPLIER
+sensor _have block @phase-fabric
+op sub _temp _temp _have
+op add _phase _phase _temp
+jump 93 always block.config 0
+op mul _temp 1700 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+op mul _temp 1500 MULTIPLIER
+sensor _have block @titanium
+op sub _temp _temp _have
+op add _titanium _titanium _temp
+op mul _temp 1300 MULTIPLIER
+sensor _have block @plastanium
+op sub _temp _temp _have
+op add _plastanium _plastanium _temp
+jump 93 always block.config 0
+op mul _temp 260 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+op mul _temp 160 MULTIPLIER
+sensor _have block @titanium
+op sub _temp _temp _have
+op add _titanium _titanium _temp
+op mul _temp 80 MULTIPLIER
+sensor _have block @metaglass
+op sub _temp _temp _have
+op add _metaglass _metaglass _temp
+jump 93 always block.config 0
+op mul _temp 80 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+op mul _temp 80 MULTIPLIER
+sensor _have block @graphite
+op sub _temp _temp _have
+op add _graphite _graphite _temp
+jump 93 always block.config 0
+sensor block.config block @config
+jump 93 equal block.config 0
+op mul _temp 70 MULTIPLIER
+sensor _have block @metaglass
+op sub _temp _temp _have
+op add _metaglass _metaglass _temp
+op mul _temp 40 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+jump 93 equal block.config @risso
+op mul _temp 40 MULTIPLIER
+sensor _have block @titanium
+op sub _temp _temp _have
+op add _titanium _titanium _temp
+jump 93 always block.config @risso
+sensor block.config block @config
+jump 182 equal block.config @mono
+jump 93 notEqual block.config @flare
+op mul _temp 60 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+jump 93 always x false
+op mul _temp 60 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+op mul _temp 30 MULTIPLIER
+sensor _have block @lead
+op sub _temp _temp _have
+op add _lead _lead _temp
+jump 93 always x false
+sensor block.config block @config
+jump 93 equal block.config 0
+op mul _temp 60 MULTIPLIER
+sensor _have block @silicon
+op sub _temp _temp _have
+op add _silicon _silicon _temp
+jump 204 equal block.config @dagger
+jump 209 equal block.config @nova
+op mul _temp 20 MULTIPLIER
+sensor _have block @coal
+op sub _temp _temp _have
+op add _coal _coal _temp
+jump 93 always x false
+op mul _temp 40 MULTIPLIER
+sensor _have block @lead
+op sub _temp _temp _have
+op add _lead _lead _temp
+jump 93 always x false
+op mul _temp 40 MULTIPLIER
+sensor _have block @lead
+op sub _temp _temp _have
+op add _lead _lead _temp
+op mul _temp 40 MULTIPLIER
+sensor _have block @titanium
+op sub _temp _temp _have
+op add _titanium _titanium _temp
+jump 93 always x false
+set counter @counter
+jump 0 lessThan timeout @time
+ubind UNITTYPE
+sensor unit.flag @unit @flag
+jump 219 notEqual unit.flag FLAGGER
+ucontrol boost 1 MAIN.Y 0 0 0
+ucontrol mine -1 -1 0 0 0
+sensor unit.fi @unit @firstItem
+jump 271 equal unit.fi 0
+jump 230 notEqual unit.fi @silicon
+jump 262 lessThan _silicon 0
+jump 253 always _silicon 0
+jump 233 notEqual unit.fi @lead
+jump 262 lessThan _lead 0
+jump 253 always _silicon 0
+jump 236 notEqual unit.fi @coal
+jump 262 lessThan _coal 0
+jump 253 always _silicon 0
+jump 239 notEqual unit.fi @metaglass
+jump 262 lessThan _metaglass 0
+jump 253 always _silicon 0
+jump 242 notEqual unit.fi @graphite
+jump 262 lessThan _graphite 0
+jump 253 always _silicon 0
+jump 245 notEqual unit.fi @titanium
+jump 262 lessThan _titanium 0
+jump 253 always _silicon 0
+jump 248 notEqual unit.fi @plastanium
+jump 262 lessThan _plastanium 0
+jump 253 always _silicon 0
+jump 251 notEqual unit.fi @phase-fabric
+jump 262 lessThan _phase 0
+jump 253 always _silicon 0
+jump 262 notEqual unit.fi @surge-alloy
+jump 262 lessThan _surge 0
+ucontrol pathfind MAIN.X MAIN.Y 0 0 0
+ucontrol within MAIN.X MAIN.Y 3 _temp 0
+jump 261 equal _temp 0
+set getlink 0
+getlink block getlink
+ucontrol itemDrop block 999 3 _temp 0
+op add getlink getlink 1
+jump 257 lessThan getlink @links
+set @counter counter
+ulocate building core 0 @copper core.x core.y 0 core
+sensor core.ic core @itemCapacity
+sensor core.ti core unit.fi
+jump 268 notEqual core.ic core.ti
+ucontrol itemDrop @air 999 0 0 0
+set @counter counter
+ucontrol pathfind core.x core.y 0 0 0
+ucontrol itemDrop core 999 0 0 0
+set @counter counter
+ulocate building core 0 @copper core.x core.y 0 core
+ucontrol pathfind core.x core.y 0 0 0
+sensor unit.ic @unit @itemCapacity
+jump 285 lessThanEq _silicon 0
+sensor _temp core @silicon
+jump 285 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 285 equal _temp 0
+ucontrol itemTake core @silicon _silicon 0 0
+jump 283 greaterThanEq _silicon unit.ic
+set _silicon 0
+set @counter counter
+op sub _silicon _silicon unit.ic
+set @counter counter
+jump 296 lessThanEq _lead 0
+sensor _temp core @lead
+jump 296 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 296 equal _temp 0
+ucontrol itemTake core @lead _lead 0 0
+jump 294 greaterThanEq _lead unit.ic
+set _lead 0
+set @counter counter
+op sub _lead _lead unit.ic
+set @counter counter
+jump 307 lessThanEq _coal 0
+sensor _temp core @coal
+jump 307 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 307 equal _temp 0
+ucontrol itemTake core @coal _coal 0 0
+jump 305 greaterThanEq _coal unit.ic
+set _coal 0
+set @counter counter
+op sub _coal _coal unit.ic
+set @counter counter
+jump 318 lessThanEq _metaglass 0
+sensor _temp core @metaglass
+jump 318 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 318 equal _temp 0
+ucontrol itemTake core @metaglass _metaglass 0 0
+jump 316 greaterThanEq _metaglass unit.ic
+set _metaglass 0
+set @counter counter
+op sub _metaglass _metaglass unit.ic
+set @counter counter
+jump 329 lessThanEq _graphite 0
+sensor _temp core @graphite
+jump 329 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 329 equal _temp 0
+ucontrol itemTake core @graphite _graphite 0 0
+jump 327 greaterThanEq _graphite unit.ic
+set _graphite 0
+set @counter counter
+op sub _graphite _graphite unit.ic
+set @counter counter
+jump 340 lessThanEq _titanium 0
+sensor _temp core @titanium
+jump 340 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 340 equal _temp 0
+ucontrol itemTake core @titanium _titanium 0 0
+jump 338 greaterThanEq _titanium unit.ic
+set _titanium 0
+set @counter counter
+op sub _titanium _titanium unit.ic
+set @counter counter
+jump 351 lessThanEq _plastanium 0
+sensor _temp core @plastanium
+jump 351 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 351 equal _temp 0
+ucontrol itemTake core @plastanium _plastanium 0 0
+jump 349 greaterThanEq _plastanium unit.ic
+set _plastanium 0
+set @counter counter
+op sub _plastanium _plastanium unit.ic
+set @counter counter
+jump 362 lessThanEq _phase 0
+sensor _temp core @phase-fabric
+jump 362 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 362 equal _temp 0
+ucontrol itemTake core @phase-fabric _phase 0 0
+jump 360 greaterThanEq _phase unit.ic
+set _phase 0
+set @counter counter
+op sub _phase _phase unit.ic
+set @counter counter
+jump 369 lessThanEq _surge 0
+sensor _temp core @surge-alloy
+jump 369 lessThan _temp unit.ic
+ucontrol within core.x core.y 3 temp 0
+jump 369 equal _temp 0
+ucontrol itemTake core @surge-alloy _surge 0 0
+jump 371 greaterThanEq _surge unit.ic
+set _surge 0
+set @counter counter
+op sub _surge _surge unit.ic
+set @counter counter

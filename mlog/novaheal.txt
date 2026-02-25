@@ -1,0 +1,76 @@
+jump 3 equal INIT 1
+set INIT 1
+set _range 5
+ubind @nova
+sensor unit.flag @unit @flag
+jump 9 equal unit.flag 0
+sensor unit.ctrl @unit @controller
+jump 3 notEqual unit.ctrl @unit
+ucontrol flag 0 0 0 0 0
+ulocate damaged core true @copper damaged.x damaged.y damaged building
+jump 51 equal damaged 0
+sensor unit.boost @unit @boosting
+sensor unit.range @unit @range
+ucontrol within damaged.x damaged.y unit.range unit.within1 0
+jump 48 equal unit.within1 0
+sensor unit.x @unit @x
+sensor unit.y @unit @y
+ucontrol getBlock unit.x unit.y 0 0 floor
+jump 26 equal floor @deep-water
+jump 26 equal floor @deep-tainted-water
+jump 26 equal floor @tar
+jump 26 equal floor @molten-slag
+jump 26 equal floor @pooled-cryofluid
+set boost 0
+jump 45 equal unit.boost 0
+jump 27 always unit.boost 0
+set boost 1
+jump 29 lessThan degree 360
+set degree 0
+op add degree degree 4
+jump 32 lessThan _range unit.range
+set _range 4
+op add _range _range 0.5
+op cos cos degree b
+op mul cos cos _range
+op sin sin degree b
+op mul sin sin _range
+op add _x cos damaged.x
+op add _y sin damaged.y
+ucontrol pathfind _x _y 0 0 0
+jump 43 equal boost 0
+ucontrol boost 1 core.y 0 0 0
+end
+ucontrol boost 0 core.y 0 0 0
+end
+ucontrol target damaged.x damaged.y 1 0 0
+ucontrol idle damaged.x damaged.y unit.range 0 0
+end
+ucontrol boost 1 core.y 0 0 0
+ucontrol pathfind damaged.x damaged.y 0 0 0
+end
+uradar ally any any distance 0 1 ally
+sensor ally.hp ally @health
+sensor ally.mhp ally @maxHealth
+jump 72 notEqual ally.hp ally.mhp
+uradar ally any any health 0 1 ally
+sensor ally.hp ally @health
+sensor ally.mhp ally @maxHealth
+jump 72 notEqual ally.hp ally.mhp
+uradar ally any any health 0 0 ally
+sensor ally.hp ally @health
+sensor ally.mhp ally @maxHealth
+jump 72 notEqual ally.hp ally.mhp
+uradar enemy any any distance 0 0 enemy
+jump 69 equal enemy 0
+ulocate building core false @copper core.x core.y found building
+ucontrol pathfind core.x core.y 0 0 0
+ucontrol boost 1 core.y 0 0 0
+end
+ucontrol boost 1 core.y 0 0 0
+ucontrol idle damaged.x damaged.y unit.range 0 0
+end
+sensor ally.x ally @x
+sensor ally.y ally @y
+ucontrol boost 1 core.y 0 0 0
+ucontrol pathfind ally.x ally.y 0 0 0

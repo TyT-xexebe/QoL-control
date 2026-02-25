@@ -189,7 +189,7 @@ Events.on(ClientChatEvent, e => {
 		   break;
 
 		case "mlog":
-		   notify("[lightgrey]Mlog inserter\n\n[accent]/mlog <filename>[lightgrey] - insert /mlog/<filename>.txt into any empty processor\n[accent]/mlog <filename> set[lightgrey] - select processor manually by shooting it");
+		   notify("[lightgrey]Mlog inserter\n\n[accent]/mlog <filename>[lightgrey] - insert /mlog/<filename>.txt into any empty processor\n[accent]/mlog <filename> set[lightgrey] - select processor manually by shooting it\n[accent]/mlog list[lightgrey] - see aviable mlog codes");
 		   break;
 
 		case "attem":

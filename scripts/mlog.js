@@ -19,11 +19,37 @@ Events.on(EventType.ClientChatEvent, e => {
     if (args[0] !== "/mlog") return;
 
     if (args.length < 2) {
-        notify("[lightgray]/mlog <filename>\n/mlog <filename> set");
+        notify("[lightgray]/mlog list\n/mlog <filename>\n/mlog <filename> set");
         return;
     }
 
     let filename = args[1];
+
+    if (filename.toLowerCase() === "list") {
+        let foundFiles = [];
+        let mods = Vars.mods.list();
+        
+        for(let i = 0; i < mods.size; i++){
+            let mlogDir = mods.get(i).root.child("mlog");
+            if(mlogDir.exists() && mlogDir.isDirectory()){
+                let files = mlogDir.list();
+                for(let j = 0; j < files.length; j++){
+                    let f = files[j];
+                    if(f.name().endsWith(".txt")){
+                        foundFiles.push(f.nameWithoutExtension());
+                    }
+                }
+            }
+        }
+        
+        if(foundFiles.length > 0){
+            notify("[green]Available files:\n[lightgray]- " + foundFiles.join("\n- "));
+        } else {
+            notify("[orange]No .txt files found in mlog/ folders");
+        }
+        return;
+    }
+
     let mode = args[2] ? args[2].toLowerCase() : "";
 
     let mlogFile = null;

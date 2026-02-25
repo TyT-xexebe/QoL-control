@@ -1,0 +1,7 @@
+getlink link num
+sensor cryo link @cryofluid
+select is greaterThan cryo 5 1 0
+control enabled link is 0 0 0
+op add num num 1
+jump 0 lessThan num @links
+set num 0

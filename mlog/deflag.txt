@@ -1,0 +1,763 @@
+print "[sky]Unit Deflagger v1.3.1[]\nby [green]SBytes[]"
+jump 4 equal count_dagger 0
+print "\n\n[lime]Deflagged[]"
+jump 117 always 0 false
+jump 7 equal count_mace 0
+print "\n\n[lime]Deflagged[]"
+jump 121 always 0 false
+jump 10 equal count_fortress 0
+print "\n\n[lime]Deflagged[]"
+jump 125 always 0 false
+jump 13 equal count_scepter 0
+print "\n\n[lime]Deflagged[]"
+jump 129 always 0 false
+jump 16 equal count_reign 0
+print "\n\n[lime]Deflagged[]"
+jump 133 always 0 false
+jump 19 equal count_nova 0
+print "\n\n[lime]Deflagged[]"
+jump 137 always 0 false
+jump 22 equal count_pulsar 0
+print "\n\n[lime]Deflagged[]"
+jump 141 always 0 false
+jump 25 equal count_quasar 0
+print "\n\n[lime]Deflagged[]"
+jump 145 always 0 false
+jump 28 equal count_vela 0
+print "\n\n[lime]Deflagged[]"
+jump 149 always 0 false
+jump 31 equal count_corvus 0
+print "\n\n[lime]Deflagged[]"
+jump 153 always 0 false
+jump 34 equal count_crawler 0
+print "\n\n[lime]Deflagged[]"
+jump 157 always 0 false
+jump 37 equal count_atrax 0
+print "\n\n[lime]Deflagged[]"
+jump 161 always 0 false
+jump 40 equal count_spiroct 0
+print "\n\n[lime]Deflagged[]"
+jump 165 always 0 false
+jump 43 equal count_arkyid 0
+print "\n\n[lime]Deflagged[]"
+jump 169 always 0 false
+jump 46 equal count_toxopid 0
+print "\n\n[lime]Deflagged[]"
+jump 173 always 0 false
+jump 49 equal count_flare 0
+print "\n\n[lime]Deflagged[]"
+jump 177 always 0 false
+jump 52 equal count_horizon 0
+print "\n\n[lime]Deflagged[]"
+jump 181 always 0 false
+jump 55 equal count_zenith 0
+print "\n\n[lime]Deflagged[]"
+jump 185 always 0 false
+jump 58 equal count_antumbra 0
+print "\n\n[lime]Deflagged[]"
+jump 189 always 0 false
+jump 61 equal count_eclipse 0
+print "\n\n[lime]Deflagged[]"
+jump 193 always 0 false
+jump 64 equal count_mono 0
+print "\n\n[lime]Deflagged[]"
+jump 197 always 0 false
+jump 67 equal count_poly 0
+print "\n\n[lime]Deflagged[]"
+jump 201 always 0 false
+jump 70 equal count_mega 0
+print "\n\n[lime]Deflagged[]"
+jump 205 always 0 false
+jump 73 equal count_quad 0
+print "\n\n[lime]Deflagged[]"
+jump 209 always 0 false
+jump 76 equal count_oct 0
+print "\n\n[lime]Deflagged[]"
+jump 213 always 0 false
+jump 79 equal count_risso 0
+print "\n\n[lime]Deflagged[]"
+jump 217 always 0 false
+jump 82 equal count_minke 0
+print "\n\n[lime]Deflagged[]"
+jump 221 always 0 false
+jump 85 equal count_bryde 0
+print "\n\n[lime]Deflagged[]"
+jump 225 always 0 false
+jump 88 equal count_sei 0
+print "\n\n[lime]Deflagged[]"
+jump 229 always 0 false
+jump 91 equal count_omura 0
+print "\n\n[lime]Deflagged[]"
+jump 233 always 0 false
+jump 94 equal count_retusa 0
+print "\n\n[lime]Deflagged[]"
+jump 237 always 0 false
+jump 97 equal count_oxynoe 0
+print "\n\n[lime]Deflagged[]"
+jump 241 always 0 false
+jump 100 equal count_cyerce 0
+print "\n\n[lime]Deflagged[]"
+jump 245 always 0 false
+jump 103 equal count_aegires 0
+print "\n\n[lime]Deflagged[]"
+jump 249 always 0 false
+jump 106 equal count_navanax 0
+print "\n\n[lime]Deflagged[]"
+jump 253 always 0 false
+jump 109 equal count_alpha 0
+print "\n\n[lime]Deflagged[]"
+jump 257 always 0 false
+jump 112 equal count_beta 0
+print "\n\n[lime]Deflagged[]"
+jump 261 always 0 false
+jump 115 equal count_gamma 0
+print "\n\n[lime]Deflagged[]"
+jump 265 always 0 false
+jump 268 always 0 false
+jump 120 equal count_dagger 0
+print ",\n"
+print count_dagger
+print " dagger"
+jump 124 equal count_mace 0
+print ",\n"
+print count_mace
+print " mace"
+jump 128 equal count_fortress 0
+print ",\n"
+print count_fortress
+print " fortress"
+jump 132 equal count_scepter 0
+print ",\n"
+print count_scepter
+print " scepter"
+jump 136 equal count_reign 0
+print ",\n"
+print count_reign
+print " reign"
+jump 140 equal count_nova 0
+print ",\n"
+print count_nova
+print " nova"
+jump 144 equal count_pulsar 0
+print ",\n"
+print count_pulsar
+print " pulsar"
+jump 148 equal count_quasar 0
+print ",\n"
+print count_quasar
+print " quasar"
+jump 152 equal count_vela 0
+print ",\n"
+print count_vela
+print " vela"
+jump 156 equal count_corvus 0
+print ",\n"
+print count_corvus
+print " corvus"
+jump 160 equal count_crawler 0
+print ",\n"
+print count_crawler
+print " crawler"
+jump 164 equal count_atrax 0
+print ",\n"
+print count_atrax
+print " atrax"
+jump 168 equal count_spiroct 0
+print ",\n"
+print count_spiroct
+print " spiroct"
+jump 172 equal count_arkyid 0
+print ",\n"
+print count_arkyid
+print " arkyid"
+jump 176 equal count_toxopid 0
+print ",\n"
+print count_toxopid
+print " toxopid"
+jump 180 equal count_flare 0
+print ",\n"
+print count_flare
+print " flare"
+jump 184 equal count_horizon 0
+print ",\n"
+print count_horizon
+print " horizon"
+jump 188 equal count_zenith 0
+print ",\n"
+print count_zenith
+print " zenith"
+jump 192 equal count_antumbra 0
+print ",\n"
+print count_antumbra
+print " antumbra"
+jump 196 equal count_eclipse 0
+print ",\n"
+print count_eclipse
+print " eclipse"
+jump 200 equal count_mono 0
+print ",\n"
+print count_mono
+print " mono"
+jump 204 equal count_poly 0
+print ",\n"
+print count_poly
+print " poly"
+jump 208 equal count_mega 0
+print ",\n"
+print count_mega
+print " mega"
+jump 212 equal count_quad 0
+print ",\n"
+print count_quad
+print " quad"
+jump 216 equal count_oct 0
+print ",\n"
+print count_oct
+print " oct"
+jump 220 equal count_risso 0
+print ",\n"
+print count_risso
+print " risso"
+jump 224 equal count_minke 0
+print ",\n"
+print count_minke
+print " minke"
+jump 228 equal count_bryde 0
+print ",\n"
+print count_bryde
+print " bryde"
+jump 232 equal count_sei 0
+print ",\n"
+print count_sei
+print " sei"
+jump 236 equal count_omura 0
+print ",\n"
+print count_omura
+print " omura"
+jump 240 equal count_retusa 0
+print ",\n"
+print count_retusa
+print " retusa"
+jump 244 equal count_oxynoe 0
+print ",\n"
+print count_oxynoe
+print " oxynoe"
+jump 248 equal count_cyerce 0
+print ",\n"
+print count_cyerce
+print " cyerce"
+jump 252 equal count_aegires 0
+print ",\n"
+print count_aegires
+print " aegires"
+jump 256 equal count_navanax 0
+print ",\n"
+print count_navanax
+print " navanax"
+jump 260 equal count_alpha 0
+print ",\n"
+print count_alpha
+print " alpha"
+jump 264 equal count_beta 0
+print ",\n"
+print count_beta
+print " beta"
+jump 268 equal count_gamma 0
+print ",\n"
+print count_gamma
+print " gamma"
+printflush message1
+ubind @dagger
+jump 282 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 282 equal unitDead 1
+ubind @dagger
+sensor unitFlag @unit @flag
+jump 282 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 282 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_dagger count_dagger 1
+jump 272 notEqual @unit anchor
+ubind @mace
+jump 295 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 295 equal unitDead 1
+ubind @mace
+sensor unitFlag @unit @flag
+jump 295 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 295 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_mace count_mace 1
+jump 285 notEqual @unit anchor
+ubind @fortress
+jump 308 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 308 equal unitDead 1
+ubind @fortress
+sensor unitFlag @unit @flag
+jump 308 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 308 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_fortress count_fortress 1
+jump 298 notEqual @unit anchor
+ubind @scepter
+jump 321 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 321 equal unitDead 1
+ubind @scepter
+sensor unitFlag @unit @flag
+jump 321 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 321 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_scepter count_scepter 1
+jump 311 notEqual @unit anchor
+ubind @reign
+jump 334 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 334 equal unitDead 1
+ubind @reign
+sensor unitFlag @unit @flag
+jump 334 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 334 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_reign count_reign 1
+jump 324 notEqual @unit anchor
+ubind @nova
+jump 347 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 347 equal unitDead 1
+ubind @nova
+sensor unitFlag @unit @flag
+jump 347 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 347 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_nova count_nova 1
+jump 337 notEqual @unit anchor
+ubind @pulsar
+jump 360 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 360 equal unitDead 1
+ubind @pulsar
+sensor unitFlag @unit @flag
+jump 360 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 360 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_pulsar count_pulsar 1
+jump 350 notEqual @unit anchor
+ubind @quasar
+jump 373 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 373 equal unitDead 1
+ubind @quasar
+sensor unitFlag @unit @flag
+jump 373 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 373 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_quasar count_quasar 1
+jump 363 notEqual @unit anchor
+ubind @vela
+jump 386 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 386 equal unitDead 1
+ubind @vela
+sensor unitFlag @unit @flag
+jump 386 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 386 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_vela count_vela 1
+jump 376 notEqual @unit anchor
+ubind @corvus
+jump 399 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 399 equal unitDead 1
+ubind @corvus
+sensor unitFlag @unit @flag
+jump 399 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 399 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_corvus count_corvus 1
+jump 389 notEqual @unit anchor
+ubind @crawler
+jump 412 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 412 equal unitDead 1
+ubind @crawler
+sensor unitFlag @unit @flag
+jump 412 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 412 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_crawler count_crawler 1
+jump 402 notEqual @unit anchor
+ubind @atrax
+jump 425 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 425 equal unitDead 1
+ubind @atrax
+sensor unitFlag @unit @flag
+jump 425 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 425 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_atrax count_atrax 1
+jump 415 notEqual @unit anchor
+ubind @spiroct
+jump 438 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 438 equal unitDead 1
+ubind @spiroct
+sensor unitFlag @unit @flag
+jump 438 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 438 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_spiroct count_spiroct 1
+jump 428 notEqual @unit anchor
+ubind @arkyid
+jump 451 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 451 equal unitDead 1
+ubind @arkyid
+sensor unitFlag @unit @flag
+jump 451 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 451 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_arkyid count_arkyid 1
+jump 441 notEqual @unit anchor
+ubind @toxopid
+jump 464 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 464 equal unitDead 1
+ubind @toxopid
+sensor unitFlag @unit @flag
+jump 464 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 464 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_toxopid count_toxopid 1
+jump 454 notEqual @unit anchor
+ubind @flare
+jump 477 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 477 equal unitDead 1
+ubind @flare
+sensor unitFlag @unit @flag
+jump 477 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 477 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_flare count_flare 1
+jump 467 notEqual @unit anchor
+ubind @horizon
+jump 490 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 490 equal unitDead 1
+ubind @horizon
+sensor unitFlag @unit @flag
+jump 490 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 490 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_horizon count_horizon 1
+jump 480 notEqual @unit anchor
+ubind @zenith
+jump 503 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 503 equal unitDead 1
+ubind @zenith
+sensor unitFlag @unit @flag
+jump 503 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 503 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_zenith count_zenith 1
+jump 493 notEqual @unit anchor
+ubind @antumbra
+jump 516 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 516 equal unitDead 1
+ubind @antumbra
+sensor unitFlag @unit @flag
+jump 516 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 516 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_antumbra count_antumbra 1
+jump 506 notEqual @unit anchor
+ubind @eclipse
+jump 529 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 529 equal unitDead 1
+ubind @eclipse
+sensor unitFlag @unit @flag
+jump 529 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 529 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_eclipse count_eclipse 1
+jump 519 notEqual @unit anchor
+ubind @mono
+jump 542 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 542 equal unitDead 1
+ubind @mono
+sensor unitFlag @unit @flag
+jump 542 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 542 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_mono count_mono 1
+jump 532 notEqual @unit anchor
+ubind @poly
+jump 555 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 555 equal unitDead 1
+ubind @poly
+sensor unitFlag @unit @flag
+jump 555 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 555 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_poly count_poly 1
+jump 545 notEqual @unit anchor
+ubind @mega
+jump 568 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 568 equal unitDead 1
+ubind @mega
+sensor unitFlag @unit @flag
+jump 568 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 568 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_mega count_mega 1
+jump 558 notEqual @unit anchor
+ubind @quad
+jump 581 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 581 equal unitDead 1
+ubind @quad
+sensor unitFlag @unit @flag
+jump 581 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 581 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_quad count_quad 1
+jump 571 notEqual @unit anchor
+ubind @oct
+jump 594 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 594 equal unitDead 1
+ubind @oct
+sensor unitFlag @unit @flag
+jump 594 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 594 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_oct count_oct 1
+jump 584 notEqual @unit anchor
+ubind @risso
+jump 607 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 607 equal unitDead 1
+ubind @risso
+sensor unitFlag @unit @flag
+jump 607 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 607 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_risso count_risso 1
+jump 597 notEqual @unit anchor
+ubind @minke
+jump 620 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 620 equal unitDead 1
+ubind @minke
+sensor unitFlag @unit @flag
+jump 620 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 620 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_minke count_minke 1
+jump 610 notEqual @unit anchor
+ubind @bryde
+jump 633 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 633 equal unitDead 1
+ubind @bryde
+sensor unitFlag @unit @flag
+jump 633 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 633 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_bryde count_bryde 1
+jump 623 notEqual @unit anchor
+ubind @sei
+jump 646 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 646 equal unitDead 1
+ubind @sei
+sensor unitFlag @unit @flag
+jump 646 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 646 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_sei count_sei 1
+jump 636 notEqual @unit anchor
+ubind @omura
+jump 659 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 659 equal unitDead 1
+ubind @omura
+sensor unitFlag @unit @flag
+jump 659 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 659 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_omura count_omura 1
+jump 649 notEqual @unit anchor
+ubind @retusa
+jump 672 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 672 equal unitDead 1
+ubind @retusa
+sensor unitFlag @unit @flag
+jump 672 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 672 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_retusa count_retusa 1
+jump 662 notEqual @unit anchor
+ubind @oxynoe
+jump 685 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 685 equal unitDead 1
+ubind @oxynoe
+sensor unitFlag @unit @flag
+jump 685 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 685 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_oxynoe count_oxynoe 1
+jump 675 notEqual @unit anchor
+ubind @cyerce
+jump 698 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 698 equal unitDead 1
+ubind @cyerce
+sensor unitFlag @unit @flag
+jump 698 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 698 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_cyerce count_cyerce 1
+jump 688 notEqual @unit anchor
+ubind @aegires
+jump 711 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 711 equal unitDead 1
+ubind @aegires
+sensor unitFlag @unit @flag
+jump 711 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 711 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_aegires count_aegires 1
+jump 701 notEqual @unit anchor
+ubind @navanax
+jump 724 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 724 equal unitDead 1
+ubind @navanax
+sensor unitFlag @unit @flag
+jump 724 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 724 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_navanax count_navanax 1
+jump 714 notEqual @unit anchor
+ubind @alpha
+jump 737 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 737 equal unitDead 1
+ubind @alpha
+sensor unitFlag @unit @flag
+jump 737 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 737 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_alpha count_alpha 1
+jump 727 notEqual @unit anchor
+ubind @beta
+jump 750 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 750 equal unitDead 1
+ubind @beta
+sensor unitFlag @unit @flag
+jump 750 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 750 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_beta count_beta 1
+jump 740 notEqual @unit anchor
+ubind @gamma
+jump 0 equal @unit null
+set anchor @unit
+sensor unitDead anchor @dead
+jump 0 equal unitDead 1
+ubind @gamma
+sensor unitFlag @unit @flag
+jump 0 equal unitFlag 0
+sensor unitCtrl @unit @controlled
+jump 0 equal unitCtrl 1
+ucontrol flag 0 0 0 0 0
+op add count_gamma count_gamma 1
+jump 753 notEqual @unit anchor
