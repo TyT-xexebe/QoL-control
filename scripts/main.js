@@ -5,7 +5,9 @@ const modules = [
     "autograb",
     "camera",
     "ai",
-    "optimizer"
+    "optimizer",
+    "mlog",
+    "attem"
 ];
 
 for (let module of modules) {

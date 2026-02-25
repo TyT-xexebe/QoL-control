@@ -79,7 +79,7 @@ Events.on(EventType.ClientChatEvent, e => {
                "\n[white]State: " + (trace.enabled ? "[green]ON" : "[scarlet]OFF") +
                "\n[white]Mode: [accent]" + (trace.mode || "none") +
                "\n[white]Target: [accent]" + (trace.target || "none") +
-               "\n[white]Priority: [lightgray]" + trace.priority.join(", "));
+               "\n[white]Priority: [lightgray]" + trace.priority.join(" > "));
     } else {
         notify("[accent]Trace:\n[lightgray]/trace toggle\n/trace set <unit>\n/trace find\n/trace status");
     }

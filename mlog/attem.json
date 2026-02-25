@@ -1,0 +1,6 @@
+[
+  {
+    "regex": "op add attem attem 1\\s+jump -?\\d{1,3} greaterThanEq attem 83\\s+jump -?\\d{1,3} notEqual key flag\\s+set attem 0",
+    "input": "print \"dont use ATTEM83 logic, more info at https://mindustry.dev/attem\" "
+  }
+]

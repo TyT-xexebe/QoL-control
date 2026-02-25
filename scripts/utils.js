@@ -1,4 +1,4 @@
-const notify = (text) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + text);
+const notify = (text) => Vars.ui.chatfrag.addMessage("[white]" + text);
 
 let hpEnabled = true;
 let trangeEnabled = false;
@@ -123,7 +123,7 @@ Events.on(ClientChatEvent, e => {
         let x = Math.floor(Core.camera.position.x / 8);
         let y = Math.floor(Core.camera.position.y / 8);
         let comment = args.length > 1 ? " " + args.slice(1).join(" ") : "";
-        Call.sendChatMessage("[accent][" + x + ", " + y + "] [white]" + comment);
+        Call.sendChatMessage("[accent][" + x + " " + y + "] [white]" + comment);
     }
 
     if (cmd === "/cghost") {
@@ -145,6 +145,62 @@ Events.on(ClientChatEvent, e => {
             notify("Cleared: [green]" + toRemove.size + " [white]ghosts");
         } else notify("Ghosts: [green]Clear");
     }
+
+	if (cmd === "/qol") {
+		switch (args[1]) {
+		case "trace":
+		   notify("[lightgrey]Finds a unit [in your team and not controlled by player/processor] and tries to possess it\n\n[accent]/trace\ntoggle[lightgrey] - on/off\n[accent]set <unitType>[lightgrey] - set specific unit type to search and possess\n[accent]find[lightgrey] - possess the highest-priority unit found [preset list in status]\n[accent]status[lightgrey] - show trace status");
+		   break;
+
+		case "ai":
+		   notify("[lightgrey]AI control for your unit\n\n[accent]/ai\nmining <items?>[lightgrey] - mine lowest core resources available on map [vanilla mineable only]\nwrite items separated by space to toggle them [status shows: green[ON] red[OFF] grey[NOT FOUND]]\n[accent]build <name?>[lightgrey] - assist building/deconstructing; write part of nickname to help specific player [-1 to reset]\n[accent]lock[lightgrey] - lock position and mining target\n[accent]status[lightgrey] - show AI status");
+		   break;
+
+		case "mining":
+		   notify("[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]/mining\n<units/items>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm");
+		   break;
+
+		case "here":
+		   notify("[accent]/here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)");
+		   break;
+
+		case "lookat":
+		   notify("[accent]/lookat <x> <y>[lightgrey] - move camera to coordinates\n[accent]/lookat last <n?>[lightgrey] - use one of last 9 found coordinates from chat history");
+		   break;
+
+		case "cghost":
+		   notify("[accent]/cghost[lightgrey] - clear ghost blocks in enemy turret range");
+		   break;
+
+		case "hp":
+		   notify("[accent]/hp <name?>[lightgrey] - toggle HP/shield/DPS display of last shot unit; nickname sets priority target");
+		   break;
+
+		case "grab":
+		   notify("[lightgrey]Auto-grab <item> from blocks in unit range\n\n[accent]/grab\ntoggle[lightgrey] - on/off\n[accent]<item>[lightgrey] - set item to grab [auto-enables]\n[accent]min <val>[lightgrey] - minimum amount to grab\n[accent]status[lightgrey] - grab status");
+		   break;
+
+		case "trange":
+		   notify("[accent]/trange[lightgrey] - toggle nearby enemy turret range display blue[AIR] brown[GROUND] purple[BOTH] (uses FPS)");
+		   break;
+
+		case "features":
+		   notify("[lightgrey]Fast rotation & omni-movement for all units\nCamera lock button\nHeavy optimisation\nAuto-leaves onho's units [FISH Servers]");
+		   break;
+
+		case "mlog":
+		   notify("[lightgrey]Mlog inserter\n\n[accent]/mlog <filename>[lightgrey] - insert /mlog/<filename>.txt into any empty processor\n[accent]/mlog <filename> set[lightgrey] - select processor manually by shooting it");
+		   break;
+
+		case "attem":
+		   notify("[accent]/attem[lightgrey] - remove all attem-like processors [regex & config: /mlog/attem.json]");
+		   break;
+
+		default:
+		   notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\ngrab[accent] | [lightgrey]ai[accent] | [lightgrey]trace[accent] | [lightgrey]mining[accent] | [lightgrey]hp[accent] | [lightgrey]lookat[accent] | [lightgrey]here[accent] | [lightgrey]cghost[accent] | [lightgrey]trange[accent] | [lightgrey]mlog[accent] | [lightgrey]attem\n\n[accent]features");
+		   break;
+		}
+	}   		
 });
 
 Events.run(Trigger.draw, () => {
