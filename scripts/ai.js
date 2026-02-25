@@ -193,11 +193,12 @@ Events.on(EventType.ClientChatEvent, e => {
             }
             break;
         case "status":
-            let u = Vars.player.unit(), isErekir = u.type.name.match(/evoke|incite|emanate/), res = "", items = Vars.content.items();
+            let u = Vars.player.unit(), res = "", items = Vars.content.items();
+            let isErekir = u == null ? false : u.type.name.match(/evoke|incite|emanate/);
             for (let i = 0; i < items.size; i++) {
                 let it = items.get(i);
-                if (!allowedItems.hasOwnProperty(it.name) || it.hardness > u.type.mineTier) continue;
-                
+                let mineTier = u == null ? 0 : u.type.mineTier;           
+                if (!allowedItems.hasOwnProperty(it.name) || it.hardness > mineTier) continue;             
                 let wall = Vars.indexer.hasWallOre(it);
                 let floor = oreData[it.name] && oreData[it.name].length > 0;
                 
