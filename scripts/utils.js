@@ -210,3 +210,8 @@ Events.run(Trigger.draw, () => {
 Events.on(ClientLoadEvent, () => {
     Vars.content.units().each(u => { u.rotateSpeed = 1000; u.omniMovement = true; });
 });
+
+// Fish servers ohno's unit leave
+Events.on(UnitChangeEvent, e => {
+    if (e.player === Vars.player && e.unit && e.unit.type === UnitTypes.alpha && e.unit instanceof Legsc) e.player.clearUnit()
+});
