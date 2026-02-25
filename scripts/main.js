@@ -4,7 +4,8 @@ const modules = [
     "mining",
     "autograb",
     "camera",
-    "ai"
+    "ai",
+    "optimizer"
 ];
 
 for (let module of modules) {

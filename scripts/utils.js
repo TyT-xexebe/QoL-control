@@ -1,7 +1,7 @@
 const notify = (text) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + text);
 
 let hpEnabled = true;
-let trangeEnabled = true;
+let trangeEnabled = false;
 let targetCache = null;
 let trackedPlayer = null;
 let targetTimer = 0;
