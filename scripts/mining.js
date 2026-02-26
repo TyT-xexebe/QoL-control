@@ -1,4 +1,4 @@
-const notify = (text) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + text);
+const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 
 const state = {
     units: { mono: true, poly: true, pulsar: true, mega: true, quasar: true },
@@ -86,25 +86,25 @@ Events.on(EventType.ClientChatEvent, e => {
         if (miningTask) {
             miningTask.cancel();
             miningTask = null;
-            notify("Mining: [scarlet]Stopped");
-        } else notify("Mining: [lightgray]Not running");
+            notify("[scarlet]Mining stopped");
+        } else notify("[lightgrey]Mining not running");
         return;
     }
 
     if (args[1] === "set") {
         let time = parseFloat(args[2]);
-        if (isNaN(time) || time < 0) return notify("Usage: [accent]/mining set <sec>");
+        if (isNaN(time) || time < 0) return notify("[lightgrey]/mining set <sec>");
         
         state.interval = time;
         if (time === 0) {
             runMining();
-            notify("Mining: [green]Executed once");
+            notify("[green]Mining executed once");
         } else {
             if (miningTask) miningTask.cancel();
             miningTask = Timer.schedule(() => {
                 try { runMining(); } catch(e) { if (miningTask) miningTask.cancel(); miningTask = null; }
             }, 0, time);
-            notify("Mining: [green]Started [white](" + time + "s)");
+            notify("[green]Mining started ([accent]" + time + "[green]s)");
         }
         return;
     }
@@ -114,10 +114,9 @@ Events.on(EventType.ClientChatEvent, e => {
         for (let k in state.units) uStr += (state.units[k] ? "[green]" : "[scarlet]") + k + " ";
         for (let k in state.items) iStr += (state.items[k] ? "[green]" : "[scarlet]") + k + " ";
         
-        notify("\n[accent]STATUS" +
-               "\n[white]State: " + (miningTask ? "[green]Active (" + state.interval + "s)" : "[scarlet]Inactive") +
-               "\n[white]Units: " + uStr +
-               "\n[white]Items: " + iStr);
+        notify("\n[lightgrey]State " + (miningTask ? "[lightgrey]Active ([accent]" + state.interval + "[lightgrey]s)" : "[scarlet]Inactive") +
+               "\n[lightgrey]Units " + uStr +
+               "\n[lightgrey]Items " + iStr);
         return;
     }
 
@@ -133,8 +132,8 @@ Events.on(EventType.ClientChatEvent, e => {
                 changed.push((state.items[key] ? "[green]" : "[scarlet]") + key);
             }
         }
-        if (changed.length > 0) return notify("Toggle: " + changed.join("[white], "));
+        if (changed.length > 0) return notify("[lightgrey]Toggle " + changed.join(" "));
     }
 
-    notify("[accent]Mining:\n[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop");
+    notify("[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop");
 });

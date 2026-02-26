@@ -9,7 +9,7 @@ const allowedItems = {
     "coal": true, "titanium": true, "beryllium": true, "graphite": true
 };
 
-const notify = (msg) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + msg);
+const notify = (msg) => Vars.ui.chatfrag.addMessage(msg);
 
 const buildOreTree = () => {
     let start = Time.millis();
@@ -30,7 +30,7 @@ const buildOreTree = () => {
         }
     }
     let elapsed = (Time.millis() - start) / 1000;
-    notify("[lightgrey]Ore Tree: [accent]" + count + "[lightgrey] ores was found | [accent]" + elapsed.toFixed(4) + "[lightgrey]s");
+    notify("[lightgrey]Ore Tree - [accent]" + count + "[lightgrey] ores was found | [accent]" + elapsed.toFixed(4) + "[lightgrey]s");
 };
 
 const findClosestFreeOre = (u, item) => {
@@ -142,7 +142,7 @@ Events.on(EventType.ClientChatEvent, e => {
     if (a[0] !== "/ai") return;
     
     const showHelp = () => {
-        notify("\n[accent]USAGE\n[lightgrey]/ai mining <item?>\n/ai build <name? | -1>\n/ai lock\n/ai status");
+        notify("[lightgrey]/ai mining <item?>\n/ai build <name? | -1>\n/ai lock\n/ai status");
     };
 
     switch(a[1]) {
@@ -154,12 +154,12 @@ Events.on(EventType.ClientChatEvent, e => {
                 lockTile = u.mineTile;
                 mineEnabled = buildEnabled = false;
             }
-            notify("Lock: " + (lockEnabled ? "[green]ON" : "[scarlet]OFF"));
+            notify("[lightgrey]Lock " + (lockEnabled ? "[green]ON" : "[scarlet]OFF"));
             break;
         case "build":
             if (a[2] === "-1") {
                 manualTarget = false; followTarget = null;
-                notify("Build: [green]AUTO");
+                notify("[lightgrey]Build [green]AUTO");
             } else if (a[2]) {
                 let f = null;
                 Groups.player.each(pl => {
@@ -167,12 +167,12 @@ Events.on(EventType.ClientChatEvent, e => {
                 });
                 if (f && f.team() == Vars.player.team()) {
                     followTarget = f; manualTarget = buildEnabled = true; mineEnabled = lockEnabled = false;
-                    notify("Build Follow: " + f.name);
-                } else notify("Build: [scarlet]Not found or not in your team");
+                    notify("[lightgrey]Build Follow " + f.name);
+                } else notify("[scarlet]player [white]" + a[2] + " [scarlet]not found or not in your team");
             } else {
                 buildEnabled = !buildEnabled;
                 if (buildEnabled) mineEnabled = lockEnabled = false;
-                notify("Build: " + (buildEnabled ? "[green]ON" : "[scarlet]OFF"));
+                notify("[lightgrey]Build " + (buildEnabled ? "[green]ON" : "[scarlet]OFF"));
             }
             break;
         case "mining":
@@ -185,11 +185,11 @@ Events.on(EventType.ClientChatEvent, e => {
                     }
                 }
                 targetItem = targetTile = null;
-                notify("Toggle: " + changed.join("[white], "));
+                notify("[lightgrey]Toggle " + changed.join(" "));
             } else {
                 mineEnabled = !mineEnabled;
                 if (mineEnabled) buildEnabled = lockEnabled = false;
-                notify("Mine: " + (mineEnabled ? "[green]ON" : "[scarlet]OFF"));
+                notify("[lightgrey]Mining " + (mineEnabled ? "[green]ON" : "[scarlet]OFF"));
             }
             break;
         case "status":
@@ -212,9 +212,9 @@ Events.on(EventType.ClientChatEvent, e => {
                 res += color + it.name + " ";
             }
             let bTrg = followTarget ? (manualTarget ? "[accent]" : "[green]") + Strings.stripColors(followTarget.name) : "[scarlet]none";
-            notify("\n[accent]STATUS\n[white]Lock: " + (lockEnabled ? "[green]ON" : "[scarlet]OFF") + 
-                   "\n[white]Build: " + (buildEnabled ? "[green]ON" : "[scarlet]OFF") + " | " + bTrg +
-                   "\n[white]Mine: " + (mineEnabled ? "[green]ON" : "[scarlet]OFF") + "\n[white]Items: " + res);
+            notify("[lightgrey]Lock " + (lockEnabled ? "[green]ON" : "[scarlet]OFF") + 
+                   "\n[lightgrey]Build " + (buildEnabled ? "[green]ON" : "[scarlet]OFF") + " | " + bTrg +
+                   "\n[lightgrey]Mining " + (mineEnabled ? "[green]ON" : "[scarlet]OFF") + "\n[lightgrey]Ores " + res);
             break;
         default:
             showHelp();

@@ -1,4 +1,4 @@
-const notify = (text) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + text);
+const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 
 const grab = {
     active: false,
@@ -88,33 +88,32 @@ Events.on(EventType.ClientChatEvent, e => {
 
     if (args[1] === "toggle") {
         grab.active = !grab.active;
-        return notify("Grab: " + (grab.active ? "[green]ON" : "[scarlet]OFF"));
+        return notify("[lightgrey]Grab " + (grab.active ? "[green]ON" : "[scarlet]OFF"));
     }
 
     if (args[1] === "min" && args[2]) {
         let val = parseInt(args[2]);
-        if (isNaN(val) || val < 1) return notify("Min: [scarlet]Invalid");
+        if (isNaN(val) || val < 1) return notify("[scarlet]<min> invalid");
         grab.min = val;
-        return notify("Grab Min: [accent]" + val);
+        return notify("[lightgrey]Grab <min> [accent]" + val);
     }
 
     if (args[1] === "status") {
-        return notify("\n[accent]STATUS" +
-                      "\n[white]State: " + (grab.active ? "[green]ON" : "[scarlet]OFF") +
-                      "\n[white]Item: [accent]" + (grab.item ? grab.item.name : "none") +
-                      "\n[white]Min: [accent]" + grab.min);
+        return notify("[lightgrey]State " + (grab.active ? "[green]ON" : "[scarlet]OFF") +
+                      "\n[lightgrey]Item [accent]" + (grab.item ? grab.item.name : "none") +
+                      "\n[lightgrey]Min [accent]" + grab.min);
     }
 
-    if (args[1] && args[1] !== "help") {
+    if (args[1]) {
         let found = Vars.content.getByName(ContentType.item, args[1]);
         if (found) {
             grab.item = found;
             grab.active = true;
-            return notify("Grab: [green]ON [white](" + found.name + ")");
+            return notify("[lightgrey]Grab [green]ON [lightgrey]([accent]" + found.name + "[lightgrey])");
         } else {
-            return notify("Item: [scarlet]Not found");
+            return notify("[scarlet]Item " + args[1] + " not found");
         }
     }
 
-    notify("[accent]Grab:\n[lightgray]/grab <item>\n/grab toggle\n/grab min <val>\n/grab status");
+    notify("[lightgray]/grab <item>\n/grab toggle\n/grab min <val>\n/grab status");
 });

@@ -1,4 +1,4 @@
-const notify = (text) => Vars.ui.chatfrag.addMessage("[white]" + text);
+const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 
 let hpEnabled = true;
 let trangeEnabled = false;
@@ -74,19 +74,19 @@ Events.on(ClientChatEvent, e => {
             });
             if (found) {
                 trackedPlayer = found;
-                notify("Tracking: " + found.name);
-            } else notify("Player: [scarlet]Not found");
+                notify("Tracking " + found.name);
+            } else notify("[scarlet]Player [white]" + args[1] +" [scarlet]not found");
         } else {
             hpEnabled = !hpEnabled;
             if (!hpEnabled) { targetCache = null; trackedPlayer = null; dpsData = {}; }
-            notify("HP Display: " + (hpEnabled ? "[green]ON" : "[scarlet]OFF"));
+            notify("[lightgrey]HP Display " + (hpEnabled ? "[green]ON" : "[scarlet]OFF"));
         }
     }
 
     if (cmd === "/trange") {
         trangeEnabled = !trangeEnabled;
         if (!trangeEnabled) cachedTurrets = [];
-        notify("Turret Ranges: " + (trangeEnabled ? "[green]ON" : "[scarlet]OFF"));
+        notify("[lightgrey]Turret Ranges " + (trangeEnabled ? "[green]ON" : "[scarlet]OFF"));
     }
 
     if (cmd === "/lookat") {
@@ -96,16 +96,16 @@ Events.on(ClientChatEvent, e => {
                 if (coordHistory[idx]) {
                     let c = coordHistory[idx];
                     Core.camera.position.set(c.x * 8, c.y * 8);
-                    notify("Jump: [accent]" + c.x + ", " + c.y);
-                } else notify("Index: [scarlet]Invalid");
+                    notify("[lightgrey]Jump [accent]" + c.x + ", " + c.y);
+                } else notify("[scarlet]Invalid index");
             } else {
                 if (coordHistory.length === 0) {
-                    notify("History: [scarlet]Empty");
+                    notify("[scarlet]History empty");
                 } else {
-                    let str = "\n[accent]COORDS:";
+                	let str = "";
                     for (let i = 0; i < coordHistory.length; i++) {
                         let c = coordHistory[i];
-                        str += "\n[white]" + (i + 1) + " - [lightgray]" + c.nick + "[white] - " + c.x + " " + c.y;
+                        str += "\n[lightgrey]" + (i + 1) + " - " + c.nick + "[lightgrey] - " + c.x + " " + c.y;
                     }
                     notify(str);
                 }
@@ -114,8 +114,8 @@ Events.on(ClientChatEvent, e => {
             let x = parseFloat(args[1]), y = parseFloat(args[2]);
             if (!isNaN(x) && !isNaN(y)) {
                 Core.camera.position.set(x * 8, y * 8);
-                notify("Camera: [accent]" + x + ", " + y);
-            } else notify("Usage: [lightgray]/lookat <x> <y> | last <n?>");
+                notify("[lightgrey]Jump [accent]" + x + ", " + y);
+            } else notify("[lightgray]/lookat <x> <y>\n/lookat last <n?>");
         }
     }
 
@@ -142,8 +142,8 @@ Events.on(ClientChatEvent, e => {
         });
         if (toRemove.size > 0) {
             Call.deletePlans(Vars.player, toRemove.toArray());
-            notify("Cleared: [green]" + toRemove.size + " [white]ghosts");
-        } else notify("Ghosts: [green]Clear");
+            notify("[lightgrey]Cleared [accent]" + toRemove.size + " [lightgrey]ghosts");
+        } else notify("[lightgrey]Ghosts clear");
     }
 
 	if (cmd === "/qol") {

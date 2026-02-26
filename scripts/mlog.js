@@ -8,7 +8,7 @@ function injectCode(target, code) {
         let LogicBlock = Packages.mindustry.world.blocks.logic.LogicBlock;
         let compressed = LogicBlock.compress(code, target.links);
         target.configure(compressed);
-        notify("[green]Injected at: " + target.tileX() + ", " + target.tileY());
+        notify("[green]Injected at [lightgrey]" + target.tileX() + " " + target.tileY());
     } catch(err) {
         notify("[scarlet]Injection error: " + err);
     }
@@ -43,9 +43,9 @@ Events.on(EventType.ClientChatEvent, e => {
         }
         
         if(foundFiles.length > 0){
-            notify("[green]Available files:\n[lightgray]- " + foundFiles.join("\n- "));
+            notify("[lightgrey]Available files:\n- " + foundFiles.join("\n- "));
         } else {
-            notify("[orange]No .txt files found in mlog/ folders");
+            notify("[scarlet]No .txt files found in mlog/ folder");
         }
         return;
     }
@@ -64,7 +64,7 @@ Events.on(EventType.ClientChatEvent, e => {
     }
 
     if(mlogFile == null){
-        notify("[scarlet]File not found: [lightgray]mlog/" + filename + ".txt");
+        notify("[scarlet]File not found [lightgray]mlog/" + filename + ".txt");
         return;
     }
 
@@ -73,7 +73,7 @@ Events.on(EventType.ClientChatEvent, e => {
     if (mode === "set") {
         pendingMlog = code;
         wasShooting = false;
-        notify("[lightgrey]Start and stop shooting at the target processor.");
+        notify("[lightgrey]Start and stop shooting at the target processor");
     } else {
         let target = null;
         

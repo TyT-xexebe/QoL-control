@@ -1,4 +1,4 @@
-const notify = (text) => Vars.ui.chatfrag.addMessage("[accent]󰚩 [white] " + text);
+const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 
 const trace = {
     enabled: false,
@@ -40,7 +40,7 @@ function findTrace() {
 
     if (unit && possess(unit)) {
         trace.lastTry = Time.millis() + 250;
-        notify("Possess: [green]" + unit.type.name);
+        notify("[lightgrey]Possess [accent]" + unit.type.name);
     }
 }
 
@@ -63,24 +63,23 @@ Events.on(EventType.ClientChatEvent, e => {
     let sub = args[1] ? args[1].toLowerCase() : "";
     if (sub === "toggle") {
         trace.enabled = !trace.enabled;
-        notify("Trace: " + (trace.enabled ? "[green]ON" : "[scarlet]OFF"));
+        notify("[lightgrey]Trace " + (trace.enabled ? "[green]ON" : "[scarlet]OFF"));
     } else if (sub === "set" && args[2]) {
         let found = Vars.content.getByName(ContentType.unit, args[2]);
         if (found) {
             trace.mode = "set";
             trace.target = args[2].toLowerCase();
-            notify("Mode: [green]SET [white](" + trace.target + ")");
-        } else notify("Unit: [scarlet]Not found");
+            notify("[lightgrey]Mode [green]SET [lightgrey]([accent]" + trace.target + "[lightgrey])");
+        } else notify("[scarlet]Unit " + args[2] + " [scarlet]not found");
     } else if (sub === "find") {
         trace.mode = "find";
-        notify("Mode: [green]FIND");
+        notify("[lightgrey]Mode [green]FIND");
     } else if (sub === "status") {
-        notify("\n[accent]STATUS" +
-               "\n[white]State: " + (trace.enabled ? "[green]ON" : "[scarlet]OFF") +
-               "\n[white]Mode: [accent]" + (trace.mode || "none") +
-               "\n[white]Target: [accent]" + (trace.target || "none") +
-               "\n[white]Priority: [lightgray]" + trace.priority.join(" > "));
+        notify("\n[lightgrey]State " + (trace.enabled ? "[green]ON" : "[scarlet]OFF") +
+               "\n[lightgrey]Mode [accent]" + (trace.mode || "none") +
+               "\n[lightgrey]Target [accent]" + (trace.target || "none") +
+               "\n[lightgrey]Priority [accent]" + trace.priority.join("[lightgrey] > [accent]"));
     } else {
-        notify("[accent]Trace:\n[lightgray]/trace toggle\n/trace set <unit>\n/trace find\n/trace status");
+        notify("[lightgray]/trace toggle\n/trace set <unit>\n/trace find\n/trace status");
     }
 });

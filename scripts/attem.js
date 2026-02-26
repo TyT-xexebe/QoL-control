@@ -68,7 +68,7 @@ Events.on(EventType.ClientChatEvent, e => {
     }));
 
     if(replacedCount > 0){
-        notify("[green]Replaced " + replacedCount + " processors");
+        notify("[green]Replaced [accent]" + replacedCount + " [green]processors");
     } else {
         notify("[lightgray]No matching processors found");
     }

@@ -1,0 +1,34 @@
+set unit @flare
+set item @phase-fabric
+getlink link 0
+op add flagger @thisx @thisy
+ubind u1
+sensor d1 @unit @dead
+jump 13 equal d1 0
+ubind unit
+sensor flag @unit @flag
+jump 0 notEqual flag 0
+set u1 @unit
+ucontrol flag flagger 0 0 0 0
+end
+sensor type @unit @type
+jump 31 notEqual type unit
+ulocate building core false @null x1 y1 found build
+sensor FI @unit @firstItem
+sensor IC @unit @itemCapacity
+jump 28 equal FI @null
+jump 25 notEqual FI item
+sensor x2 link @x
+sensor y2 link @y
+ucontrol approach x2 y2 5 0 0
+ucontrol itemDrop link 999 0 0 0
+end
+ucontrol approach x1 y1 5 0 0
+ucontrol itemDrop build 999 0 0 0
+end
+ucontrol approach x1 y1 5 0 0
+ucontrol itemTake build item IC 0 0
+end
+ubind u1
+ucontrol flag 0 0 0 0 0
+set u1 @null
