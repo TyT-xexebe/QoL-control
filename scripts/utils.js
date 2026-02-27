@@ -1,4 +1,4 @@
-const notify = (text) => Vars.ui.chatfrag.addMessage(text);
+ const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 
 let hpEnabled = true;
 let trangeEnabled = false;
@@ -40,11 +40,14 @@ function drawHP(unit) {
 }
 
 Events.on(PlayerChatEvent, e => {
-    let raw = Strings.stripColors(e.message);
-    let match = raw.match(/(\d+)[^\d]+(\d+)/);
+	if (!e.player) return; 
+	
+    let raw = String(e.message);
+let match = raw.match(/(\d\d?\d?\d?)([ ,./|][ ,./|]?[ ,./|]?)(\d\d?\d?\d?)/);
+
     if (match) {
-        let x = parseInt(match[1]), y = parseInt(match[2]);
-        if (x >= 0 && x <= 1000 && y >= 0 && y <= 1000) {
+        let x = parseInt(match[1]), y = parseInt(match[3]);
+        if (x >= 0 && x <= 9999 && y >= 0 && y <= 9999) {
             coordHistory.push({
                 nick: Strings.stripColors(e.player.name),
                 x: x,
@@ -105,7 +108,7 @@ Events.on(ClientChatEvent, e => {
                 	let str = "";
                     for (let i = 0; i < coordHistory.length; i++) {
                         let c = coordHistory[i];
-                        str += "\n[lightgrey]" + (i + 1) + " - " + c.nick + "[lightgrey] - " + c.x + " " + c.y;
+                        str += "\n[lightgrey]" + (i + 1) + " - " + c.nick + "[lightgrey] - [accent]" + c.x + " " + c.y;
                     }
                     notify(str);
                 }
