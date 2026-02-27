@@ -1,0 +1,189 @@
+const notify = (text) => Vars.ui.chatfrag.addMessage(text);
+
+const assistState = {
+    enabled: false,
+    range: 400,
+    units: { poly: true, mega: true, pulsar: true, quasar: true },
+    max: { poly: 10, mega: 10, pulsar: 10, quasar: 10 }
+};
+
+let assistTimer = null;
+global.qolAssistingUnits = {};
+let assistingUnits = global.qolAssistingUnits;
+
+function releaseSingleUnit(u) {
+    try { u.clearCommand(); } catch(e) {}
+    try { u.resetController(); } catch(e) {}
+}
+
+function releaseAssistUnits() {
+    Groups.unit.each(u => {
+        if (assistingUnits[u.id]) {
+            releaseSingleUnit(u);
+        }
+    });
+    assistingUnits = {};
+}
+
+function runAssist() {
+    const player = Vars.player;
+    if (!player || !player.team() || !Vars.state.isGame()) {
+        releaseAssistUnits();
+        return;
+    }
+
+    const pUnit = player.unit();
+    if (!pUnit || pUnit.dead) {
+        releaseAssistUnits();
+        return;
+    }
+
+    const plans = pUnit.plans;
+    let isBuildingNear = false;
+
+    if (plans.size > 0) {
+        let bRange = pUnit.type.buildRange + 8; 
+        for (let i = 0; i < plans.size; i++) {
+            let plan = plans.get(i);
+            if (pUnit.dst(plan.x * 8, plan.y * 8) <= bRange) {
+                isBuildingNear = true;
+                break;
+            }
+        }
+    }
+
+    if (isBuildingNear) {
+        let counts = { poly: 0, mega: 0, pulsar: 0, quasar: 0 };
+        let needsCommandUpdate = new IntSeq();
+        
+        let px = new java.lang.Float(pUnit.x);
+        let py = new java.lang.Float(pUnit.y);
+
+        Groups.unit.each(u => {
+            if (assistingUnits[u.id]) {
+                let stolen = (u.player != null) || (u.controller() instanceof LogicAI);
+                
+                if (u.team === player.team() && !u.dead && !stolen) {
+                    let type = u.type.name;
+                    if (assistState.units[type]) {
+                        counts[type]++;
+                        
+                        let cmd = null;
+                        try { cmd = u.command(); } catch(e) {}
+                        
+                        if (cmd !== UnitCommand.assistCommand) {
+                            needsCommandUpdate.add(u.id);
+                        }
+                    } else {
+                        delete assistingUnits[u.id];
+                        releaseSingleUnit(u);
+                    }
+                } else {
+                    delete assistingUnits[u.id];
+                    releaseSingleUnit(u);
+                }
+            }
+        });
+
+        Groups.unit.each(u => {
+            if (!assistingUnits[u.id] && u.team === player.team() && !u.dead && u.canBuild() && u.player == null && !(u.controller() instanceof LogicAI)) {
+                let type = u.type.name;
+                if (assistState.units[type] && counts[type] < assistState.max[type]) {
+                    if (u.dst(pUnit) <= assistState.range) {
+                        counts[type]++;
+                        assistingUnits[u.id] = true;
+                        needsCommandUpdate.add(u.id);
+                    }
+                }
+            }
+        });
+
+        if (needsCommandUpdate.size > 0) {
+            try {
+                Call.setUnitCommand(player, needsCommandUpdate.toArray(), UnitCommand.assistCommand, px, py);
+            } catch(e) {
+                try {
+                    Call.setUnitCommand(player, needsCommandUpdate.toArray(), UnitCommand.assistCommand);
+                } catch(e2) {}
+            }
+        }
+    } else {
+        releaseAssistUnits();
+    }
+}
+
+Events.on(EventType.ClientChatEvent, e => {
+    let args = String(e.message).trim().toLowerCase().split(" ");
+    if (args[0] !== "/assist") return;
+
+    if (args.length === 1) {
+        notify("[lightgrey]/assist toggle\n/assist toggle <unit>\n/assist max <unit> <val>\n/assist range <val>\n/assist status");
+        return;
+    }
+
+    if (args[1] === "toggle") {
+        if (args.length === 2) {
+            assistState.enabled = !assistState.enabled;
+            if (assistState.enabled) {
+                assistTimer = Timer.schedule(() => {
+                    try { 
+                        runAssist(); 
+                    } catch(err) { 
+                        notify("[scarlet]Assist Error: " + err);
+                        if (assistTimer) assistTimer.cancel(); 
+                        assistTimer = null; 
+                    }
+                }, 0, 0.5);
+                notify("[green]Assist ON");
+            } else {
+                if (assistTimer) assistTimer.cancel();
+                assistTimer = null;
+                releaseAssistUnits();
+                notify("[scarlet]Assist OFF");
+            }
+        } else {
+            let type = args[2];
+            if (assistState.units.hasOwnProperty(type)) {
+                assistState.units[type] = !assistState.units[type];
+                notify("[lightgrey]Assist for " + type + " is now " + (assistState.units[type] ? "[green]ON" : "[scarlet]OFF"));
+            } else {
+                notify("[scarlet]Unknown unit type");
+            }
+        }
+        return;
+    }
+
+    if (args[1] === "max") {
+        let type = args[2];
+        let val = parseInt(args[3]);
+        if (assistState.max.hasOwnProperty(type) && !isNaN(val) && val >= 0) {
+            assistState.max[type] = val;
+            notify("[lightgrey]Max " + type + " set to [accent]" + val);
+        } else {
+            notify("[scarlet]Invalid unit type or value\n[lightgrey]/assist max <unit> <val>");
+        }
+        return;
+    }
+
+    if (args[1] === "range") {
+        let val = parseFloat(args[2]);
+        if (!isNaN(val) && val > 0) {
+            assistState.range = val * 8;
+            notify("[lightgrey]Assist range set to [accent]" + val + "[lightgrey] blocks");
+        } else {
+            notify("[scarlet]Invalid range\n[lightgrey]/assist range <val>");
+        }
+        return;
+    }
+
+    if (args[1] === "status") {
+        let uStr = "";
+        for (let k in assistState.units) {
+            uStr += (assistState.units[k] ? "[green]" : "[scarlet]") + k + "[lightgrey](" + assistState.max[k] + ") ";
+        }
+        notify("\n[lightgrey]Assist " + (assistState.enabled ? "[green]ON" : "[scarlet]OFF") +
+               "\n[lightgrey]Range [accent]" + (assistState.range / 8) + " blocks" +
+               "\n[lightgrey]Units " + uStr);
+        return;
+    }
+});

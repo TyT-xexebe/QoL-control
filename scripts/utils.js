@@ -146,7 +146,7 @@ Events.on(ClientChatEvent, e => {
         } else notify("[lightgrey]Ghosts clear");
     }
 
-	if (cmd === "/qol") {
+if (cmd === "/qol") {
 		switch (args[1]) {
 		case "trace":
 		   notify("[lightgrey]Finds a unit [in your team and not controlled by player/processor] and tries to possess it\n\n[accent]/trace\ntoggle[lightgrey] - on/off\n[accent]set <unitType>[lightgrey] - set specific unit type to search and possess\n[accent]find[lightgrey] - possess the highest-priority unit found [preset list in status]\n[accent]status[lightgrey] - show trace status");
@@ -158,6 +158,10 @@ Events.on(ClientChatEvent, e => {
 
 		case "mining":
 		   notify("[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]/mining\n<units/items>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm");
+		   break;
+
+		case "assist":
+		   notify("[lightgrey]Builder mode (units will only build your blueprints)\n\n[accent]/assist\ntoggle[lightgrey] - on/off\n[accent]toggle <unit>[lightgrey] - toggle specific unit\n[accent]max <unit> <val>[lightgrey] - set max units to use\n[accent]range <val>[lightgrey] - set search radius (in blocks)\n[accent]status[lightgrey] - show settings");
 		   break;
 
 		case "here":
@@ -197,11 +201,11 @@ Events.on(ClientChatEvent, e => {
 		   break;
 
 		default:
-		   notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\ngrab[accent] | [lightgrey]ai[accent] | [lightgrey]trace[accent] | [lightgrey]mining[accent] | [lightgrey]hp[accent] | [lightgrey]lookat[accent] | [lightgrey]here[accent] | [lightgrey]cghost[accent] | [lightgrey]trange[accent] | [lightgrey]mlog[accent] | [lightgrey]attem\n\n[accent]features");
+		   notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\ngrab[accent] | [lightgrey]ai[accent] | [lightgrey]trace[accent] | [lightgrey]mining[accent] | [lightgrey]assist[accent] | [lightgrey]hp[accent] | [lightgrey]lookat[accent] | [lightgrey]here[accent] | [lightgrey]cghost[accent] | [lightgrey]trange[accent] | [lightgrey]mlog[accent] | [lightgrey]attem\n\n[accent]features");
 		   break;
 		}
-	}   		
-});
+	}
+	});
 
 Events.run(Trigger.draw, () => {
     if (!Vars.state.isGame()) return;

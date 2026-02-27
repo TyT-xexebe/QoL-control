@@ -7,7 +7,8 @@ const modules = [
     "ai",
     "optimizer",
     "mlog",
-    "attem"
+    "attem",
+    "assist"
 ];
 
 for (let module of modules) {

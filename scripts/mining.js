@@ -30,8 +30,12 @@ function runMining() {
 
     const unitGroups = {};
     Groups.unit.each(u => {
+        let isAssisting = global.qolAssistingUnits && global.qolAssistingUnits[u.id];
+
         if (u.team === player.team() && !u.dead && u.type.mineTier > 0 && 
-            u.player == null && state.units[u.type.name] && !(u.controller() instanceof LogicAI)) {
+            u.player == null && state.units[u.type.name] && !(u.controller() instanceof LogicAI) && 
+            !isAssisting) {
+            
             if (!unitGroups[u.type.name]) unitGroups[u.type.name] = [];
             unitGroups[u.type.name].push(u);
         }
@@ -87,20 +91,20 @@ function runMining() {
 
         assignments.forEach(as => {
             let needed = itemNeeds[as.item.name];
-            let cmd = unitsToCommand[as.item.name];
+            let cmdObj = unitsToCommand[as.item.name];
             for (let i = 0; i < needed; i++) {
                 if (unassignedUnits.length > 0) {
                     let u = unassignedUnits.pop();
-                    cmd.ids.add(u.id);
+                    cmdObj.ids.add(u.id);
                 }
             }
             
-            if (cmd.ids.size > 0) {
-                Call.setUnitCommand(player, cmd.ids.toArray(), UnitCommand.mineCommand);
-                let stance = ItemUnitStance.getByItem(cmd.item);
+            if (cmdObj.ids.size > 0) {
+                Call.setUnitCommand(player, cmdObj.ids.toArray(), UnitCommand.mineCommand);
+                let stance = ItemUnitStance.getByItem(cmdObj.item);
                 if (stance) {
-                    Call.setUnitStance(player, cmd.ids.toArray(), UnitStance.mineAuto, false);
-                    Call.setUnitStance(player, cmd.ids.toArray(), stance, true);
+                    Call.setUnitStance(player, cmdObj.ids.toArray(), UnitStance.mineAuto, false);
+                    Call.setUnitStance(player, cmdObj.ids.toArray(), stance, true);
                 }
             }
         });

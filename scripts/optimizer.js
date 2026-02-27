@@ -10,7 +10,7 @@ Events.on(ClientLoadEvent, cons(e => {
     };
 
     const boolKeys = [
-        "bloom", "shadows", "effects", "weather", "animatedwater",
+        "bloom", "shadows", "weather", "animatedwater",
         "animatedshields", "ambientlight", "lasers"
     ];
     for(let i = 0; i < boolKeys.length; i++){
