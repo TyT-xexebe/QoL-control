@@ -3,11 +3,22 @@ const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 const state = {
     units: { mono: true, poly: true, pulsar: true, mega: true, quasar: true },
     items: { copper: true, lead: true, sand: true, coal: true, titanium: true, beryllium: true, scrap: true },
-    itemTiers: { copper: 1, lead: 1, sand: 1, scrap: 1, beryllium: 1, coal: 2, titanium: 3 },
+    itemTiers: { copper: 1, lead: 1, sand: 1, scrap: 1, coal: 2, titanium: 3, beryllium: 3 },
     interval: 0
 };
 
+const itemColors = {
+    copper: "[#d99d73]", 
+    lead: "[#8c7fa9]", 
+    sand: "[#e8d174]",
+    coal: "[#595959]", 
+    titanium: "[#8da1e3]", 
+    beryllium: "[#54b582]", 
+    scrap: "[#9b9b9b]"
+};
+
 let miningTask = null;
+let lastDistribution = {};
 
 function runMining() {
     const player = Vars.player;
@@ -19,14 +30,23 @@ function runMining() {
     const validItems = [];
     const priorities = new ObjectMap();
     
+    let capacity = core.storageCapacity || 4000;
+    let limit = Math.max(0, capacity - 500);
+    
     Vars.content.items().each(it => {
         if (state.items[it.name] && (Vars.indexer.hasOre(it) || (Vars.indexer.hasWallOre && Vars.indexer.hasWallOre(it)))) {
-            validItems.push(it);
-            priorities.put(it, 1 / Math.max(core.items.get(it), 1));
+            let amount = core.items.get(it);
+            if (amount < limit) {
+                validItems.push(it);
+                priorities.put(it, 1 / Math.max(amount, 1));
+            }
         }
     });
 
-    if (validItems.length === 0) return;
+    if (validItems.length === 0) {
+        lastDistribution = {};
+        return;
+    }
 
     const unitGroups = {};
     Groups.unit.each(u => {
@@ -40,6 +60,8 @@ function runMining() {
             unitGroups[u.type.name].push(u);
         }
     });
+
+    lastDistribution = {};
 
     for (let typeName in unitGroups) {
         let list = unitGroups[typeName];
@@ -62,6 +84,13 @@ function runMining() {
             assignments.sort((a, b) => b.mod - a.mod);
             for (let i = 0; i < (list.length - sumAssigned); i++) assignments[i].count++;
         }
+
+        lastDistribution[typeName] = {};
+        assignments.forEach(as => {
+            if (as.count > 0) {
+                lastDistribution[typeName][as.item.name] = as.count;
+            }
+        });
 
         let itemNeeds = {};
         let unitsToCommand = {};
@@ -111,6 +140,14 @@ function runMining() {
     }
 }
 
+Events.on(EventType.WorldLoadEvent, () => {
+    lastDistribution = {};
+    if (miningTask) {
+        miningTask.cancel();
+        miningTask = null;
+    }
+});
+
 Events.on(EventType.ClientChatEvent, e => {
     let args = String(e.message).trim().toLowerCase().split(" ");
     if (args[0] !== "/mining") return;
@@ -147,9 +184,31 @@ Events.on(EventType.ClientChatEvent, e => {
         for (let k in state.units) uStr += (state.units[k] ? "[green]" : "[scarlet]") + k + " ";
         for (let k in state.items) iStr += (state.items[k] ? "[green]" : "[scarlet]") + k + " ";
         
-        notify("\n[lightgrey]State " + (miningTask ? "[lightgrey]Active ([accent]" + state.interval + "[lightgrey]s)" : "[scarlet]Inactive") +
-               "\n[lightgrey]Units " + uStr +
-               "\n[lightgrey]Items " + iStr);
+        let statsStr = "";
+        for (let uName in state.units) {
+            if (!state.units[uName] || !lastDistribution[uName]) continue;
+            
+            let row = "";
+            let uStats = lastDistribution[uName];
+            
+            for (let iName in itemColors) {
+                if (uStats[iName]) {
+                    row += itemColors[iName] + uStats[iName] + " ";
+                }
+            }
+            
+            if (row !== "") {
+                statsStr += "\n[lightgrey]" + uName + " | " + row;
+            }
+        }
+        
+        let finalMsg = "\n[lightgrey]State " + (miningTask ? "[lightgrey]Active ([accent]" + state.interval + "[lightgrey]s)" : "[scarlet]Inactive") +
+                       "\n[lightgrey]Units " + uStr +
+                       "\n[lightgrey]Items " + iStr;
+                       
+        if (statsStr !== "") finalMsg += "\n\n[lightgrey]Stats:" + statsStr;
+        
+        notify(finalMsg);
         return;
     }
 
