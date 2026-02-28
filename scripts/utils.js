@@ -204,7 +204,7 @@ if (cmd === "/qol") {
 		   break;
 
 		default:
-		   notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\ngrab[accent] | [lightgrey]ai[accent] | [lightgrey]trace[accent] | [lightgrey]mining[accent] | [lightgrey]assist[accent] | [lightgrey]hp[accent] | [lightgrey]lookat[accent] | [lightgrey]here[accent] | [lightgrey]cghost[accent] | [lightgrey]trange[accent] | [lightgrey]mlog[accent] | [lightgrey]attem\n\n[accent]features");
+		   notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\ngrab[accent] | [lightgrey]ai[accent] | [lightgrey]trace[accent] | [lightgrey]mining[accent] | [lightgrey]assist[accent] | [lightgrey]hp[accent] | [lightgrey]lookat[accent] | [lightgrey]here[accent] | [lightgrey]cghost[accent] | [lightgrey]trange[accent] | [lightgrey]mlog[accent] | [lightgrey]detector\n\n[accent]features");
 		   break;
 		}
 	}
