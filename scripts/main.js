@@ -7,7 +7,7 @@ const modules = [
     "ai",
     "optimizer",
     "mlog",
-    "attem",
+    "detector",
     "assist"
 ];
 

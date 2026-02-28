@@ -1,0 +1,14 @@
+{
+  "attem": [
+    {
+      "regex": "op add attem attem 1\\s+jump -?\\d{1,3} greaterThanEq attem 83\\s+jump -?\\d{1,3} notEqual key flag\\s+set attem 0",
+      "input": "print \"dont use ATTEM83 logic, more info at https://mindustry.dev/attem\" "
+    }
+  ],
+  "wpx": [
+    {
+      "regex": "op\\s+mod\\s+n1\\s+@second\\s+15\\s+op\\s+sub\\s+n2\\s+@second\\s+n1\\s+op\\s+add\\s+nextCheck\\s+n2\\s+15\\s+lookup\\s+item\\s+res\\s+resNum",
+      "input": "print \"there was wpx shitass miner\""
+    }
+  ]
+}

@@ -199,8 +199,8 @@ if (cmd === "/qol") {
 		   notify("[lightgrey]Mlog inserter\n\n[accent]/mlog <filename>[lightgrey] - insert /mlog/<filename>.txt into any empty processor\n[accent]/mlog <filename> set[lightgrey] - select processor manually by shooting it\n[accent]/mlog list[lightgrey] - see aviable mlog codes");
 		   break;
 
-		case "attem":
-		   notify("[accent]/attem[lightgrey] - remove all attem-like processors [regex & config: /mlog/attem.json]");
+		case "detector":
+		   notify("[accent]/detector <regexName>[lightgrey] - remove all code-like processors [regexs & config: /mlog/attem.json]\n[accent]/detector log[lightgrey] - shows last coords of all removed codes");
 		   break;
 
 		default:
