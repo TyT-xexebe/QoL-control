@@ -15,15 +15,20 @@ const buildOreTree = () => {
     let start = Time.millis();
     oreData = {};
     if (!Vars.world) return;
+    
+    for (let key in allowedItems) {
+        oreData[key] = [];
+    }
+    
     let w = Vars.world.width(), h = Vars.world.height();
     let count = 0;
+    let tiles = Vars.world.tiles;
+    
     for (let x = 0; x < w; x++) {
         for (let y = 0; y < h; y++) {
-            let tile = Vars.world.tile(x, y);
-            if (!tile) continue;
+            let tile = tiles.getn(x, y);
             let drop = tile.drop();
-            if (drop) {
-                if (!oreData[drop.name]) oreData[drop.name] = [];
+            if (drop && oreData[drop.name] !== undefined) {
                 oreData[drop.name].push(tile);
                 count++;
             }
@@ -37,11 +42,20 @@ const findClosestFreeOre = (u, item) => {
     let tiles = oreData[item.name];
     if (!tiles) return null;
     let closest = null, minDst = Infinity;
+    let utx = u.tileX(), uty = u.tileY();
+    let air = Blocks.air;
+    
     for (let i = 0, len = tiles.length; i < len; i++) {
         let t = tiles[i];
-        if (t.block() === Blocks.air) {
-            let d = u.dst2(t.worldx(), t.worldy());
-            if (d < minDst) { minDst = d; closest = t; }
+        let dx = t.x - utx;
+        let dy = t.y - uty;
+        let d = dx * dx + dy * dy;
+        
+        if (d < minDst) {
+            if (t.block() === air) {
+                minDst = d; 
+                closest = t; 
+            }
         }
     }
     return closest;
