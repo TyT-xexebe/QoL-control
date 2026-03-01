@@ -205,7 +205,7 @@ if (cmd === "/qol") {
 		case "autofill":
 			notify("[accent]/autofill[lightgrey] - autofills turrets");
 			break;
-		case: "render":
+		case "render":
 			notify("[accent]/render <unit|block|bullet>[lightgrey] - off/on some render things")
 			break;
 
