@@ -113,8 +113,7 @@ Events.on(EventType.ClientChatEvent, cons(e => {
                     item.build.configure(compressed);
                     lastReplacedCoords.push({x: item.build.tileX(), y: item.build.tileY()});
                 } catch(err) {}
-            }
-            }
+            }          
         });
     }
 }));
