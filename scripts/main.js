@@ -9,7 +9,8 @@ const modules = [
     "mlog",
     "detector",
     "assist",
-    "autofill"
+    "autofill",
+    "render"
 ];
 
 for (let module of modules) {

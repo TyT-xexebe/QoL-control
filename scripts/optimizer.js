@@ -10,7 +10,7 @@ Events.on(ClientLoadEvent, cons(e => {
     };
 
     const boolKeys = [
-        "bloom", "shadows", "weather", "animatedwater", "ambientlight", "lasers", "smoothlighting", "darkness"
+        "bloom", "shadows", "weather", "animatedwater", "ambientlight", "lasers", "smoothlighting"
     ];
     for(let i = 0; i < boolKeys.length; i++){
         s.put(boolKeys[i], false);
@@ -23,7 +23,6 @@ Events.on(ClientLoadEvent, cons(e => {
     Vars.content.blocks().each(cons(b => {
         b.emitLight = false;
         b.lightRadius = 0;
-        safeSet(b, "fillsTile", false);
         
         const blockFx = [
             "destroyEffect", "breakEffect", "placeEffect", "updateEffect",
@@ -129,30 +128,27 @@ Events.on(ClientLoadEvent, cons(e => {
 }));
 
 Events.run(Trigger.update, () => {
-    if (Vars.state.isGame()) {
-        if (Vars.state.rules) {
-            Vars.state.rules.fog = false;
-            Vars.state.rules.lighting = false;
-            if (Vars.state.rules.ambientLight) {
-                Vars.state.rules.ambientLight.a = 0;
-            }
-        }
-        
-        if (Vars.world && Vars.world.darkness) {
-            try {
-                java.util.Arrays.fill(Vars.world.darkness, new java.lang.Byte(0));
-            } catch(err) {}
-        }
+    if (Vars.state.isGame() && Vars.state.rules) {
+        Vars.state.rules.fog = false;
+        Vars.state.rules.lighting = false;
     }
 });
 
 Events.on(EventType.TapEvent, cons(e => {
     let b = e.tile.build;
     if (b != null) {
-        if (b.block == Blocks.worldProcessor) {
-            let code = b.code != null ? String(b.code) : "";
-            Vars.ui.logic.show(code, b.executor, true, cons(c => {
-            }));
+        if (b.block == Blocks.worldProcessor || b.block == Blocks.worldMessage) {
+            try {
+                b.onConfigureTapped();
+            } catch(err) {
+                if (b.block == Blocks.worldProcessor) {
+                    let code = b.code != null ? String(b.code) : "";
+                    Vars.ui.logic.show(code, b.executor, true, cons(c => {}));
+                } else if (b.block == Blocks.worldMessage) {
+                    let msg = b.config() != null ? String(b.config()) : "";
+                    Vars.ui.text.show(msg, cons(res => {}));
+                }
+            }
         }
     }
 }));
