@@ -10,7 +10,7 @@ Events.on(ClientLoadEvent, cons(e => {
     };
 
     const boolKeys = [
-        "bloom", "shadows", "weather", "animatedwater", "ambientlight", "lasers"
+        "bloom", "shadows", "weather", "animatedwater", "ambientlight", "lasers", "smoothlighting", "darkness"
     ];
     for(let i = 0; i < boolKeys.length; i++){
         s.put(boolKeys[i], false);
@@ -21,55 +21,59 @@ Events.on(ClientLoadEvent, cons(e => {
     s.put("corpses", zeroInt); 
     
     Vars.content.blocks().each(cons(b => {
-            b.hasShadow = false;
-            b.emitLight = false;
-            b.lightRadius = 0;
-            
-            const blockFx = [
-                "destroyEffect", "breakEffect", "placeEffect", "updateEffect",
-                "craftEffect", "consumeEffect", "smokeEffect", "shootEffect",
-                "ammoUseEffect", "chargeEffect", "drillEffect", "generateEffect"
-            ];
-            for(let i = 0; i < blockFx.length; i++){
-                safeSet(b, blockFx[i], none);
-            }
-    
-            let isVeg = false;
-            try {
-                if (
-                    b instanceof Packages.mindustry.world.blocks.environment.TallBlock ||
-                    /*b instanceof Packages.mindustry.world.blocks.environment.Prop ||*/
-                    b instanceof Packages.mindustry.world.blocks.environment.TreeBlock ||
-                    b instanceof Packages.mindustry.world.blocks.environment.Seaweed
-                ) {
+        b.emitLight = false;
+        b.lightRadius = 0;
+        safeSet(b, "fillsTile", false);
+        
+        const blockFx = [
+            "destroyEffect", "breakEffect", "placeEffect", "updateEffect",
+            "craftEffect", "consumeEffect", "smokeEffect", "shootEffect",
+            "ammoUseEffect", "chargeEffect", "drillEffect", "generateEffect"
+        ];
+        for(let i = 0; i < blockFx.length; i++){
+            safeSet(b, blockFx[i], none);
+        }
+
+        let isVeg = false;
+        try {
+            if (
+                b instanceof Packages.mindustry.world.blocks.environment.TallBlock ||
+                b instanceof Packages.mindustry.world.blocks.environment.TreeBlock ||
+                b instanceof Packages.mindustry.world.blocks.environment.Seaweed
+            ) {
+                isVeg = true;
+            } else {
+                let cName = b.getClass().getSimpleName();
+                if (cName == "TreeBlock" || cName == "Seaweed" || cName == "Bush" || cName == "TallBlock") {
                     isVeg = true;
-                } else {
-                    let cName = b.getClass().getSimpleName();
-                    if (cName == "TreeBlock" || cName == "Seaweed" || cName == "Bush"/* || cName == "Prop" */|| cName == "TallBlock") {
-                        isVeg = true;
+                }
+            }
+        } catch(err) {}
+
+        if (isVeg) {
+            b.region = clearReg;  
+            try {
+                if (b.variantRegions != null) {
+                    for (let j = 0; j < b.variantRegions.length; j++) {
+                        b.variantRegions[j] = clearReg;
                     }
                 }
             } catch(err) {}
-    
-            if (isVeg) {
-                b.region = clearReg;  
-                try {
-                    if (b.variantRegions != null) {
-                        for (let j = 0; j < b.variantRegions.length; j++) {
-                            b.variantRegions[j] = clearReg;
-                        }
+            
+            try {
+                if (b.regions != null) {
+                    for (let j = 0; j < b.regions.length; j++) {
+                        b.regions[j] = clearReg;
                     }
-                } catch(err) {}
-                
-                try {
-                    if (b.regions != null) {
-                        for (let j = 0; j < b.regions.length; j++) {
-                            b.regions[j] = clearReg;
-                        }
-                    }
-                } catch(err) {}
-            }
-        }));
+                }
+            } catch(err) {}
+        } else {
+            b.hasShadow = false;
+            safeSet(b, "shadowAlpha", 0);
+            safeSet(b, "shadowOffset", 0);
+            safeSet(b, "customShadowRegion", clearReg);
+        }
+    }));
         
     Vars.content.bullets().each(cons(b => {
         b.lightRadius = 0;
@@ -122,4 +126,33 @@ Events.on(ClientLoadEvent, cons(e => {
             }
         }
     } catch(err) {}
+}));
+
+Events.run(Trigger.update, () => {
+    if (Vars.state.isGame()) {
+        if (Vars.state.rules) {
+            Vars.state.rules.fog = false;
+            Vars.state.rules.lighting = false;
+            if (Vars.state.rules.ambientLight) {
+                Vars.state.rules.ambientLight.a = 0;
+            }
+        }
+        
+        if (Vars.world && Vars.world.darkness) {
+            try {
+                java.util.Arrays.fill(Vars.world.darkness, new java.lang.Byte(0));
+            } catch(err) {}
+        }
+    }
+});
+
+Events.on(EventType.TapEvent, cons(e => {
+    let b = e.tile.build;
+    if (b != null) {
+        if (b.block == Blocks.worldProcessor) {
+            let code = b.code != null ? String(b.code) : "";
+            Vars.ui.logic.show(code, b.executor, true, cons(c => {
+            }));
+        }
+    }
 }));

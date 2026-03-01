@@ -8,7 +8,8 @@ const modules = [
     "optimizer",
     "mlog",
     "detector",
-    "assist"
+    "assist",
+    "autofill"
 ];
 
 for (let module of modules) {
