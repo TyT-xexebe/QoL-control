@@ -10,7 +10,8 @@ const modules = [
     "detector",
     "assist",
     "autofill",
-    "render"
+    "render",
+    "table"
 ];
 
 for (let module of modules) {

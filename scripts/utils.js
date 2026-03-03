@@ -160,7 +160,7 @@ if (cmd === "/qol") {
 		   break;
 
 		case "mining":
-		   notify("[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]/mining\n<units/items>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm");
+		   notify("[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]/mining\n<units/items>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm\n[accent]save[lightgrey] - saves current settings as default");
 		   break;
 
 		case "assist":
@@ -206,11 +206,14 @@ if (cmd === "/qol") {
 			notify("[accent]/autofill[lightgrey] - autofills turrets");
 			break;
 		case "render":
-			notify("[accent]/render <unit|block|bullet>[lightgrey] - off/on some render things")
+			notify("[accent]/render <unit|block|bullet>[lightgrey] - off/on some render things");
+			break;
+		case "table":
+			notify("[lightgrey]Schematic table\n\n[accent]/table\ntoggle[lightgrey] - on/off\n[accent]<rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]size <val>[lightgrey] - sets table buttoms size\n[accent]reset[lightgrey] - resets table to default");
 			break;
 
 		default:
-		   notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\ngrab[accent] | [lightgrey]ai[accent] | [lightgrey]trace[accent] | [lightgrey]mining[accent] | [lightgrey]assist[accent] | [lightgrey]hp[accent] | [lightgrey]lookat[accent] | [lightgrey]here[accent] | [lightgrey]cghost[accent] | [lightgrey]trange[accent] | [lightgrey]mlog[accent] | [lightgrey]detector[accent] | [lightgrey]autofill[accent] | [lightgrey]render\n\n[accent]features");
+		   notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\ngrab[accent] | [lightgrey]ai[accent] | [lightgrey]trace[accent] | [lightgrey]mining[accent] | [lightgrey]assist[accent] | [lightgrey]hp[accent] | [lightgrey]lookat[accent] | [lightgrey]here[accent] | [lightgrey]cghost[accent] | [lightgrey]trange[accent] | [lightgrey]mlog[accent] | [lightgrey]detector[accent] | [lightgrey]autofill[accent] | [lightgrey]render[accent] | [lightgrey]table\n\n[accent]features");
 		   break;
 		}
 	}

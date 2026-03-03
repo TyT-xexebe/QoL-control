@@ -7,6 +7,13 @@ const state = {
     interval: 0
 };
 
+try {
+    let u = Core.settings.getString("qol-mining-units", "");
+    if(u) Object.assign(state.units, JSON.parse(u));
+    let i = Core.settings.getString("qol-mining-items", "");
+    if(i) Object.assign(state.items, JSON.parse(i));
+} catch(e) {}
+
 const itemColors = {
     copper: "[#d99d73]", 
     lead: "[#8c7fa9]", 
@@ -161,6 +168,13 @@ Events.on(EventType.ClientChatEvent, e => {
         return;
     }
 
+    if (args[1] === "save") {
+        Core.settings.put("qol-mining-units", JSON.stringify(state.units));
+        Core.settings.put("qol-mining-items", JSON.stringify(state.items));
+        notify("[green]Mining settings saved");
+        return;
+    }
+
     if (args[1] === "set") {
         let time = parseFloat(args[2]);
         if (isNaN(time) || time < 0) return notify("[lightgrey]/mining set <sec>");
@@ -227,5 +241,5 @@ Events.on(EventType.ClientChatEvent, e => {
         if (changed.length > 0) return notify("[lightgrey]Toggle " + changed.join(" "));
     }
 
-    notify("[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop");
+    notify("[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop\n/mining save");
 });
