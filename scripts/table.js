@@ -177,8 +177,8 @@ Events.on(EventType.ClientLoadEvent, e => {
         }
     });
 
-    rebuildGrid();
     uiTable.add(gridTable).pad(4);
+    rebuildGrid();
     
     Events.run(Trigger.update, () => {
         uiTable.visible = cfg.enabled && Vars.state.isGame() && Vars.ui.hudfrag.shown;
