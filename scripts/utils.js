@@ -164,7 +164,7 @@ if (cmd === "/qol") {
 		   break;
 
 		case "assist":
-		   notify("[lightgrey]Builder mode (units will only build your blueprints)\n\n[accent]/assist\ntoggle[lightgrey] - on/off\n[accent]toggle <unit>[lightgrey] - toggle specific unit\n[accent]max <unit> <val>[lightgrey] - set max units to use\n[accent]range <val>[lightgrey] - set search radius (in blocks)\n[accent]status[lightgrey] - show settings");
+		   notify("[lightgrey]Builder mode (units will only build your blueprints)\n\n[accent]/assist\ntoggle[lightgrey] - on/off\n[accent]toggle <unit>[lightgrey] - toggle specific unit\n[accent]max <unit> <val>[lightgrey] - set max units to use\n[accent]range <val>[lightgrey] - set search radius (in blocks)\n[accent]status[lightgrey] - show settings\n[accent]save[lightgrey] - saves current settings as default");
 		   break;
 
 		case "here":

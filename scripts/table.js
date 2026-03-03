@@ -51,7 +51,7 @@ Events.on(EventType.ClientLoadEvent, e => {
     uiTable.addListener(extend(InputListener, {
         touchDown(e, x, y, p, b) { isDragging = false; startX = x; startY = y; return true; },
         touchDragged(e, x, y, p) {
-            if(!isDragging && (Math.abs(x - startX) > 5 || Math.abs(y - startY) > 5)) isDragging = true;
+            if(!isDragging && (Math.abs(x - startX) > 15 || Math.abs(y - startY) > 15)) isDragging = true;
             if(isDragging){
                 tableX = Mathf.clamp(e.stageX - startX, 0, Core.graphics.getWidth() - uiTable.getWidth());
                 tableY = Mathf.clamp(e.stageY - startY, 0, Core.graphics.getHeight() - uiTable.getHeight());
@@ -181,7 +181,7 @@ Events.on(EventType.ClientLoadEvent, e => {
     rebuildGrid();
     
     Events.run(Trigger.update, () => {
-        uiTable.visible = cfg.enabled && Vars.state.isGame() && Vars.ui.hudfrag.shown;
+        uiTable.visible = cfg.enabled && Vars.state.isGame() && Vars.ui.hudfrag.shown
         if(!uiTable.visible) return;
         tableX = Mathf.clamp(tableX, 0, Core.graphics.getWidth() - uiTable.getWidth());
         tableY = Mathf.clamp(tableY, 0, Core.graphics.getHeight() - uiTable.getHeight());

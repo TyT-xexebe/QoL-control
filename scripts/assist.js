@@ -3,9 +3,18 @@ const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 const assistState = {
     enabled: false,
     range: 400,
-    units: { poly: true, mega: true, pulsar: true, quasar: true },
-    max: { poly: 10, mega: 10, pulsar: 10, quasar: 10 }
+    units: { poly: true, mega: true, pulsar: true, quasar: false },
+    max: { poly: 3, mega: 10, pulsar: 5, quasar: 0 }
 };
+
+try {
+    let u = Core.settings.getString("qol-assist-units", "");
+    if(u) Object.assign(assistState.units, JSON.parse(u));
+    let m = Core.settings.getString("qol-assist-max", "");
+    if(m) Object.assign(assistState.max, JSON.parse(m));
+    let r = Core.settings.getFloat("qol-assist-range", -1);
+    if(r > 0) assistState.range = r;
+} catch(e) {}
 
 let assistTimer = null;
 global.qolAssistingUnits = {};
@@ -52,63 +61,61 @@ function runAssist() {
         }
     }
 
-    if (isBuildingNear) {
-        let counts = { poly: 0, mega: 0, pulsar: 0, quasar: 0 };
-        let needsCommandUpdate = new IntSeq();
-        
-        let px = new java.lang.Float(pUnit.x);
-        let py = new java.lang.Float(pUnit.y);
+    let counts = { poly: 0, mega: 0, pulsar: 0, quasar: 0 };
+    let needsCommandUpdate = new IntSeq();
+    let px = new java.lang.Float(pUnit.x);
+    let py = new java.lang.Float(pUnit.y);
 
-        Groups.unit.each(u => {
-            if (assistingUnits[u.id]) {
-                let stolen = (u.player != null) || (u.controller() instanceof LogicAI);
-                
-                if (u.team === player.team() && !u.dead && !stolen) {
-                    let type = u.type.name;
-                    if (assistState.units[type]) {
-                        counts[type]++;
-                        
-                        let cmd = null;
-                        try { cmd = u.command(); } catch(e) {}
-                        
-                        if (cmd !== UnitCommand.assistCommand) {
-                            needsCommandUpdate.add(u.id);
-                        }
-                    } else {
-                        delete assistingUnits[u.id];
-                        releaseSingleUnit(u);
-                    }
+    Groups.unit.each(u => {
+        if (assistingUnits[u.id]) {
+            let stolen = (u.player != null) || (u.controller() instanceof LogicAI);
+            let type = u.type.name;
+            
+            if (u.team === player.team() && !u.dead && !stolen) {
+                if (type === "nova") {
+                    let cmd = null;
+                    try { cmd = u.command(); } catch(e) {}
+                    if (cmd !== UnitCommand.assistCommand) needsCommandUpdate.add(u.id);
+                } else if (isBuildingNear && assistState.units[type]) {
+                    counts[type]++;
+                    let cmd = null;
+                    try { cmd = u.command(); } catch(e) {}
+                    if (cmd !== UnitCommand.assistCommand) needsCommandUpdate.add(u.id);
                 } else {
                     delete assistingUnits[u.id];
                     releaseSingleUnit(u);
                 }
-            }
-        });
-
-        Groups.unit.each(u => {
-            if (!assistingUnits[u.id] && u.team === player.team() && !u.dead && u.canBuild() && u.player == null && !(u.controller() instanceof LogicAI)) {
-                let type = u.type.name;
-                if (assistState.units[type] && counts[type] < assistState.max[type]) {
-                    if (u.dst(pUnit) <= assistState.range) {
-                        counts[type]++;
-                        assistingUnits[u.id] = true;
-                        needsCommandUpdate.add(u.id);
-                    }
-                }
-            }
-        });
-
-        if (needsCommandUpdate.size > 0) {
-            try {
-                Call.setUnitCommand(player, needsCommandUpdate.toArray(), UnitCommand.assistCommand, px, py);
-            } catch(e) {
-                try {
-                    Call.setUnitCommand(player, needsCommandUpdate.toArray(), UnitCommand.assistCommand);
-                } catch(e2) {}
+            } else {
+                delete assistingUnits[u.id];
+                releaseSingleUnit(u);
             }
         }
-    } else {
-        releaseAssistUnits();
+    });
+
+    Groups.unit.each(u => {
+        if (!assistingUnits[u.id] && u.team === player.team() && !u.dead && u.player == null && !(u.controller() instanceof LogicAI)) {
+            let type = u.type.name;
+            if (type === "nova") {
+                assistingUnits[u.id] = true;
+                needsCommandUpdate.add(u.id);
+            } else if (isBuildingNear && u.canBuild() && assistState.units[type] && counts[type] < assistState.max[type]) {
+                if (u.dst(pUnit) <= assistState.range) {
+                    counts[type]++;
+                    assistingUnits[u.id] = true;
+                    needsCommandUpdate.add(u.id);
+                }
+            }
+        }
+    });
+
+    if (needsCommandUpdate.size > 0) {
+        try {
+            Call.setUnitCommand(player, needsCommandUpdate.toArray(), UnitCommand.assistCommand, px, py);
+        } catch(e) {
+            try {
+                Call.setUnitCommand(player, needsCommandUpdate.toArray(), UnitCommand.assistCommand);
+            } catch(e2) {}
+        }
     }
 }
 
@@ -117,7 +124,15 @@ Events.on(EventType.ClientChatEvent, e => {
     if (args[0] !== "/assist") return;
 
     if (args.length === 1) {
-        notify("[lightgrey]/assist toggle\n/assist toggle <unit>\n/assist max <unit> <val>\n/assist range <val>\n/assist status");
+        notify("[lightgrey]/assist toggle\n/assist toggle <unit>\n/assist max <unit> <val>\n/assist range <val>\n/assist status\n/assist save");
+        return;
+    }
+
+    if (args[1] === "save") {
+        Core.settings.put("qol-assist-units", JSON.stringify(assistState.units));
+        Core.settings.put("qol-assist-max", JSON.stringify(assistState.max));
+        Core.settings.put("qol-assist-range", new java.lang.Float(assistState.range));
+        notify("[green]Assist settings saved");
         return;
     }
 

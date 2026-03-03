@@ -1,8 +1,8 @@
 const notify = (text) => Vars.ui.chatfrag.addMessage(text);
 
 const state = {
-    units: { mono: true, poly: true, pulsar: true, mega: true, quasar: true },
-    items: { copper: true, lead: true, sand: true, coal: true, titanium: true, beryllium: true, scrap: true },
+    units: { mono: true, poly: false, pulsar: true, mega: true, quasar: true },
+    items: { copper: true, lead: true, sand: true, coal: true, titanium: true, beryllium: true, scrap: false },
     itemTiers: { copper: 1, lead: 1, sand: 1, scrap: 1, coal: 2, titanium: 3, beryllium: 3 },
     interval: 0
 };
