@@ -1,4 +1,4 @@
-const notify = (msg) => Vars.ui.chatfrag.addMessage(msg);
+const notify = require("qol-control/core/logger").notify;
 
 let renderBullets = true;
 let renderUnits = true;

@@ -1,4 +1,4 @@
-const notify = (text) => Vars.ui.chatfrag.addMessage(text);
+const notify = require("qol-control/core/logger").notify;
 
 const state = {
     units: { mono: true, poly: false, pulsar: true, mega: true, quasar: true },

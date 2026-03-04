@@ -9,7 +9,7 @@ const allowedItems = {
     "coal": true, "titanium": true, "beryllium": true, "graphite": true
 };
 
-const notify = (msg) => Vars.ui.chatfrag.addMessage(msg);
+const notify = require("qol-control/core/logger").notify;
 
 const buildOreTree = () => {
     let start = Time.millis();

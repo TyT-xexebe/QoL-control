@@ -1,24 +1,37 @@
-const modules = [
-    "utils",
-    "trace",
-    "mining",
-    "autograb",
-    "camera",
-    "ai",
-    "optimizer",
-    "mlog",
-    "detector",
-    "assist",
-    "autofill",
-    "render",
-    "table"
-];
+const logger = require("qol-control/core/logger");
 
-for (let module of modules) {
+let settings = {};
+try {
+    let mod = Vars.mods.getMod("qol-control");
+    if (mod) {
+        let file = mod.root.child("scripts").child("settings.json");
+        if (file.exists()) {
+            settings = JSON.parse(file.readString());
+        } else {
+            logger.err("settings.json not found!");
+        }
+    }
+} catch(e) {
+    logger.err("Failed to read settings.json: " + e);
+}
+
+const activeModules = [];
+for (let mod in settings) {
+    if (settings[mod]) {
+        activeModules.push(mod);
+    }
+}
+
+global.qolActiveModules = activeModules;
+
+require("qol-control/core/help");
+
+for (let module of activeModules) {
     try {
         require("qol-control/" + module);
+        logger.info("Loaded qol-control/" + module);
     } catch (e) {
-        Log.err("QOL-Control: failed to load " + module);
-        Log.err(e);
+        logger.err("Failed to load " + module);
+        logger.err(e);
     }
 }

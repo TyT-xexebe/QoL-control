@@ -1,0 +1,20 @@
+{
+  "core/optimizer": true,
+  "core/unlocker": true,
+  "features/hp": true,
+  "features/trange": true,
+  "features/lookat": true,
+  "features/cghost": true,
+  "features/fish_leave": true,
+  "features/trace": true,
+  "features/mining": true,
+  "features/autograb": true,
+  "features/camera": true,
+  "features/ai": true,
+  "features/mlog": true,
+  "features/detector": true,
+  "features/assist": true,
+  "features/autofill": true,
+  "ui/render": true,
+  "ui/table": true
+}

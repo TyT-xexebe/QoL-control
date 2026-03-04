@@ -1,0 +1,60 @@
+const notify = require("qol-control/core/logger").notify;
+
+const helpData = {
+    "features/trace": { cmd: "trace", desc: "[lightgrey]Finds a unit [in your team and not controlled by player/processor] and tries to possess it\n\n[accent]/trace\ntoggle[lightgrey] - on/off\n[accent]set <unitType>[lightgrey] - set specific unit type to search and possess\n[accent]find[lightgrey] - possess the highest-priority unit found [preset list in status]\n[accent]status[lightgrey] - show trace status" },
+    "features/ai": { cmd: "ai", desc: "[lightgrey]AI control for your unit\n\n[accent]/ai\nmining <items?>[lightgrey] - mine lowest core resources available on map [vanilla mineable only]\nwrite items separated by space to toggle them [status shows: green[ON] red[OFF] grey[NOT FOUND]]\n[accent]build <name?>[lightgrey] - assist building/deconstructing; write part of nickname to help specific player [-1 to reset]\n[accent]lock[lightgrey] - lock position and mining target\n[accent]status[lightgrey] - show AI status" },
+    "features/mining": { cmd: "mining", desc: "[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]/mining\n<units/items>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm\n[accent]save[lightgrey] - saves current settings as default" },
+    "features/assist": { cmd: "assist", desc: "[lightgrey]Builder mode (units will only build your blueprints)\n\n[accent]/assist\ntoggle[lightgrey] - on/off\n[accent]toggle <unit>[lightgrey] - toggle specific unit\n[accent]max <unit> <val>[lightgrey] - set max units to use\n[accent]range <val>[lightgrey] - set search radius (in blocks)\n[accent]status[lightgrey] - show settings\n[accent]save[lightgrey] - saves current settings as default" },
+    "features/lookat": { cmd: "lookat", desc: "[accent]/lookat <x> <y>[lightgrey] - move camera to coordinates\n[accent]/lookat last <n?>[lightgrey] - use one of last 9 found coordinates from chat history" },
+    "features/cghost": { cmd: "cghost", desc: "[accent]/cghost[lightgrey] - clear ghost blocks in enemy turret range" },
+    "features/hp": { cmd: "hp", desc: "[accent]/hp <name?>[lightgrey] - toggle HP/shield/DPS display of last shot unit; nickname sets priority target" },
+    "features/autograb": { cmd: "grab", desc: "[lightgrey]Auto-grab <item> from blocks in unit range\n\n[accent]/grab\ntoggle[lightgrey] - on/off\n[accent]<item>[lightgrey] - set item to grab [auto-enables]\n[accent]min <val>[lightgrey] - minimum amount to grab\n[accent]status[lightgrey] - grab status" },
+    "features/trange": { cmd: "trange", desc: "[accent]/trange[lightgrey] - toggle nearby enemy turret range display blue[AIR] brown[GROUND] purple[BOTH] (uses FPS)" },
+    "features/mlog": { cmd: "mlog", desc: "[lightgrey]Mlog inserter\n\n[accent]/mlog <filename>[lightgrey] - insert /mlog/<filename>.txt into any empty processor\n[accent]/mlog <filename> set[lightgrey] - select processor manually by shooting it\n[accent]/mlog list[lightgrey] - see aviable mlog codes" },
+    "features/detector": { cmd: "detector", desc: "[accent]/detector <regexName>[lightgrey] - remove all code-like processors [regexs & config: /mlog/attem.json]\n[accent]/detector log[lightgrey] - shows last coords of all removed codes" },
+    "features/autofill": { cmd: "autofill", desc: "[accent]/autofill[lightgrey] - autofills turrets" },
+    "ui/render": { cmd: "render", desc: "[accent]/render <unit|block|bullet>[lightgrey] - off/on some render things" },
+    "ui/table": { cmd: "table", desc: "[lightgrey]Schematic table\n\n[accent]/table\ntoggle[lightgrey] - on/off\n[accent]<rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]size <val>[lightgrey] - sets table buttoms size\n[accent]reset[lightgrey] - resets table to default" }
+};
+
+Events.on(ClientChatEvent, e => {
+    let msg = String(e.message);
+    let args = msg.trim().toLowerCase().split(" ");
+    let cmd = args[0];
+
+    if (cmd === "/qol") {
+        let activeModules = global.qolActiveModules || [];
+        let subcmd = args[1];
+        
+        if (subcmd === "here" && activeModules.includes("features/lookat")) {
+            notify("[accent]/here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)");
+            return;
+        }
+        if (subcmd === "features") {
+            notify("[lightgrey]Fast rotation & omni-movement for all units\nCamera lock button\nHeavy optimisation\nAuto-leaves onho's units [FISH Servers]");
+            return;
+        }
+
+        let found = false;
+        for (let mod of activeModules) {
+            if (helpData[mod] && helpData[mod].cmd === subcmd) {
+                notify(helpData[mod].desc);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            let availableCmds = [];
+            for (let mod of activeModules) {
+                if (helpData[mod]) {
+                    availableCmds.push("[lightgrey]" + helpData[mod].cmd);
+                }
+            }
+            if (activeModules.includes("features/lookat")) availableCmds.push("[lightgrey]here");
+            
+            let cmdsStr = availableCmds.join("[accent] | ");
+            notify("[accent]/qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\n" + cmdsStr + "\n\n[accent]features");
+        }
+    }
+});
