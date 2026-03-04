@@ -54,32 +54,32 @@ Events.on(UnitCreateEvent, e => {
     else if (trace.mode === "find" && !Vars.player.unit() && trace.priority.includes(e.unit.type.name)) possess(e.unit);
 });
 
-Events.on(EventType.WorldLoadEvent, () => { trace.enabled = false; });
+Events.on(WorldLoadEvent, () => { trace.enabled = false; });
 
-Events.on(EventType.ClientChatEvent, e => {
+Events.on(ClientChatEvent, e => {
     let args = String(e.message).trim().split(" ");
-    if (args[0] !== "/trace") return;
+    if (args[0] !== "/trace" && args[0] !== "/tr") return;
 
     let sub = args[1] ? args[1].toLowerCase() : "";
-    if (sub === "toggle") {
+    if (sub === "toggle" || sub === "t") {
         trace.enabled = !trace.enabled;
         notify("[lightgrey]Trace " + (trace.enabled ? "[green]ON" : "[scarlet]OFF"));
-    } else if (sub === "set" && args[2]) {
+    } else if ((sub === "set" && args[2]) || (sub === "s" && args[2])) {
         let found = Vars.content.getByName(ContentType.unit, args[2]);
         if (found) {
             trace.mode = "set";
             trace.target = args[2].toLowerCase();
             notify("[lightgrey]Mode [green]SET [lightgrey]([accent]" + trace.target + "[lightgrey])");
         } else notify("[scarlet]Unit " + args[2] + " [scarlet]not found");
-    } else if (sub === "find") {
+    } else if (sub === "find" || sub === "f") {
         trace.mode = "find";
         notify("[lightgrey]Mode [green]FIND");
-    } else if (sub === "status") {
+    } else if (sub === "status" || sub === "st") {
         notify("\n[lightgrey]State " + (trace.enabled ? "[green]ON" : "[scarlet]OFF") +
                "\n[lightgrey]Mode [accent]" + (trace.mode || "none") +
                "\n[lightgrey]Target [accent]" + (trace.target || "none") +
                "\n[lightgrey]Priority [accent]" + trace.priority.join("[lightgrey] > [accent]"));
     } else {
-        notify("[lightgray]/trace toggle\n/trace set <unit>\n/trace find\n/trace status");
+        notify("[lightgray]/trace toggle\n/trace set <unit>\n/trace find\n/trace status\n\n/tr t\n/tr s <unit>\n/tr f\n/tr st");
     }
 });

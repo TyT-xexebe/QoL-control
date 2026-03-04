@@ -30,8 +30,8 @@ Events.on(ClientChatEvent, e => {
     let args = msg.trim().toLowerCase().split(" ");
     let cmd = args[0];
 
-    if (cmd === "/lookat") {
-        if (args[1] === "last") {
+    if (cmd === "/lookat" || cmd === "/la") {
+        if (args[1] === "last" || args[1] === "l") {
             if (args[2]) {
                 let idx = parseInt(args[2]) - 1;
                 if (coordHistory[idx]) {
@@ -56,7 +56,7 @@ Events.on(ClientChatEvent, e => {
             if (!isNaN(x) && !isNaN(y)) {
                 Core.camera.position.set(x * 8, y * 8);
                 notify("[lightgrey]Jump [accent]" + x + ", " + y);
-            } else notify("[lightgray]/lookat <x> <y>\n/lookat last <n?>");
+            } else notify("[lightgray]/lookat <x> <y>\n/lookat last <n?>\n\n/la <x> <y>\n/la l <n?>");
         }
     }
 

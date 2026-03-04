@@ -3,16 +3,16 @@ const notify = require("qol-control/core/logger").notify;
 let lastReplacedCoords = [];
 const DELAY_FRAMES = 3; 
 
-Events.on(EventType.WorldLoadEvent, cons(e => {
+Events.on(WorldLoadEvent, cons(e => {
     lastReplacedCoords = [];
 }));
 
-Events.on(EventType.ClientChatEvent, cons(e => {
+Events.on(ClientChatEvent, cons(e => {
     let args = String(e.message).trim().split(" ");
-    if (args[0] !== "/detector") return;
+    if (args[0] !== "/detector" && args[0] !== "/dt") return;
 
     if (args.length < 2) {
-        notify("[lightgray]/detector <name>\n/detector log");
+        notify("[lightgray]/detector <name>\n/detector log\n\n/dt <name>\n/dt log");
         return;
     }
 

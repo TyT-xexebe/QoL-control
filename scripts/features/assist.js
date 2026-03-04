@@ -119,12 +119,12 @@ function runAssist() {
     }
 }
 
-Events.on(EventType.ClientChatEvent, e => {
+Events.on(ClientChatEvent, e => {
     let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/assist") return;
+    if (args[0] !== "/assist" && args[0] !== "/as") return;
 
     if (args.length === 1) {
-        notify("[lightgrey]/assist toggle\n/assist toggle <unit>\n/assist max <unit> <val>\n/assist range <val>\n/assist status\n/assist save");
+        notify("[lightgrey]/assist toggle\n/assist toggle <unit>\n/assist max <unit> <val>\n/assist range <val>\n/assist status\n/assist save\n\n/as t\n/as t <unit>\n/as m <unit> <val>\n/as r <val>\n/as s\n/as save");
         return;
     }
 
@@ -136,7 +136,7 @@ Events.on(EventType.ClientChatEvent, e => {
         return;
     }
 
-    if (args[1] === "toggle") {
+    if (args[1] === "toggle" || args[1] === "t") {
         if (args.length === 2) {
             assistState.enabled = !assistState.enabled;
             if (assistState.enabled) {
@@ -168,7 +168,7 @@ Events.on(EventType.ClientChatEvent, e => {
         return;
     }
 
-    if (args[1] === "max") {
+    if (args[1] === "max" || args[1] === "m") {
         let type = args[2];
         let val = parseInt(args[3]);
         if (assistState.max.hasOwnProperty(type) && !isNaN(val) && val >= 0) {
@@ -180,7 +180,7 @@ Events.on(EventType.ClientChatEvent, e => {
         return;
     }
 
-    if (args[1] === "range") {
+    if (args[1] === "range" || args[1] === "r") {
         let val = parseFloat(args[2]);
         if (!isNaN(val) && val > 0) {
             assistState.range = val * 8;
@@ -191,7 +191,7 @@ Events.on(EventType.ClientChatEvent, e => {
         return;
     }
 
-    if (args[1] === "status") {
+    if (args[1] === "status" || args[1] === "s") {
         let uStr = "";
         for (let k in assistState.units) {
             uStr += (assistState.units[k] ? "[green]" : "[scarlet]") + k + "[lightgrey](" + assistState.max[k] + ") ";

@@ -147,7 +147,7 @@ function runMining() {
     }
 }
 
-Events.on(EventType.WorldLoadEvent, () => {
+Events.on(WorldLoadEvent, () => {
     lastDistribution = {};
     if (miningTask) {
         miningTask.cancel();
@@ -155,9 +155,9 @@ Events.on(EventType.WorldLoadEvent, () => {
     }
 });
 
-Events.on(EventType.ClientChatEvent, e => {
+Events.on(ClientChatEvent, e => {
     let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/mining") return;
+    if (args[0] !== "/mining" && args[0] !== "/m") return;
 
     if (args[1] === "stop") {
         if (miningTask) {
@@ -175,7 +175,7 @@ Events.on(EventType.ClientChatEvent, e => {
         return;
     }
 
-    if (args[1] === "set") {
+    if (args[1] === "set" || args[1] === "s") {
         let time = parseFloat(args[2]);
         if (isNaN(time) || time < 0) return notify("[lightgrey]/mining set <sec>");
         
@@ -193,7 +193,7 @@ Events.on(EventType.ClientChatEvent, e => {
         return;
     }
 
-    if (args[1] === "status") {
+    if (args[1] === "status" || args[1] === "s") {
         let uStr = "", iStr = "";
         for (let k in state.units) uStr += (state.units[k] ? "[green]" : "[scarlet]") + k + " ";
         for (let k in state.items) iStr += (state.items[k] ? "[green]" : "[scarlet]") + k + " ";
@@ -241,5 +241,5 @@ Events.on(EventType.ClientChatEvent, e => {
         if (changed.length > 0) return notify("[lightgrey]Toggle " + changed.join(" "));
     }
 
-    notify("[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop\n/mining save");
+    notify("[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop\n/mining save\n\n/m s\n/m <units/items?>\n/m s <sec>\n/m stop\n/m save");
 });

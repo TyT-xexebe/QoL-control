@@ -75,9 +75,9 @@ const initCache = () => {
     cacheInitialized = true;
 };
 
-Events.on(EventType.ClientChatEvent, cons(e => {
+Events.on(ClientChatEvent, cons(e => {
     let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] === "/autofill") {
+    if (args[0] === "/autofill" || args[0] === "/af") {
         autofillEnabled = !autofillEnabled;
         notify("[lightgrey]Autofill " + (autofillEnabled ? "[green]ON" : "[scarlet]OFF"));
     }

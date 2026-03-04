@@ -100,7 +100,7 @@ Events.run(Trigger.update, () => {
 
     if (lockEnabled) {
         u.mineTile = lockTile;
-        if (u.dst(lockPos.x, lockPos.y) > 2) u.vel.trns(u.angleTo(lockPos.x, lockPos.y), u.type.speed);
+        if (u.dst2(lockPos.x, lockPos.y) > 4) u.vel.trns(u.angleTo(lockPos.x, lockPos.y), u.type.speed);
         else u.vel.set(0, 0);
         u.lookAt(lockTile ? lockTile.worldx() : lockPos.x, lockTile ? lockTile.worldy() : lockPos.y);
         return; 
@@ -138,7 +138,7 @@ Events.run(Trigger.update, () => {
         let isFull = u.stack.amount >= u.type.itemCapacity;
         if (isFull || (targetItem && u.stack.amount > 0 && u.stack.item !== targetItem)) {
             u.mineTile = null;
-            if (u.dst(core) > 60) u.vel.trns(u.angleTo(core), u.type.speed);
+            if (u.dst2(core) > 3600) u.vel.trns(u.angleTo(core), u.type.speed);
             else { u.vel.set(0, 0); if (transferTimer++ >= 15) { Call.transferInventory(p, core); transferTimer = 0; } }
             u.lookAt(core);
         } else if (targetTile) {
@@ -151,16 +151,17 @@ Events.run(Trigger.update, () => {
     }
 });
 
-Events.on(EventType.ClientChatEvent, e => {
+Events.on(ClientChatEvent, e => {
     let a = String(e.message).trim().toLowerCase().split(" ");
     if (a[0] !== "/ai") return;
     
     const showHelp = () => {
-        notify("[lightgrey]/ai mining <item?>\n/ai build <name? | -1>\n/ai lock\n/ai status");
+        notify("[lightgrey]/ai mining <item?>\n/ai build <name? | -1>\n/ai lock\n/ai status \n\n/ai m <item?>\n/ai b <name? | -1>\n/ai l\n/ai s");
     };
 
     switch(a[1]) {
         case "lock":
+        case "l":
             lockEnabled = !lockEnabled;
             if (lockEnabled) {
                 let u = Vars.player.unit();
@@ -171,6 +172,7 @@ Events.on(EventType.ClientChatEvent, e => {
             notify("[lightgrey]Lock " + (lockEnabled ? "[green]ON" : "[scarlet]OFF"));
             break;
         case "build":
+        case "b":
             if (a[2] === "-1") {
                 manualTarget = false; followTarget = null;
                 notify("[lightgrey]Build [green]AUTO");
@@ -190,6 +192,7 @@ Events.on(EventType.ClientChatEvent, e => {
             }
             break;
         case "mining":
+        case "m":
             if (a.length > 2) {
                 let changed = [];
                 for (let i = 2; i < a.length; i++) {
@@ -207,6 +210,7 @@ Events.on(EventType.ClientChatEvent, e => {
             }
             break;
         case "status":
+        case "s":
             let u = Vars.player.unit(), res = "", items = Vars.content.items();
             let isErekir = u == null ? false : u.type.name.match(/evoke|incite|emanate/);
             for (let i = 0; i < items.size; i++) {

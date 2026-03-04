@@ -5,7 +5,7 @@ Events.on(ClientChatEvent, e => {
     let args = msg.trim().toLowerCase().split(" ");
     let cmd = args[0];
 
-    if (cmd === "/cghost") {
+    if (cmd === "/cghost" || cmd === "/cg") {
         let teamData = Vars.player.team().data();
         if (!teamData) return;
         let toRemove = new IntSeq();

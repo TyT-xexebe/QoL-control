@@ -14,7 +14,7 @@ function injectCode(target, code) {
     }
 }
 
-Events.on(EventType.ClientChatEvent, e => {
+Events.on(ClientChatEvent, e => {
     let args = String(e.message).trim().split(" ");
     if (args[0] !== "/mlog") return;
 

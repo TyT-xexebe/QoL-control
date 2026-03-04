@@ -20,7 +20,7 @@ function findTargets() {
     });
 }
 
-Events.on(EventType.WorldLoadEvent, () => {
+Events.on(WorldLoadEvent, () => {
     grab.active = false;
     grab.item = null;
     grab.targets = [];
@@ -82,11 +82,11 @@ Events.run(Trigger.update, () => {
     }
 });
 
-Events.on(EventType.ClientChatEvent, e => {
+Events.on(ClientChatEvent, e => {
     let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/grab") return;
+    if (args[0] !== "/grab" && args[0] !== "/g") return;
 
-    if (args[1] === "toggle") {
+    if (args[1] === "toggle" || args[1] === "t") {
         grab.active = !grab.active;
         return notify("[lightgrey]Grab " + (grab.active ? "[green]ON" : "[scarlet]OFF"));
     }
@@ -98,7 +98,7 @@ Events.on(EventType.ClientChatEvent, e => {
         return notify("[lightgrey]Grab <min> [accent]" + val);
     }
 
-    if (args[1] === "status") {
+    if (args[1] === "status" || args[1] === "s") {
         return notify("[lightgrey]State " + (grab.active ? "[green]ON" : "[scarlet]OFF") +
                       "\n[lightgrey]Item [accent]" + (grab.item ? grab.item.name : "none") +
                       "\n[lightgrey]Min [accent]" + grab.min);
@@ -115,5 +115,5 @@ Events.on(EventType.ClientChatEvent, e => {
         }
     }
 
-    notify("[lightgray]/grab <item>\n/grab toggle\n/grab min <val>\n/grab status");
+    notify("[lightgray]/grab <item>\n/grab toggle\n/grab min <val>\n/grab status\n\n/g <item>\n/g t\n/g min <val>\n/g s");
 });
