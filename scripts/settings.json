@@ -16,5 +16,6 @@
   "features/assist": true,
   "features/autofill": true,
   "ui/render": true,
-  "ui/table": true
+  "ui/table": true,
+  "ui/buildpause": true
 }
