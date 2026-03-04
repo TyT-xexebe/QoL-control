@@ -84,7 +84,7 @@ Events.run(Trigger.update, () => {
 
 Events.on(ClientChatEvent, e => {
     let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/grab" && args[0] !== "/g") return;
+    if (args[0] !== "/grab" && args[0] !== "/gr") return;
 
     if (args[1] === "toggle" || args[1] === "t") {
         grab.active = !grab.active;
@@ -115,5 +115,5 @@ Events.on(ClientChatEvent, e => {
         }
     }
 
-    notify("[lightgray]/grab <item>\n/grab toggle\n/grab min <val>\n/grab status\n\n/g <item>\n/g t\n/g min <val>\n/g s");
+    notify("[lightgray]/grab <item>\n/grab toggle\n/grab min <val>\n/grab status\n\n/gr <item>\n/gr t\n/gr min <val>\n/gr s");
 });
