@@ -7,12 +7,11 @@ Events.on(WorldLoadEvent, cons(e => {
     lastReplacedCoords = [];
 }));
 
-Events.on(ClientChatEvent, cons(e => {
-    let args = String(e.message).trim().split(" ");
-    if (args[0] !== "/detector" && args[0] !== "/dt") return;
+const interceptor = require("qol-control/core/interceptor");
 
+const detectorHandler = (args) => {
     if (args.length < 2) {
-        notify("[lightgray]/detector <name>\n/detector log\n\n/dt <name>\n/dt log");
+        notify("[lightgray]!detector <name>\n!detector log\n\n!dt <name>\n!dt log");
         return;
     }
 
@@ -116,4 +115,7 @@ Events.on(ClientChatEvent, cons(e => {
             }          
         });
     }
-}));
+};
+
+interceptor.add("detector", detectorHandler);
+interceptor.add("dt", detectorHandler);

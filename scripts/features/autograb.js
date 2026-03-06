@@ -82,10 +82,9 @@ Events.run(Trigger.update, () => {
     }
 });
 
-Events.on(ClientChatEvent, e => {
-    let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/grab" && args[0] !== "/gr") return;
+const interceptor = require("qol-control/core/interceptor");
 
+const grabHandler = (args) => {
     if (args[1] === "toggle" || args[1] === "t") {
         grab.active = !grab.active;
         return notify("[lightgrey]Grab " + (grab.active ? "[green]ON" : "[scarlet]OFF"));
@@ -115,5 +114,8 @@ Events.on(ClientChatEvent, e => {
         }
     }
 
-    notify("[lightgray]/grab <item>\n/grab toggle\n/grab min <val>\n/grab status\n\n/gr <item>\n/gr t\n/gr min <val>\n/gr s");
-});
+    notify("[lightgray]!grab <item>\n!grab toggle\n!grab min <val>\n!grab status\n\n!gr <item>\n!gr t\n!gr min <val>\n!gr s");
+};
+
+interceptor.add("grab", grabHandler);
+interceptor.add("gr", grabHandler);

@@ -151,12 +151,11 @@ Events.run(Trigger.update, () => {
     }
 });
 
-Events.on(ClientChatEvent, e => {
-    let a = String(e.message).trim().toLowerCase().split(" ");
-    if (a[0] !== "/ai") return;
-    
+const interceptor = require("qol-control/core/interceptor");
+
+interceptor.add("ai", (a) => {
     const showHelp = () => {
-        notify("[lightgrey]/ai mining <item?>\n/ai build <name? | -1>\n/ai lock\n/ai status \n\n/ai m <item?>\n/ai b <name? | -1>\n/ai l\n/ai s");
+        notify("[lightgrey]!ai mining <item?>\n!ai build <name? | -1>\n!ai lock\n!ai status \n\n!ai m <item?>\n!ai b <name? | -1>\n!ai l\n!ai s");
     };
 
     switch(a[1]) {

@@ -119,12 +119,11 @@ function runAssist() {
     }
 }
 
-Events.on(ClientChatEvent, e => {
-    let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/assist" && args[0] !== "/as") return;
+const interceptor = require("qol-control/core/interceptor");
 
+const assistHandler = (args) => {
     if (args.length === 1) {
-        notify("[lightgrey]/assist toggle\n/assist toggle <unit>\n/assist max <unit> <val>\n/assist range <val>\n/assist status\n/assist save\n\n/as t\n/as t <unit>\n/as m <unit> <val>\n/as r <val>\n/as s\n/as save");
+        notify("[lightgrey]!assist toggle\n!assist toggle <unit>\n!assist max <unit> <val>\n!assist range <val>\n!assist status\n!assist save\n\n!as t\n!as t <unit>\n!as m <unit> <val>\n!as r <val>\n!as s\n!as save");
         return;
     }
 
@@ -175,7 +174,7 @@ Events.on(ClientChatEvent, e => {
             assistState.max[type] = val;
             notify("[lightgrey]Max " + type + " set to [accent]" + val);
         } else {
-            notify("[scarlet]Invalid unit type or value\n[lightgrey]/assist max <unit> <val>");
+            notify("[scarlet]Invalid unit type or value\n[lightgrey]!assist max <unit> <val>");
         }
         return;
     }
@@ -186,7 +185,7 @@ Events.on(ClientChatEvent, e => {
             assistState.range = val * 8;
             notify("[lightgrey]Assist range set to [accent]" + val + "[lightgrey] blocks");
         } else {
-            notify("[scarlet]Invalid range\n[lightgrey]/assist range <val>");
+            notify("[scarlet]Invalid range\n[lightgrey]!assist range <val>");
         }
         return;
     }
@@ -201,4 +200,7 @@ Events.on(ClientChatEvent, e => {
                "\n[lightgrey]Units " + uStr);
         return;
     }
-});
+};
+
+interceptor.add("assist", assistHandler);
+interceptor.add("as", assistHandler);

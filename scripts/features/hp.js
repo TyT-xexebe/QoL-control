@@ -38,26 +38,22 @@ Events.on(WorldLoadEvent, () => {
     dpsData = {};
 });
 
-Events.on(ClientChatEvent, e => {
-    let msg = String(e.message);
-    let args = msg.trim().toLowerCase().split(" ");
-    let cmd = args[0];
+const interceptor = require("qol-control/core/interceptor");
 
-    if (cmd === "/hp") {
-        if (args[1]) {
-            let found = null;
-            Groups.player.each(p => {
-                if (Strings.stripColors(p.name).toLowerCase().includes(args[1])) found = p;
-            });
-            if (found) {
-                trackedPlayer = found;
-                notify("Tracking " + found.name);
-            } else notify("[scarlet]Player [white]" + args[1] +" [scarlet]not found");
-        } else {
-            hpEnabled = !hpEnabled;
-            if (!hpEnabled) { targetCache = null; trackedPlayer = null; dpsData = {}; }
-            notify("[lightgrey]HP Display " + (hpEnabled ? "[green]ON" : "[scarlet]OFF"));
-        }
+interceptor.add("hp", (args) => {
+    if (args[1]) {
+        let found = null;
+        Groups.player.each(p => {
+            if (Strings.stripColors(p.name).toLowerCase().includes(args[1])) found = p;
+        });
+        if (found) {
+            trackedPlayer = found;
+            notify("Tracking " + found.name);
+        } else notify("[scarlet]Player [white]" + args[1] +" [scarlet]not found");
+    } else {
+        hpEnabled = !hpEnabled;
+        if (!hpEnabled) { targetCache = null; trackedPlayer = null; dpsData = {}; }
+        notify("[lightgrey]HP Display " + (hpEnabled ? "[green]ON" : "[scarlet]OFF"));
     }
 });
 

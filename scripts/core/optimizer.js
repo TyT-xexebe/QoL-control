@@ -127,11 +127,13 @@ Events.on(ClientLoadEvent, cons(e => {
     } catch(err) {}
 }));
 
-Events.run(Trigger.update, () => {
+Events.run(Trigger.preDraw, () => {
     if (Vars.state.isGame() && Vars.state.rules) {
         Vars.state.rules.fog = false;
+        Vars.state.rules.staticFog = false;
         Vars.state.rules.lighting = false;
     }
+    Vars.enableDarkness = false;
 });
 
 Events.on(EventType.TapEvent, cons(e => {

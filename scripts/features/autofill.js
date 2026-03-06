@@ -1,4 +1,5 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 let autofillEnabled = false;
 const DELAY_MS = 250;
@@ -75,13 +76,13 @@ const initCache = () => {
     cacheInitialized = true;
 };
 
-Events.on(ClientChatEvent, cons(e => {
-    let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] === "/autofill" || args[0] === "/af") {
-        autofillEnabled = !autofillEnabled;
-        notify("[lightgrey]Autofill " + (autofillEnabled ? "[green]ON" : "[scarlet]OFF"));
-    }
-}));
+const autofillHandler = (args) => {
+    autofillEnabled = !autofillEnabled;
+    notify("[lightgrey]Autofill " + (autofillEnabled ? "[green]ON" : "[scarlet]OFF"));
+};
+
+interceptor.add("autofill", autofillHandler);
+interceptor.add("af", autofillHandler);
 
 Events.run(Trigger.update, () => {
     if (!autofillEnabled || !Vars.state.isGame()) return;

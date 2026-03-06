@@ -1,4 +1,5 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 const trace = {
     enabled: false,
@@ -56,10 +57,7 @@ Events.on(UnitCreateEvent, e => {
 
 Events.on(WorldLoadEvent, () => { trace.enabled = false; });
 
-Events.on(ClientChatEvent, e => {
-    let args = String(e.message).trim().split(" ");
-    if (args[0] !== "/trace" && args[0] !== "/tr") return;
-
+const traceHandler = (args) => {
     let sub = args[1] ? args[1].toLowerCase() : "";
     if (sub === "toggle" || sub === "t") {
         trace.enabled = !trace.enabled;
@@ -80,6 +78,9 @@ Events.on(ClientChatEvent, e => {
                "\n[lightgrey]Target [accent]" + (trace.target || "none") +
                "\n[lightgrey]Priority [accent]" + trace.priority.join("[lightgrey] > [accent]"));
     } else {
-        notify("[lightgray]/trace toggle\n/trace set <unit>\n/trace find\n/trace status\n\n/tr t\n/tr s <unit>\n/tr f\n/tr st");
+        notify("[lightgray]!trace toggle\n!trace set <unit>\n!trace find\n!trace status\n\n!tr t\n!tr s <unit>\n!tr f\n!tr st");
     }
-});
+};
+
+interceptor.add("trace", traceHandler);
+interceptor.add("tr", traceHandler);

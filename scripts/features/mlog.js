@@ -1,4 +1,5 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 let pendingMlog = null;
 let wasShooting = false;
@@ -14,12 +15,9 @@ function injectCode(target, code) {
     }
 }
 
-Events.on(ClientChatEvent, e => {
-    let args = String(e.message).trim().split(" ");
-    if (args[0] !== "/mlog") return;
-
+interceptor.add("mlog", (args) => {
     if (args.length < 2) {
-        notify("[lightgray]/mlog list\n/mlog <filename>\n/mlog <filename> set");
+        notify("[lightgray]!mlog list\n!mlog <filename>\n!mlog <filename> set");
         return;
     }
 

@@ -1,4 +1,5 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 let renderBullets = true;
 let renderUnits = true;
@@ -9,16 +10,13 @@ const origUnitSizes = [];
 const origBlockSizes = [];
 const origBlockRegions = [];
 
-Events.on(ClientChatEvent, cons(e => {
-    let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/render") return;
-
+interceptor.add("render", (args) => {
     if (args.length < 2) {
-        notify("[lightgray]/render <bullet|unit|block>");
+        notify("[lightgray]!render <bullet|unit|block>");
         return;
     }
 
-    let subcmd = args[1];
+    let subcmd = args[1].toLowerCase();
     let clearReg = Core.atlas.find("clear");
 
     if (subcmd === "bullet") {
@@ -81,6 +79,6 @@ Events.on(ClientChatEvent, cons(e => {
         notify("[lightgray]Blocks " + (renderBlocks ? "[green]ON" : "[scarlet]OFF"));
     } 
     else {
-        notify("[lightgray]/render <bullet|unit|block>");
+        notify("[lightgray]!render <bullet|unit|block>");
     }
-}));
+});

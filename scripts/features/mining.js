@@ -1,4 +1,5 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 const state = {
     units: { mono: true, poly: false, pulsar: true, mega: true, quasar: true },
@@ -155,10 +156,7 @@ Events.on(WorldLoadEvent, () => {
     }
 });
 
-Events.on(ClientChatEvent, e => {
-    let args = String(e.message).trim().toLowerCase().split(" ");
-    if (args[0] !== "/mining" && args[0] !== "/m") return;
-
+const miningHandler = (args) => {
     if (args[1] === "stop") {
         if (miningTask) {
             miningTask.cancel();
@@ -177,7 +175,7 @@ Events.on(ClientChatEvent, e => {
 
     if (args[1] === "set" || args[1] === "s") {
         let time = parseFloat(args[2]);
-        if (isNaN(time) || time < 0) return notify("[lightgrey]/mining set <sec>");
+        if (isNaN(time) || time < 0) return notify("[lightgrey]!mining set <sec>");
         
         state.interval = time;
         if (time === 0) {
@@ -193,7 +191,7 @@ Events.on(ClientChatEvent, e => {
         return;
     }
 
-    if (args[1] === "status" || args[1] === "s") {
+    if (args[1] === "status" || args[1] === "st") {
         let uStr = "", iStr = "";
         for (let k in state.units) uStr += (state.units[k] ? "[green]" : "[scarlet]") + k + " ";
         for (let k in state.items) iStr += (state.items[k] ? "[green]" : "[scarlet]") + k + " ";
@@ -241,5 +239,8 @@ Events.on(ClientChatEvent, e => {
         if (changed.length > 0) return notify("[lightgrey]Toggle " + changed.join(" "));
     }
 
-    notify("[lightgray]/mining status\n/mining <units/items?>\n/mining set <sec>\n/mining stop\n/mining save\n\n/m s\n/m <units/items?>\n/m s <sec>\n/m stop\n/m save");
-});
+    notify("[lightgray]!mining status\n!mining <units/items?>\n!mining set <sec>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?>\n!m s <sec>\n!m stop\n!m save");
+};
+
+interceptor.add("mining", miningHandler);
+interceptor.add("m", miningHandler);

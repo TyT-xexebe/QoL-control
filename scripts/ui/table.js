@@ -1,4 +1,5 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 var cfg = {
     rows: Core.settings.getInt("qol-schem-rows", 4),
@@ -134,10 +135,7 @@ Events.on(EventType.ClientLoadEvent, e => {
         uiTable.pack();
     };
 
-    Events.on(ClientChatEvent, e => {
-        let args = String(e.message).trim().split(" ");
-        if (args[0] !== "/table") return;
-
+    interceptor.add("table", (args) => {
         let sub = args[1] ? args[1].toLowerCase() : "";
         let val = args[2] ? parseInt(args[2]) : 0;
 
@@ -173,7 +171,7 @@ Events.on(EventType.ClientLoadEvent, e => {
             rebuildGrid();
             notify("[lightgrey]Table [green]RESET");
         } else {
-            notify("[lightgray]/table toggle\n/table rows <val>\n/table cols <val>\n/table size <val>\n/table reset");
+            notify("[lightgray]!table toggle\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset");
         }
     });
 

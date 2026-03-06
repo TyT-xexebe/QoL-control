@@ -25,45 +25,44 @@ Events.on(WorldLoadEvent, () => {
     coordHistory = [];
 });
 
-Events.on(ClientChatEvent, e => {
-    let msg = String(e.message);
-    let args = msg.trim().toLowerCase().split(" ");
-    let cmd = args[0];
+const interceptor = require("qol-control/core/interceptor");
 
-    if (cmd === "/lookat" || cmd === "/la") {
-        if (args[1] === "last" || args[1] === "l") {
-            if (args[2]) {
-                let idx = parseInt(args[2]) - 1;
-                if (coordHistory[idx]) {
-                    let c = coordHistory[idx];
-                    Core.camera.position.set(c.x * 8, c.y * 8);
-                    notify("[lightgrey]Jump [accent]" + c.x + ", " + c.y);
-                } else notify("[scarlet]Invalid index");
-            } else {
-                if (coordHistory.length === 0) {
-                    notify("[scarlet]History empty");
-                } else {
-                	let str = "";
-                    for (let i = 0; i < coordHistory.length; i++) {
-                        let c = coordHistory[i];
-                        str += "\n[lightgrey]" + (i + 1) + " - " + c.nick + "[lightgrey] - [accent]" + c.x + " " + c.y;
-                    }
-                    notify(str);
-                }
-            }
+const lookatHandler = (args) => {
+    if (args[1] === "last" || args[1] === "l") {
+        if (args[2]) {
+            let idx = parseInt(args[2]) - 1;
+            if (coordHistory[idx]) {
+                let c = coordHistory[idx];
+                Core.camera.position.set(c.x * 8, c.y * 8);
+                notify("[lightgrey]Jump [accent]" + c.x + ", " + c.y);
+            } else notify("[scarlet]Invalid index");
         } else {
-            let x = parseFloat(args[1]), y = parseFloat(args[2]);
-            if (!isNaN(x) && !isNaN(y)) {
-                Core.camera.position.set(x * 8, y * 8);
-                notify("[lightgrey]Jump [accent]" + x + ", " + y);
-            } else notify("[lightgray]/lookat <x> <y>\n/lookat last <n?>\n\n/la <x> <y>\n/la l <n?>");
+            if (coordHistory.length === 0) {
+                notify("[scarlet]History empty");
+            } else {
+                let str = "";
+                for (let i = 0; i < coordHistory.length; i++) {
+                    let c = coordHistory[i];
+                    str += "\n[lightgrey]" + (i + 1) + " - " + c.nick + "[lightgrey] - [accent]" + c.x + " " + c.y;
+                }
+                notify(str);
+            }
         }
+    } else {
+        let x = parseFloat(args[1]), y = parseFloat(args[2]);
+        if (!isNaN(x) && !isNaN(y)) {
+            Core.camera.position.set(x * 8, y * 8);
+            notify("[lightgrey]Jump [accent]" + x + ", " + y);
+        } else notify("[lightgray]!lookat <x> <y>\n!lookat last <n?>\n\n!la <x> <y>\n!la l <n?>");
     }
+};
 
-    if (cmd === "/here") {
-        let x = Math.floor(Core.camera.position.x / 8);
-        let y = Math.floor(Core.camera.position.y / 8);
-        let comment = args.length > 1 ? " " + args.slice(1).join(" ") : "";
-        Call.sendChatMessage("[accent][" + x + " " + y + "] [white]" + comment);
-    }
+interceptor.add("lookat", lookatHandler);
+interceptor.add("la", lookatHandler);
+
+interceptor.add("here", (args, msg) => {
+    let x = Math.floor(Core.camera.position.x / 8);
+    let y = Math.floor(Core.camera.position.y / 8);
+    let comment = args.length > 1 ? " " + msg.substring(msg.indexOf(" ") + 1) : "";
+    Call.sendChatMessage("[accent][" + x + " " + y + "] [white]" + comment);
 });
