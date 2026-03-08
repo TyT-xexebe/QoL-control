@@ -57,6 +57,8 @@ function runMining() {
     }
 
     const unitGroups = {};
+    const playerCommandedGroups = {};
+
     Groups.unit.each(u => {
         let isAssisting = global.qolAssistingUnits && global.qolAssistingUnits[u.id];
 
@@ -64,15 +66,62 @@ function runMining() {
             u.player == null && state.units[u.type.name] && !(u.controller() instanceof LogicAI) && 
             !isAssisting) {
             
-            if (!unitGroups[u.type.name]) unitGroups[u.type.name] = [];
-            unitGroups[u.type.name].push(u);
+            let typeName = u.type.name;
+            if (!unitGroups[typeName]) {
+                unitGroups[typeName] = [];
+                playerCommandedGroups[typeName] = [];
+            }
+
+            let isPlayerCommanded = false;
+            try {
+                let ctrl = u.controller();
+                if (ctrl) {
+                    let cName = String(ctrl.getClass().getSimpleName());
+                    if (cName === "CommandAI") {
+                        let cmd = ctrl.command;
+                        if (cmd && cmd !== UnitCommand.mineCommand) {
+                            isPlayerCommanded = true;
+                        }
+                    } else if (cName === "FormationAI") {
+                        let leader = ctrl.leader;
+                        if (leader && leader.controller()) {
+                            let lCtrl = leader.controller();
+                            if (String(lCtrl.getClass().getSimpleName()) === "CommandAI") {
+                                let cmd = lCtrl.command;
+                                if (cmd && cmd !== UnitCommand.mineCommand) {
+                                    isPlayerCommanded = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch(e) {}
+
+            if (isPlayerCommanded) {
+                playerCommandedGroups[typeName].push(u);
+            } else {
+                unitGroups[typeName].push(u);
+            }
         }
     });
+
+    for (let typeName in playerCommandedGroups) {
+        let playerUnits = playerCommandedGroups[typeName];
+        let miningUnits = unitGroups[typeName];
+        let total = playerUnits.length + miningUnits.length;
+        let maxPlayerUnits = Math.floor(total * 0.5);
+
+        while (playerUnits.length > maxPlayerUnits) {
+            miningUnits.push(playerUnits.pop());
+        }
+    }
 
     lastDistribution = {};
 
     for (let typeName in unitGroups) {
         let list = unitGroups[typeName];
+        if (list.length === 0) continue;
+        
         let tier = list[0].type.mineTier;
         let availableForUnit = validItems.filter(it => (state.itemTiers[it.name] || 1) <= tier);
         if (availableForUnit.length === 0) continue;

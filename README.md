@@ -16,7 +16,7 @@ There is also a optimizer that disables some unnecessary game features to increa
 
 ## Settings
 
-All features can be fully disabled in the game settings or in
+All features can be fully disabled in:
 
 `/scripts/settings.json`
 
