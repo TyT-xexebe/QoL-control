@@ -4,6 +4,7 @@
   "features/hp": true,
   "features/trange": true,
   "features/lookat": true,
+  "features/here": true,
   "features/cghost": true,
   "features/fish_leave": true,
   "features/trace": true,
@@ -15,6 +16,7 @@
   "features/detector": true,
   "features/assist": true,
   "features/autofill": true,
+  "features/logger": true,
   "ui/render": true,
   "ui/table": true,
   "ui/buildpause": true

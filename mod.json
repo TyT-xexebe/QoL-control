@@ -4,7 +4,7 @@
   "author": "TyTxexebe",
   "version": "3.1",
   "minGameVersion": "154",
-  "description": "A lot of usefull & QoL features\ntype /qol <cmd?> in chat to get more info",
+  "description": "A lot of useful & QoL features\ntype !qol <cmd?> in chat to get more info\n\nyou can change qol-control/settings.json to turn functions on/off which you want by default and not load at all\n\nyou can add your mlog codes in qol-control/mlog/ to use them with !mlog\n\nyou can add your regex in qol-control/mlog/regex.json to use it in !detector\n\nplease give me a star on GitHub :>\n\ndiscord: @tytxexebe",
   "hidden": true,
   "main": "main.js"
 }

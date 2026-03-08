@@ -15,17 +15,15 @@ const helpData = {
     "features/detector": { cmd: "detector", desc: "[accent]!detector <regexName>[lightgrey] - remove all code-like processors [regexs & config: !mlog/attem.json]\n[accent]!detector log[lightgrey] - shows last coords of all removed codes\n\n[accent]Shortcuts:[lightgrey] !dt <name> | !dt log" },
     "features/autofill": { cmd: "autofill", desc: "[accent]!autofill[lightgrey] - autofills turrets\n\n[accent]Shortcuts:[lightgrey] !af" },
     "ui/render": { cmd: "render", desc: "[accent]!render <unit|block|bullet>[lightgrey] - off/on some render things" },
-    "ui/table": { cmd: "table", desc: "[lightgrey]Schematic table\n\n[accent]!table\ntoggle[lightgrey] - on/off\n[accent]<rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]size <val>[lightgrey] - sets table buttoms size\n[accent]reset[lightgrey] - resets table to default" }
+    "ui/table": { cmd: "table", desc: "[lightgrey]Schematic table\n\n[accent]!table\ntoggle[lightgrey] - on/off\n[accent]<rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]size <val>[lightgrey] - sets table buttoms size\n[accent]reset[lightgrey] - resets table to default" },
+    "features/logger": { cmd: "log", desc: "Logs all player (in your team) actions in the UI & .txt\n\n[accent]!log\n[lightgrey]toggle - on/off\n[accent]<name?>[lightgrey] - shows all players' actions (or by name)\n[accent]show <name?>[lightgrey] - shows all logs on the map (or of one player), may cause FPS drops\n[accent]revert <name>[lightgrey] - adds all destroyed buildings (by <name>) to your build plan\n[accent]status[lightgrey] - logger status\n[accent]save[lightgrey] - saves logs as a separate .txt file" },
+    "features/here": {cmd: "here", desc: "[accent]!here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)" }
 };
 
 interceptor.add("qol", (args) => {
     let activeModules = global.qolActiveModules || [];
     let subcmd = args[1];
     
-    if (subcmd === "here" && activeModules.includes("features/lookat")) {
-        notify("[accent]!here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)");
-        return;
-    }
     if (subcmd === "features") {
         notify("[lightgrey]Fast rotation & omni-movement for all units\nCamera lock button\nHeavy optimisation\nAuto-leaves onho's units [FISH Servers]");
         return;
