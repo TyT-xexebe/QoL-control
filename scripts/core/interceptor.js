@@ -7,8 +7,7 @@ function registerCommand(name, handler) {
 function handleCommand(msg) {
     let fooState = Core.settings.getBool("qol-control-foo-client", false);
     if (fooState && msg.length > 1) {
-        // Foo's client appends a 2-char message ID (2 code units)
-        msg = msg.substring(0, msg.length - 2);
+        msg = msg.replace(/[\s\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uE000-\uF8FF\uFFF0-\uFFFF\x00-\x1F\u0F80-\u107F]+$/, '');
     }
 
     if (!msg.startsWith("!") && !msg.startsWith("?")) return false;
@@ -42,7 +41,7 @@ try {
                         let msgField = object.getClass().getField("message");
                         let msg = msgField.get(object);
                         
-                        if (msg && msg.startsWith("!")) {
+                        if (msg && (msg.startsWith("!") || msg.startsWith("?"))) {
                             if (handleCommand(msg)) {
                                 return;
                             }
