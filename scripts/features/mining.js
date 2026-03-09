@@ -5,7 +5,8 @@ const state = {
     units: { mono: true, poly: false, pulsar: true, mega: true, quasar: true },
     items: { copper: true, lead: true, sand: true, coal: true, titanium: true, beryllium: true, scrap: false },
     itemTiers: { copper: 1, lead: 1, sand: 1, scrap: 1, coal: 2, titanium: 3, beryllium: 3 },
-    interval: 0
+    interval: 0,
+    freePercent: 50
 };
 
 try {
@@ -13,6 +14,8 @@ try {
     if(u) Object.assign(state.units, JSON.parse(u));
     let i = Core.settings.getString("qol-mining-items", "");
     if(i) Object.assign(state.items, JSON.parse(i));
+    let f = Core.settings.getInt("qol-mining-free", 50);
+    state.freePercent = f;
 } catch(e) {}
 
 const itemColors = {
@@ -26,13 +29,56 @@ const itemColors = {
 };
 
 let miningTask = null;
+let idleTrackerTask = null;
+let unitIdleData = {};
 let lastDistribution = {};
+
+function startIdleTracker() {
+    if (idleTrackerTask) return;
+    unitIdleData = {};
+    idleTrackerTask = Timer.schedule(() => {
+        if (!Vars.state.isGame()) return;
+        let currentIds = {};
+        const playerTeam = Vars.player.team();
+        Groups.unit.each(u => {
+            if (u.team === playerTeam && !u.dead && u.type.mineTier > 0) {
+                currentIds[u.id] = true;
+                let data = unitIdleData[u.id];
+                if (!data) {
+                    unitIdleData[u.id] = { x: u.x, y: u.y, time: 0 };
+                } else {
+                    if (Mathf.dst2(u.x, u.y, data.x, data.y) < 256) {
+                        data.time += 1;
+                    } else {
+                        data.x = u.x;
+                        data.y = u.y;
+                        data.time = 0;
+                    }
+                }
+            }
+        });
+        for (let id in unitIdleData) {
+            if (!currentIds[id]) delete unitIdleData[id];
+        }
+    }, 0, 1);
+}
+
+function stopIdleTracker() {
+    if (idleTrackerTask) {
+        idleTrackerTask.cancel();
+        idleTrackerTask = null;
+    }
+    unitIdleData = {};
+}
 
 function runMining() {
     const player = Vars.player;
-    if (!player || !player.team() || !Vars.state.isGame()) return;
+    if (!player || !Vars.state.isGame()) return;
     
-    const core = player.team().core();
+    const playerTeam = player.team();
+    if (!playerTeam) return;
+    
+    const core = playerTeam.core();
     if (!core) return;
 
     const validItems = [];
@@ -62,7 +108,7 @@ function runMining() {
     Groups.unit.each(u => {
         let isAssisting = global.qolAssistingUnits && global.qolAssistingUnits[u.id];
 
-        if (u.team === player.team() && !u.dead && u.type.mineTier > 0 && 
+        if (u.team === playerTeam && !u.dead && u.type.mineTier > 0 && 
             u.player == null && state.units[u.type.name] && !(u.controller() instanceof LogicAI) && 
             !isAssisting) {
             
@@ -76,26 +122,27 @@ function runMining() {
             try {
                 let ctrl = u.controller();
                 if (ctrl) {
-                    let cName = String(ctrl.getClass().getSimpleName());
-                    if (cName === "CommandAI") {
-                        let cmd = ctrl.command;
-                        if (cmd && cmd !== UnitCommand.mineCommand) {
-                            isPlayerCommanded = true;
-                        }
-                    } else if (cName === "FormationAI") {
+                    let cmd = ctrl.command;
+                    if (cmd && cmd !== UnitCommand.mineCommand) {
+                        isPlayerCommanded = true;
+                    } else {
                         let leader = ctrl.leader;
-                        if (leader && leader.controller()) {
+                        if (leader && leader.controller) {
                             let lCtrl = leader.controller();
-                            if (String(lCtrl.getClass().getSimpleName()) === "CommandAI") {
-                                let cmd = lCtrl.command;
-                                if (cmd && cmd !== UnitCommand.mineCommand) {
-                                    isPlayerCommanded = true;
-                                }
+                            if (lCtrl && lCtrl.command && lCtrl.command !== UnitCommand.mineCommand) {
+                                isPlayerCommanded = true;
                             }
                         }
                     }
                 }
             } catch(e) {}
+
+            if (isPlayerCommanded) {
+                let idleData = unitIdleData[u.id];
+                if (idleData && idleData.time >= 5) {
+                    isPlayerCommanded = false;
+                }
+            }
 
             if (isPlayerCommanded) {
                 playerCommandedGroups[typeName].push(u);
@@ -109,7 +156,7 @@ function runMining() {
         let playerUnits = playerCommandedGroups[typeName];
         let miningUnits = unitGroups[typeName];
         let total = playerUnits.length + miningUnits.length;
-        let maxPlayerUnits = Math.floor(total * 0.5);
+        let maxPlayerUnits = Math.floor(total * (state.freePercent / 100));
 
         while (playerUnits.length > maxPlayerUnits) {
             miningUnits.push(playerUnits.pop());
@@ -203,6 +250,7 @@ Events.on(WorldLoadEvent, () => {
         miningTask.cancel();
         miningTask = null;
     }
+    stopIdleTracker();
 });
 
 const miningHandler = (args) => {
@@ -210,6 +258,7 @@ const miningHandler = (args) => {
         if (miningTask) {
             miningTask.cancel();
             miningTask = null;
+            stopIdleTracker();
             notify("[scarlet]Mining stopped");
         } else notify("[lightgrey]Mining not running");
         return;
@@ -218,7 +267,16 @@ const miningHandler = (args) => {
     if (args[1] === "save") {
         Core.settings.put("qol-mining-units", JSON.stringify(state.units));
         Core.settings.put("qol-mining-items", JSON.stringify(state.items));
+        Core.settings.put("qol-mining-free", state.freePercent);
         notify("[green]Mining settings saved");
+        return;
+    }
+
+    if (args[1] === "free" || args[1] === "f") {
+        let pct = parseInt(args[2]);
+        if (isNaN(pct) || pct < 0 || pct > 100) return notify("[lightgrey]!mining free <0-100>");
+        state.freePercent = pct;
+        notify("[green]Free units set to [accent]" + pct + "%");
         return;
     }
 
@@ -233,8 +291,9 @@ const miningHandler = (args) => {
         } else {
             if (miningTask) miningTask.cancel();
             miningTask = Timer.schedule(() => {
-                try { runMining(); } catch(err) { if (miningTask) miningTask.cancel(); miningTask = null; }
+                try { runMining(); } catch(err) { if (miningTask) miningTask.cancel(); miningTask = null; stopIdleTracker(); }
             }, 0, time);
+            startIdleTracker();
             notify("[green]Mining started ([accent]" + time + "[green]s)");
         }
         return;
@@ -265,7 +324,8 @@ const miningHandler = (args) => {
         
         let finalMsg = "\n[lightgrey]State " + (miningTask ? "[lightgrey]Active ([accent]" + state.interval + "[lightgrey]s)" : "[scarlet]Inactive") +
                        "\n[lightgrey]Units " + uStr +
-                       "\n[lightgrey]Items " + iStr;
+                       "\n[lightgrey]Items " + iStr +
+                       "\n[lightgrey]Free " + "[accent]" + state.freePercent + "%";
                        
         if (statsStr !== "") finalMsg += "\n\n[lightgrey]Stats:" + statsStr;
         
@@ -288,7 +348,7 @@ const miningHandler = (args) => {
         if (changed.length > 0) return notify("[lightgrey]Toggle " + changed.join(" "));
     }
 
-    notify("[lightgray]!mining status\n!mining <units/items?>\n!mining set <sec>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?>\n!m s <sec>\n!m stop\n!m save");
+    notify("[lightgray]!mining status\n!mining <units/items?>\n!mining set <sec>\n!mining free <0-100>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?>\n!m s <sec>\n!m f <0-100>\n!m stop\n!m save");
 };
 
 interceptor.add("mining", miningHandler);
