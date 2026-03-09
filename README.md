@@ -8,6 +8,16 @@ You can see more detailed info about commands directly in the game by typing:
 
 you can use `!` or `?` prefixes for commands
 
+## Foo's Client Compatibility
+
+If you use Foo's Client, my mod chat commands will conflict with it because of 2 character ID in Foo's messages, to fix this:
+
+    Go to Settings -> QoL Control.
+
+    Enable "Turn on if you using Foo's client" and restart the game.
+
+    You must use the ? prefix for my commands (?qol instead of !qol), because Foo's Client already reserves the ! prefix for its own commands.
+
 ## Commands
 
 ### `!mining` | `!m`

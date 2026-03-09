@@ -5,6 +5,12 @@ function registerCommand(name, handler) {
 }
 
 function handleCommand(msg) {
+    let fooState = Core.settings.getBool("qol-control-foo-client", false);
+    if (fooState && msg.length > 1) {
+        // Foo's client appends a 2-char message ID (2 code units)
+        msg = msg.substring(0, msg.length - 2);
+    }
+
     if (!msg.startsWith("!") && !msg.startsWith("?")) return false;
     let args = msg.substring(1).split(" ");
     let cmd = args[0].toLowerCase();

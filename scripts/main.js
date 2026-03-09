@@ -61,6 +61,13 @@ if (!Vars.headless) {
                     hasChanged = true;
                 }).checked(currentState).left().padBottom(6).row();
             }
+            
+            let fooKey = "qol-control-foo-client";
+            let fooState = Core.settings.getBool(fooKey, false);
+            table.check("Turn on if you using Foo's client", b => {
+                Core.settings.put(fooKey, b);
+                hasChanged = true;
+            }).checked(fooState).left().padBottom(6).row();
         }));
 
         Vars.ui.settings.hidden(run(() => {
