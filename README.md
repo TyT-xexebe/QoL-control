@@ -6,6 +6,8 @@ You can see more detailed info about commands directly in the game by typing:
 
 `!qol <cmd?>`
 
+you can use `!` or `?` prefixes for commands
+
 ## Commands
 
 ### `!mining` | `!m`

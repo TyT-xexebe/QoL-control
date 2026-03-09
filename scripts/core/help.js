@@ -48,6 +48,6 @@ interceptor.add("qol", (args) => {
         if (activeModules.includes("features/lookat")) availableCmds.push("[lightgrey]here");
         
         let cmdsStr = availableCmds.join("[accent] | ");
-        notify("[accent]!qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\n" + cmdsStr + "\n\n[accent]features\n\nyou may read more detailed commands information on github mod page (dont forget a star)");
+        notify("[accent]!qol <cmd>[lightgrey] - command info\n\n[accent]Available commands[lightgrey]\n" + cmdsStr + "\n\n[accent]features\n\nyou may read more detailed commands information on github mod page (dont forget a star)\n\n[all commands use ! or ? prefix]");
     }
 });

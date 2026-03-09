@@ -5,7 +5,7 @@ function registerCommand(name, handler) {
 }
 
 function handleCommand(msg) {
-    if (!msg.startsWith("!")) return false;
+    if (!msg.startsWith("!") && !msg.startsWith("?")) return false;
     let args = msg.substring(1).split(" ");
     let cmd = args[0].toLowerCase();
     
@@ -82,7 +82,7 @@ try {
     if (!alreadyAdded) {
         let filter = new JavaAdapter(ChatFilter, {
             filter: function(player, text) {
-                if (player === Vars.player && text && text.startsWith("!")) {
+                if (player === Vars.player && text && (text.startsWith("!") || text.startsWith("?"))) {
                     if (handleCommand(text)) {
                         return null;
                     }
