@@ -106,7 +106,7 @@ Toggles the display of HP and shield for the unit you are currently shooting at.
 Tracks a specific player's HP and draws a line to them.
 
 ### `!log`
-Logs block placements, destructions and changed by players in your team.
+Logs block placements, destructions and changed by players in your team. (may cause FPS drops and longer load in world)
 
 `!log toggle` | `!log t`
 Toggles the logger on/off.

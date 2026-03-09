@@ -139,17 +139,12 @@ Events.run(Trigger.preDraw, () => {
 Events.on(EventType.TapEvent, cons(e => {
     let b = e.tile.build;
     if (b != null) {
-        if (b.block == Blocks.worldProcessor || b.block == Blocks.worldMessage) {
+        if (b.block == Blocks.worldProcessor) {
             try {
                 b.onConfigureTapped();
             } catch(err) {
-                if (b.block == Blocks.worldProcessor) {
-                    let code = b.code != null ? String(b.code) : "";
-                    Vars.ui.logic.show(code, b.executor, true, cons(c => {}));
-                } else if (b.block == Blocks.worldMessage) {
-                    let msg = b.config() != null ? String(b.config()) : "";
-                    Vars.ui.text.show(msg, cons(res => {}));
-                }
+                let code = b.code != null ? String(b.code) : "";
+                Vars.ui.logic.show(code, b.executor, true, cons(c => {}));
             }
         }
     }

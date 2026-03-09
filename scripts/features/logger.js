@@ -17,7 +17,7 @@ const initShadowMap = () => {
     for (let x = 0; x < Vars.world.width(); x++) {
         for (let y = 0; y < Vars.world.height(); y++) {
             let t = Vars.world.tile(x, y);
-            if (t && t.build && t.isCenter()) setShadow(t, t.block(), t.build.config(), t.build.rotation);
+            if (t && t.build && t.isCenter()) setShadow(t, t.block(), getConfig(t.build), t.build.rotation);
         }
     }
 };
@@ -35,6 +35,16 @@ const fConf = (v, b) => {
     if (v instanceof java.lang.String) return '"' + v + '"';
     if (v.getClass && v.getClass().isArray()) return b && (b.name.indexOf("processor") !== -1 || b.name.indexOf("logic") !== -1) ? "code changed" : "array changed";
     return "changed";
+};
+
+const getConfig = b => {
+    if (!b) return null;
+    try {
+        let c = b.config;
+        return typeof c === "function" ? b.config() : c;
+    } catch (e) {
+        return null;
+    }
 };
 
 const getP = u => {
@@ -139,7 +149,7 @@ Events.on(BlockBuildEndEvent, e => {
         addLog(p.id, p.n, p.t, act, b, cStr, s ? s.c : null, s ? s.r : 0, s ? s.cx : e.tile.x, s ? s.cy : e.tile.y);
         rmShadow(s);
     } else {
-        let b = e.tile.block(), ct = e.tile.build ? e.tile.build.tile : e.tile, c = e.tile.build ? e.tile.build.config() : null;
+        let b = e.tile.block(), ct = e.tile.build ? e.tile.build.tile : e.tile, c = e.tile.build ? getConfig(e.tile.build) : null;
         if (!b || b.name === "air" || b instanceof Packages.mindustry.world.blocks.environment.Floor || b instanceof Packages.mindustry.world.blocks.environment.OverlayFloor) return;
         let r = e.tile.build ? e.tile.build.rotation : 0;
         let cStr = c != null ? fConf(c, b) : "no config";
@@ -188,7 +198,7 @@ Events.on(PayloadDropEvent, e => {
     if (!enabled || !e.build) return;
     let p = getP(e.carrier);
     if (!p) return;
-    let b = e.build.block, c = e.build.config(), cStr = c != null ? fConf(c, b) : "no config";
+    let b = e.build.block, c = getConfig(e.build), cStr = c != null ? fConf(c, b) : "no config";
     setShadow(e.build.tile, b, c, e.build.rotation);
     addLog(p.id, p.n, p.t, "drop", b, cStr, c, e.build.rotation, e.build.tileX(), e.build.tileY());
 });
