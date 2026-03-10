@@ -211,6 +211,26 @@ Mutes any player whose name contains the specified `<name>` (partial match).
 `!mute remove <name>` | `!mute rem <name>`
 Unmutes a player by removing them from the mute list.
 
+## Features
+
+#### Camera lock button
+
+Locks your unit, while you can move your camera anywhere.
+
+#### Build pause button
+
+Pauses building.
+
+#### Quick chat button.
+
+You can add your own quick text buttons to send them in chat.
+
+You can send multiple messages with a single just write them on separate lines.
+
+Long texts that exceed the games 150 character limit are automatically split into several messages.
+
+#### Omnimovement + rotateSpeed for units
+
 ## Performance
 
 The mod is made to be as lightweight as possible so it doesn't heavily load your device.

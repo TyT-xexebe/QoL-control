@@ -21,5 +21,6 @@
   "ui/render": true,
   "ui/camera": true,
   "ui/table": true,
-  "ui/buildpause": true
+  "ui/buildpause": true,
+  "ui/quickchat": true
 }

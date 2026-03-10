@@ -27,7 +27,7 @@ interceptor.add("qol", (args) => {
     let subcmd = args[1];
     
     if (subcmd === "features") {
-        notify("[lightgrey]Fast rotation & omni-movement for all units\nCamera lock button\nHeavy optimisation\nAuto-leaves onho's units [FISH Servers]");
+        notify("[lightgrey]Fast rotation & omni-movement for all units\nCamera lock button\nbuild pause button\nquick chat button\nHeavy optimisation\nAuto-leaves onho's units [FISH Servers]");
         return;
     }
 
