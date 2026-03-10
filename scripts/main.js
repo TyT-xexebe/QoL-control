@@ -89,3 +89,7 @@ if (!Vars.headless) {
         }));
     }));
 }
+
+Events.on(ClientLoadEvent, cons(e => {
+    Vars.maxSchematicSize = 512;
+}));
