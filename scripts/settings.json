@@ -10,14 +10,15 @@
   "features/trace": true,
   "features/mining": true,
   "features/autograb": true,
-  "features/camera": true,
   "features/ai": true,
   "features/mlog": true,
   "features/detector": true,
   "features/assist": true,
   "features/autofill": true,
   "features/logger": true,
+  "features/server": true,
   "ui/render": true,
+  "ui/camera": true,
   "ui/table": true,
   "ui/buildpause": true
 }

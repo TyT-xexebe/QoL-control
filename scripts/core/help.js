@@ -17,7 +17,8 @@ const helpData = {
     "ui/render": { cmd: "render", desc: "[accent]!render <unit|block|bullet>[lightgrey] - off/on some render things" },
     "ui/table": { cmd: "table", desc: "[lightgrey]Schematic table\n\n[accent]!table\ntoggle[lightgrey] - on/off\n[accent]<rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]size <val>[lightgrey] - sets table buttoms size\n[accent]reset[lightgrey] - resets table to default" },
     "features/logger": { cmd: "log", desc: "Logs all player (in your team) actions in the UI & .txt\n\n[accent]!log\n[lightgrey]toggle - on/off\n[accent]<name?>[lightgrey] - shows all players' actions (or by name)\n[accent]show <name?>[lightgrey] - shows all logs on the map (or of one player), may cause FPS drops\n[accent]revert <name>[lightgrey] - adds all destroyed buildings (by <name>) to your build plan\n[accent]status[lightgrey] - logger status\n[accent]save[lightgrey] - saves logs as a separate .txt file" },
-    "features/here": {cmd: "here", desc: "[accent]!here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)" }
+    "features/here":  {cmd: "here", desc: "[accent]!here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)" },
+    "features/server": { cmd: "server", desc: "[lightgrey]Fast join to servers which you can add in it" }
 };
 
 interceptor.add("qol", (args) => {

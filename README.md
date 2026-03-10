@@ -20,7 +20,7 @@ If you use Foo's Client, my mod chat commands will conflict with it because of 2
 
 ## Commands
 
-### `!mining` | `!m`
+#### `!mining` | `!m`
 Takes all free units on the map (that are enabled in your settings) and distributes them to mine the enabled resources.
 
 `!mining set <sec>` | `!m s <sec>`
@@ -41,7 +41,7 @@ Sets the % (0-100) of free units. Any player can take `<%>` of the units from th
 `!mining save` | `!m save`
 Saves the current enabled/disabled settings for units, resources, and the % of free units as default settings.
 
-### `!assist` | `!as`
+#### `!assist` | `!as`
 Units around you within an `n` tile radius will help you build, even if they are currently mining.
 
 `!assist toggle` | `!as t`
@@ -62,7 +62,7 @@ Shows the current assist settings and status.
 `!assist save` | `!as save`
 Saves the current assist settings as default.
 
-### `!ai`
+#### `!ai`
 AI for automatic mining, building help and unit lock.
 
 `!ai mining <item?>` | `!ai m <item?>`
@@ -77,10 +77,10 @@ Toggles lock mode, will fix your unit coordinates and mining coords.
 `!ai status` | `!ai s`
 Shows the current AI status.
 
-### `!autofill` | `!af`
+#### `!autofill` | `!af`
 Toggles autofilling of turrets with resources from the core / your inventory.
 
-### `!grab` | `!gr`
+#### `!grab` | `!gr`
 Automatically grabs a specific item from any blocks in your radius.
 
 `!grab <item>` | `!gr <item>`
@@ -95,10 +95,10 @@ Sets the minimum amount of item in block to grab it.
 `!grab status` | `!gr s`
 Shows the current grab status.
 
-### `!cghost` | `!cg`
+#### `!cghost` | `!cg`
 Clears all your ghost blocks (destroyed blocks waiting to be rebuilt) if they in enemy turrets range.
 
-### `!detector` | `!dt`
+#### `!detector` | `!dt`
 Finds logic processors matching specific regex rules from `mlog/regex.json`.
 
 `!detector <name>` | `!dt <name>`
@@ -107,17 +107,17 @@ Searches for processors matching the `<name>` rule.
 `!detector log` | `!dt log`
 Shows the coordinates of the last found processors.
 
-### `!here <text?> `
+#### `!here <text?> `
 Sends a chat message with your current camera coordinates.
 
-### `!hp`
+#### `!hp`
 `!hp`
 Toggles the display of HP and shield for the unit you are currently shooting at.
 
 `!hp <name?>`
 Tracks a specific player's HP and draws a line to them.
 
-### `!log`
+#### `!log`
 Logs block placements, destructions and changed by players in your team. (may cause FPS drops and longer load in world)
 
 `!log toggle` | `!log t`
@@ -138,14 +138,14 @@ Reverts all block destructions made by a specific player.
 `!log save`
 Saves the logs to a file in your data directory.
 
-### `!lookat` | `!la`
+#### `!lookat` | `!la`
 `!lookat <x> <y>` | `!la <x> <y>`
 Moves your camera to the specified coordinates.
 
 `!lookat last <n?>` | `!la l <n?>`
 Moves your camera to the last `n` recorded locations. `!lookat last` to see saved history
 
-### `!mlog`
+#### `!mlog`
 Injects mlog code from the `mlog/` folder directly into processors.
 
 `!mlog list`
@@ -157,7 +157,7 @@ Injects the code from the specified file into the first empty processor found on
 `!mlog <filename> set`
 Prepares the code to be injected into a processor you shoot at.
 
-### `!trace` | `!tr`
+#### `!trace` | `!tr`
 Automatically possesses a specific unit type when it becomes available.
 
 `!trace toggle` | `!tr t`
@@ -172,10 +172,10 @@ Automatically possesses the best available unit based on a priority list.
 `!trace status` | `!tr st`
 Shows the current trace status and priority list.
 
-### `!trange`
+#### `!trange`
 Toggles the display of enemy turret ranges. (may cause FPS drops)
 
-### `!table`
+#### `!table`
 Table of schematics which can be changed and moved.
 
 `!table rows/cols <val>`
@@ -190,8 +190,13 @@ Resets table.
 `!table toggle`
 Toggles On / Off table display.
 
-### `render <bullet/unit/block>`
+#### `render <bullet/unit/block>`
 Toggles render of <?> (may have some issues on PC, or with using other mods).
+
+#### `server`
+Fast join to servers which you added to it.
+
+####
 
 ## Performance
 
