@@ -17,6 +17,7 @@
   "features/autofill": true,
   "features/logger": true,
   "features/server": true,
+  "features/mute": true,
   "ui/render": true,
   "ui/camera": true,
   "ui/table": true,

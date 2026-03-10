@@ -196,7 +196,20 @@ Toggles render of <?> (may have some issues on PC, or with using other mods).
 #### `server`
 Fast join to servers which you added to it.
 
-####
+#### `!mute`
+Local chat mute for specific players. Hides their messages from your chat (dont work for bubble chat).
+
+`!mute list`
+Shows all currently muted players (both exact and partial mutes).
+
+`!mute add <name>`
+Mutes a player by their exact name (ignoring color tags. You can write only part of a name, it will search for player on server with it and add full name in mute list).
+
+`!mute addp <name>`
+Mutes any player whose name contains the specified `<name>` (partial match).
+
+`!mute remove <name>` | `!mute rem <name>`
+Unmutes a player by removing them from the mute list.
 
 ## Performance
 

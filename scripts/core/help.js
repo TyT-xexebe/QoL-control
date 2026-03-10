@@ -17,8 +17,9 @@ const helpData = {
     "ui/render": { cmd: "render", desc: "[accent]!render <unit|block|bullet>[lightgrey] - off/on some render things" },
     "ui/table": { cmd: "table", desc: "[lightgrey]Schematic table\n\n[accent]!table\ntoggle[lightgrey] - on/off\n[accent]<rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]size <val>[lightgrey] - sets table buttoms size\n[accent]reset[lightgrey] - resets table to default" },
     "features/logger": { cmd: "log", desc: "Logs all player (in your team) actions in the UI & .txt\n\n[accent]!log\n[lightgrey]toggle - on/off\n[accent]<name?>[lightgrey] - shows all players' actions (or by name)\n[accent]show <name?>[lightgrey] - shows all logs on the map (or of one player), may cause FPS drops\n[accent]revert <name>[lightgrey] - adds all destroyed buildings (by <name>) to your build plan\n[accent]status[lightgrey] - logger status\n[accent]save[lightgrey] - saves logs as a separate .txt file" },
-    "features/here":  {cmd: "here", desc: "[accent]!here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)" },
-    "features/server": { cmd: "server", desc: "[lightgrey]Fast join to servers which you can add in it" }
+    "features/here": {cmd: "here", desc: "[accent]!here <text?>[lightgrey] - send camera coordinates to global chat (optional text allowed)" },
+    "features/server": { cmd: "server", desc: "[lightgrey]Server manager\n\n[accent]!server[lightgrey] - opens UI to manage and connect to servers" },
+    "features/mute": { cmd: "mute", desc: "[lightgrey]Local chat mute for specific players\n\n[accent]!mute\nlist[lightgrey] - show all muted players\n[accent]add <name>[lightgrey] - mute exact player name\n[accent]addp <name>[lightgrey] - mute any player containing this name (partial)\n[accent]remove <name>[lightgrey] - unmute player\n\n[accent]Shortcuts:[lightgrey] !mute rem <name>" }
 };
 
 interceptor.add("qol", (args) => {
