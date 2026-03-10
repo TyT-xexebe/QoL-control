@@ -46,22 +46,29 @@ const initCache = () => {
             let ammoTypes = b.ammoTypes;
             if (ammoTypes) {
                 let list = [];
-                let iter = ammoTypes.keys().iterator();
-                while(iter.hasNext){
-                    let item = iter.next();
-                    let bullet = ammoTypes.get(item);
+                
+                // ИСПРАВЛЕНИЕ: Безопасный перебор предметов. 
+                // Обходит баг с IllegalAccessException в итераторах ObjectMap на новых версиях Java.
+                let allItems = Vars.content.items();
+                for(let i = 0; i < allItems.size; i++) {
+                    let item = allItems.get(i);
                     
-                    let pIndex = GLOBAL_AMMO_PRIORITY.indexOf(item.name);
-                    let score = 0;
-                    if (pIndex !== -1) {
-                        score = 1000 - pIndex; 
-                    } else {
-                        let rMult = bullet.reloadMultiplier || 1;
-                        let aMult = bullet.ammoMultiplier || 1;
-                        score = (bullet.damage + bullet.splashDamage) * aMult * rMult;
+                    if(ammoTypes.containsKey(item)) {
+                        let bullet = ammoTypes.get(item);
+                        
+                        let pIndex = GLOBAL_AMMO_PRIORITY.indexOf(item.name);
+                        let score = 0;
+                        if (pIndex !== -1) {
+                            score = 1000 - pIndex; 
+                        } else {
+                            let rMult = bullet.reloadMultiplier || 1;
+                            let aMult = bullet.ammoMultiplier || 1;
+                            score = (bullet.damage + bullet.splashDamage) * aMult * rMult;
+                        }
+                        list.push({ item: item, score: score });
                     }
-                    list.push({ item: item, score: score });
                 }
+                
                 list.sort((a, b) => b.score - a.score);
                 
                 bestAmmoById[b.id] = list.map(e => e.item);
