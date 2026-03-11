@@ -1,13 +1,36 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 let lastReplacedCoords = [];
 const DELAY_FRAMES = 3; 
+
+const qolDir = Vars.dataDirectory.child("qol");
+const mlogDir = qolDir.child("mlog");
 
 Events.on(WorldLoadEvent, cons(e => {
     lastReplacedCoords = [];
 }));
 
-const interceptor = require("qol-control/core/interceptor");
+function ensureRegexJson() {
+    if (!qolDir.exists()) qolDir.mkdirs();
+    if (!mlogDir.exists()) mlogDir.mkdirs();
+
+    let jsonFile = mlogDir.child("regex.json");
+    if (!jsonFile.exists()) {
+        let modRoot = Vars.mods.getMod("qol-control");
+        if (modRoot) {
+            let defaultJson = modRoot.root.child("mlog").child("regex.json");
+            if (defaultJson.exists()) {
+                defaultJson.copyTo(jsonFile);
+            } else {
+                jsonFile.writeString("{}");
+            }
+        } else {
+            jsonFile.writeString("{}");
+        }
+    }
+    return jsonFile;
+}
 
 const detectorHandler = (args) => {
     if (args.length < 2) {
@@ -27,18 +50,10 @@ const detectorHandler = (args) => {
         return;
     }
 
-    let jsonFile = null;
-    let mods = Vars.mods.list();
-    for(let i = 0; i < mods.size; i++){
-        let f = mods.get(i).root.child("mlog").child("regex.json");
-        if(f.exists()){
-            jsonFile = f;
-            break;
-        }
-    }
+    let jsonFile = ensureRegexJson();
 
-    if(!jsonFile){
-        notify("[scarlet]File mlog/regex.json not found");
+    if(!jsonFile.exists()){
+        notify("[scarlet]File qol/mlog/regex.json not found");
         return;
     }
 
@@ -46,7 +61,7 @@ const detectorHandler = (args) => {
     try {
         parsed = JSON.parse(jsonFile.readString());
     } catch(err) {
-        notify("[scarlet]JSON parse error");
+        notify("[scarlet]JSON parse error in regex.json");
         return;
     }
 

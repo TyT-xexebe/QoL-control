@@ -99,7 +99,7 @@ Shows the current grab status.
 Clears all your ghost blocks (destroyed blocks waiting to be rebuilt) if they in enemy turrets range.
 
 #### `!detector` | `!dt`
-Finds logic processors matching specific regex rules from `mlog/regex.json`.
+Finds logic processors matching specific regex rules from `qol/mlog/regex.json` (in your Mindustry directory),
 
 `!detector <name>` | `!dt <name>`
 Searches for processors matching the `<name>` rule.
@@ -136,7 +136,7 @@ Draws the logged actions on the map, optionally filtered by player name.
 Reverts all block destructions made by a specific player.
 
 `!log save`
-Saves the logs to a file in your data directory.
+Saves the logs to a file in Mindustry directory (/qol/)
 
 #### `!lookat` | `!la`
 `!lookat <x> <y>` | `!la <x> <y>`
@@ -146,7 +146,7 @@ Moves your camera to the specified coordinates.
 Moves your camera to the last `n` recorded locations. `!lookat last` to see saved history
 
 #### `!mlog`
-Injects mlog code from the `mlog/` folder directly into processors.
+Injects mlog code from the `/qol/mlog/` folder (in Mindustry directory) into processors.
 
 `!mlog list`
 Lists all available `.txt` files in the `mlog/` folder.
@@ -156,6 +156,9 @@ Injects the code from the specified file into the first empty processor found on
 
 `!mlog <filename> set`
 Prepares the code to be injected into a processor you shoot at.
+
+`!mlog <filename> set`
+Deletes .txt file
 
 #### `!trace` | `!tr`
 Automatically possesses a specific unit type when it becomes available.
@@ -241,25 +244,25 @@ There is also a optimizer that disables some unnecessary game features to increa
 
 ## Settings
 
-All features can be fully disabled in:
-
-`/scripts/settings.json`
+All features can be fully disabled ingame settings meny.
 
 By default everything is enabled, but you can disable anything if you want.
 
 
 For `!mlog` you can add your own mlog codes in:
 
-`/mlog/`
+`/qol/mlog/` which is in your Mindustry directory `/files/`
 
-(Some stuff is already there by default. I'm too lazy to delete it.)
+(Some stuff is already there by default.)
 
 
 For `!detector` you can add your own regex in:
 
-`/mlog/regex.json`
+`/qol/mlog/regex.json`
 
 By default it contains `attem` and `wpx`.
+
+All logs from `!log save` saving in `/qol/`, it also always have default log `/qol/main_log.txt` from your last game if `!log toggle` was enabled.
 
 ## Who Cares
 

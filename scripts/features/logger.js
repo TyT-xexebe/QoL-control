@@ -102,7 +102,7 @@ const updLog = () => {
     let hasLogs = false;
     for (let id in logs) { if (logs[id].length) { hasLogs = true; break; } }
     if (!hasLogs) return;
-    let d = Core.settings.getDataDirectory().child("qol-logs");
+    let d = Core.settings.getDataDirectory().child("qol");
     if (!d.exists()) d.mkdirs();
     wLog(d.child("main_log.txt"));
 };
@@ -207,7 +207,7 @@ Events.on(WorldLoadEvent, () => {
     logs = {}; buffers = {}; pids = {}; reqTraces = {}; failTraces = {}; drawName = null;
     cachedDraws = []; lastDrawCount = 0; lastDrawName = null;
     initShadowMap();
-    let f = Core.settings.getDataDirectory().child("qol-logs").child("main_log.txt");
+    let f = Core.settings.getDataDirectory().child("qol").child("main_log.txt");
     if (f.exists()) f.writeString("");
 });
 
@@ -370,7 +370,7 @@ interceptor.add("log", args => {
         let hasLogs = false;
         for (let id in logs) { if (logs[id].length) { hasLogs = true; break; } }
         if (!hasLogs) return notify("[scarlet]No logs to save.");
-        let d = Core.settings.getDataDirectory().child("qol-logs");
+        let d = Core.settings.getDataDirectory().child("qol");
         if (!d.exists()) d.mkdirs();
         let dt = new Date(), fn = "log_" + dt.getFullYear() + "-" + (dt.getMonth()+1) + "-" + dt.getDate() + "_" + dt.getHours() + "-" + dt.getMinutes() + "-" + dt.getSeconds() + ".txt", f = d.child(fn);
         wLog(f); notify("[lightgrey]Saved to " + f.absolutePath());
