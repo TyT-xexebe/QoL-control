@@ -234,6 +234,28 @@ Long texts that exceed the games 150 character limit are automatically split int
 
 #### Omnimovement + rotateSpeed for units
 
+#### Mlog Editor Extensions
+
+##### Requires "Features mlog" enabled in settings. This feature is experimental and lightly tested; bugs may occur. Always backup your processor code before merging.
+
+##### Available at the processors Edit menu:
+
+- Copy with Labels
+Converts absolute line numbers in jump commands into text labels, and copies the result to the clipboard.
+
+- Save/Load to QoL
+Saves the current processor code to the Mindustry/qol/mlog/ folder (survives mod updates), or opens a menu to load/delete existing one.
+
+- Save Range to QoL
+Saves a specific chunk of code by defining start and end lines (0-indexed). 
+(Jumps within the range are converted to labels, jumps pointing outside the range are set to -1)
+
+- Insert Code
+Injects code from the clipboard or a saved file after a specified line (use -1 to insert at the very beginning). 
+Automatically assigns unique label prefixes to both the existing and inserted code to prevent jump conflicts.
+
+^! Its a testing feature that may contain bugs !^
+
 ## Performance
 
 The mod is made to be as lightweight as possible so it doesn't heavily load your device.
