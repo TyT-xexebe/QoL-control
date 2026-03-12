@@ -18,6 +18,7 @@
   "features/logger": true,
   "features/server": true,
   "features/mute": true,
+  "features/map": true,
   "ui/render": true,
   "ui/camera": true,
   "ui/table": true,

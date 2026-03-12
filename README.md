@@ -214,6 +214,10 @@ Mutes any player whose name contains the specified `<name>` (partial match).
 `!mute remove <name>` | `!mute rem <name>`
 Unmutes a player by removing them from the mute list.
 
+#### `!map`
+
+Shows current map stats.
+
 ## Features
 
 #### Camera lock button
