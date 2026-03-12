@@ -19,8 +19,14 @@ var saveCfg = () => {
     Core.settings.put("qol-schem-slots", JSON.stringify(cfg.slots));
 };
 
-var getIcon = (name) => {
+var getIcon = (name, typeStr) => {
     if(!name) return Icon.add.getRegion();
+    
+    if (typeStr && ContentType[typeStr]) {
+        let c = Vars.content.getByName(ContentType[typeStr], name);
+        if (c) return c.uiIcon;
+    }
+    
     let c = Vars.content.getByName(ContentType.block, name) || Vars.content.getByName(ContentType.item, name) || Vars.content.getByName(ContentType.liquid, name) || Vars.content.getByName(ContentType.unit, name);
     return c ? c.uiIcon : Icon.add.getRegion();
 };
@@ -29,18 +35,22 @@ Events.on(EventType.ClientLoadEvent, e => {
     let allIcons = [];
     
     Vars.content.getBy(ContentType.block).each(c => {
-        if(c.uiIcon && c.uiIcon !== Core.atlas.find("error") && c.uiIcon !== Core.atlas.find("clear")) allIcons.push({ name: String(c.name), icon: c.uiIcon, order: c.category ? c.category.ordinal() * 100 : 0 });
+        if(c.uiIcon && c.uiIcon !== Core.atlas.find("error") && c.uiIcon !== Core.atlas.find("clear")) {
+            allIcons.push({ name: String(c.name), type: "block", icon: c.uiIcon, order: c.category ? c.category.ordinal() * 100 : 0 });
+        }
     });
     
-    const addIcons = (type, typeOrder) => {
+    const addIcons = (type, typeStr, typeOrder) => {
         Vars.content.getBy(type).each(c => {
-            if(c.uiIcon && c.uiIcon !== Core.atlas.find("error") && c.uiIcon !== Core.atlas.find("clear")) allIcons.push({ name: String(c.name), icon: c.uiIcon, order: typeOrder });
+            if(c.uiIcon && c.uiIcon !== Core.atlas.find("error") && c.uiIcon !== Core.atlas.find("clear")) {
+                allIcons.push({ name: String(c.name), type: typeStr, icon: c.uiIcon, order: typeOrder });
+            }
         });
     };
     
-    addIcons(ContentType.item, 10000);
-    addIcons(ContentType.liquid, 10001);
-    addIcons(ContentType.unit, 10002);
+    addIcons(ContentType.item, "item", 10000);
+    addIcons(ContentType.liquid, "liquid", 10001);
+    addIcons(ContentType.unit, "unit", 10002);
     allIcons.sort((a, b) => a.order !== b.order ? a.order - b.order : a.name.localeCompare(b.name));
 
     let uiTable = new Table(Styles.black5);
@@ -71,9 +81,10 @@ Events.on(EventType.ClientLoadEvent, e => {
     const openConfig = (idx) => {
         let dialog = new BaseDialog("");
         dialog.addCloseButton();
-        let slot = cfg.slots[idx] || { schem: "", icon: null };
+        let slot = cfg.slots[idx] || { schem: "", icon: null, type: null };
         let currentSchem = slot.schem;
         let currentIconName = slot.icon;
+        let currentIconType = slot.type;
         
         let t = new Table();
         t.add("Schematic: ").padRight(8);
@@ -86,6 +97,7 @@ Events.on(EventType.ClientLoadEvent, e => {
             let ic = allIcons[i];
             iconPane.button(new TextureRegionDrawable(ic.icon), Styles.clearNonei, 32, () => {
                 currentIconName = ic.name;
+                currentIconType = ic.type;
                 dialog.title.setText(ic.name);
             }).size(40);
             if(++colsCount % 10 === 0) iconPane.row();
@@ -94,7 +106,7 @@ Events.on(EventType.ClientLoadEvent, e => {
         dialog.cont.add(new ScrollPane(iconPane)).size(520, 300).padTop(10).row();
         
         dialog.buttons.button("@ok", Icon.ok, () => {
-            cfg.slots[idx] = { schem: currentSchem, icon: currentIconName };
+            cfg.slots[idx] = { schem: currentSchem, icon: currentIconName, type: currentIconType };
             saveCfg();
             rebuildGrid();
             dialog.hide();
@@ -117,7 +129,7 @@ Events.on(EventType.ClientLoadEvent, e => {
             for(let c = 0; c < cfg.cols; c++){
                 let idx = r * cfg.cols + c;
                 let slot = cfg.slots[idx];
-                gridTable.button(new TextureRegionDrawable(getIcon(slot ? slot.icon : null)), Styles.clearNonei, iconSize, () => {
+                gridTable.button(new TextureRegionDrawable(getIcon(slot ? slot.icon : null, slot ? slot.type : null)), Styles.clearNonei, iconSize, () => {
                     if(isDragging) return; 
                     let time = Time.millis();
                     if(time - lastClickTime < 300 && lastClickSlot === idx) openConfig(idx);
