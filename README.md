@@ -244,19 +244,23 @@ Long texts that exceed the games 150 character limit are automatically split int
 
 ##### Available at the processors Edit menu:
 
-- Copy with Labels
+Copy with Labels
 Converts absolute line numbers in jump commands into text labels, and copies the result to the clipboard.
 
-- Save/Load to QoL
+Save/Load to QoL
 Saves the current processor code to the Mindustry/qol/mlog/ folder (survives mod updates), or opens a menu to load/delete existing one.
 
-- Save Range to QoL
+Save Range to QoL
 Saves a specific chunk of code by defining start and end lines (0-indexed). 
 (Jumps within the range are converted to labels, jumps pointing outside the range are set to -1)
 
-- Insert Code
+Insert Code
 Injects code from the clipboard or a saved file after a specified line (use -1 to insert at the very beginning). 
 Automatically assigns unique label prefixes to both the existing and inserted code to prevent jump conflicts.
+
+Replace Code
+Finds and replaces specific lines or multi-line blocks of code throughout all processor.
+Automatically protects and updates all jump targets using labels, ensuring that replacing code blocks of different lengths wont break your existing jumps.
 
 ^! Its a testing feature that may contain bugs !^
 

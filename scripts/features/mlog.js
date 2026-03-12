@@ -47,156 +47,105 @@ function injectCode(target, code) {
     }
 }
 
+function cleanCodeString(code) {
+    return String(code || "")
+        .replace(/\r\n|\r/g, "\n")
+        .replace(/\t|[\u200B-\u200D\uFEFF\u00A0]/g, " ");
+}
+
+function parseJump(line) {
+    let trimmed = line.trim();
+    if (trimmed.startsWith("jump ")) {
+        let parts = trimmed.split(" ").filter(p => p !== "");
+        if (parts.length >= 2 && /^\d+$/.test(parts[1])) {
+            return {
+                target: parseInt(parts[1], 10),
+                parts: parts,
+                indent: line.match(/^\s*/)[0]
+            };
+        }
+    }
+    return null;
+}
+
+function normalizeLine(line) {
+    return line.trim().split(" ").filter(p => p !== "").join(" ");
+}
+
 function convertJumpsToLabels(code, prefix) {
-    if (!code) return { code: "", map: [] };
-    if (!prefix) prefix = "label";
-    let jsCode = String(code)
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n")
-        .replace(/\t/g, " ")
-        .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ");
-    let lines = jsCode.split("\n");
-    let targets = {}; 
-    
+    if (prefix === undefined) prefix = "label";
+    let lines = cleanCodeString(code).split("\n");
+    let targets = {};
+    let maxTarget = -1;
+
     for (let i = 0; i < lines.length; i++) {
-        let line = lines[i].replace(/^\s+|\s+$/g, "");
-        if (line.indexOf("jump ") === 0) {
-            let parts = line.split(" ");
-            let cleanParts = [];
-            for(let j = 0; j < parts.length; j++) {
-                if(parts[j] !== "") cleanParts.push(parts[j]);
-            }
-            
-            if (cleanParts.length >= 2) {
-                let target = cleanParts[1];
-                if (/^\d+$/.test(target)) {
-                    let targetLine = parseInt(target, 10);
-                    targets[targetLine] = prefix + targetLine;
-                }
-            }
+        let jump = parseJump(lines[i]);
+        if (jump) {
+            targets[jump.target] = prefix + jump.target;
+            maxTarget = Math.max(maxTarget, jump.target);
         }
     }
 
     let newLines = [];
     let origToNewMap = [];
-    
+
     for (let i = 0; i < lines.length; i++) {
-        if (targets[i]) {
-            newLines.push(targets[i] + ":");
-        }
-        
+        if (targets[i]) newLines.push(targets[i] + ":");
         origToNewMap[i] = newLines.length;
-        
+
         let line = lines[i];
-        let trimmed = line.replace(/^\s+|\s+$/g, "");
-        if (trimmed.indexOf("jump ") === 0) {
-            let parts = trimmed.split(" ");
-            let cleanParts = [];
-            for(let j = 0; j < parts.length; j++) {
-                if(parts[j] !== "") cleanParts.push(parts[j]);
-            }
-            
-            if (cleanParts.length >= 2 && /^\d+$/.test(cleanParts[1])) {
-                let targetLine = parseInt(cleanParts[1], 10);
-                if (targets[targetLine]) {
-                    cleanParts[1] = targets[targetLine];
-                    let indentMatch = line.match(/^\s+/);
-                    let indent = indentMatch ? indentMatch[0] : "";
-                    line = indent + cleanParts.join(" ");
-                }
-            }
+        let jump = parseJump(line);
+        if (jump && targets[jump.target]) {
+            jump.parts[1] = targets[jump.target];
+            line = jump.indent + jump.parts.join(" ");
         }
         newLines.push(line);
     }
-    
-    let maxTarget = -1;
-    for (let key in targets) {
-        if (targets.hasOwnProperty(key)) {
-            let num = parseInt(key, 10);
-            if (num > maxTarget) maxTarget = num;
-        }
-    }
-    
+
     for (let i = lines.length; i <= maxTarget; i++) {
-        if (targets[i]) {
-            newLines.push(targets[i] + ":");
-        }
+        if (targets[i]) newLines.push(targets[i] + ":");
     }
 
     return { code: newLines.join("\n"), map: origToNewMap };
 }
 
 function convertRangeJumpsToLabels(code, start, end, prefix) {
-    if (!code) return "";
-    if (!prefix) prefix = "label";
-    let jsCode = String(code)
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n")
-        .replace(/\t/g, " ")
-        .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ");
-    let lines = jsCode.split("\n");
-    
+    if (prefix === undefined) prefix = "label";
+    let lines = cleanCodeString(code).split("\n");
     start = Math.max(0, parseInt(start, 10) || 0);
     end = Math.min(lines.length - 1, parseInt(end, 10) || lines.length - 1);
     if (start > end) return "";
 
     let slice = lines.slice(start, end + 1);
-    let targets = {}; 
-    
+    let targets = {};
+    let maxTarget = -1;
+
     for (let i = 0; i < slice.length; i++) {
-        let line = slice[i].replace(/^\s+|\s+$/g, "");
-        if (line.indexOf("jump ") === 0) {
-            let parts = line.split(" ");
-            let cleanParts = [];
-            for(let j=0; j<parts.length; j++) if(parts[j]!=="") cleanParts.push(parts[j]);
-            
-            if (cleanParts.length >= 2) {
-                let target = cleanParts[1];
-                if (/^\d+$/.test(target)) {
-                    let targetLine = parseInt(target, 10);
-                    if (targetLine >= start && targetLine <= end) {
-                        targets[targetLine - start] = prefix + targetLine;
-                    }
-                }
-            }
+        let jump = parseJump(slice[i]);
+        if (jump && jump.target >= start && jump.target <= end) {
+            let relTarget = jump.target - start;
+            targets[relTarget] = prefix + jump.target;
+            maxTarget = Math.max(maxTarget, relTarget);
         }
     }
 
     let newLines = [];
     for (let i = 0; i < slice.length; i++) {
         if (targets[i]) newLines.push(targets[i] + ":");
-        
+
         let line = slice[i];
-        let trimmed = line.replace(/^\s+|\s+$/g, "");
-        if (trimmed.indexOf("jump ") === 0) {
-            let parts = trimmed.split(" ");
-            let cleanParts = [];
-            for(let j=0; j<parts.length; j++) if(parts[j]!=="") cleanParts.push(parts[j]);
-            
-            if (cleanParts.length >= 2 && /^\d+$/.test(cleanParts[1])) {
-                let targetLine = parseInt(cleanParts[1], 10);
-                let indentMatch = line.match(/^\s+/);
-                let indent = indentMatch ? indentMatch[0] : "";
-                
-                if (targetLine >= start && targetLine <= end) {
-                    cleanParts[1] = targets[targetLine - start];
-                } else {
-                    cleanParts[1] = "-1";
-                }
-                line = indent + cleanParts.join(" ");
+        let jump = parseJump(line);
+        if (jump) {
+            if (jump.target >= start && jump.target <= end) {
+                jump.parts[1] = targets[jump.target - start];
+            } else {
+                jump.parts[1] = "-1";
             }
+            line = jump.indent + jump.parts.join(" ");
         }
         newLines.push(line);
     }
-    
-    let maxTarget = -1;
-    for (let key in targets) {
-        if (targets.hasOwnProperty(key)) {
-            let num = parseInt(key, 10);
-            if (num > maxTarget) maxTarget = num;
-        }
-    }
-    
+
     for (let i = slice.length; i <= maxTarget; i++) {
         if (targets[i]) newLines.push(targets[i] + ":");
     }
@@ -204,10 +153,101 @@ function convertRangeJumpsToLabels(code, start, end, prefix) {
     return newLines.join("\n");
 }
 
+function performReplace(logicDialog, findText, replaceText) {
+    if (!findText || findText.trim() === "") return;
+    try {
+        let lines = cleanCodeString(logicDialog.canvas.save()).split("\n");
+        let findLines = cleanCodeString(findText).split("\n");
+        let repLines = cleanCodeString(replaceText).split("\n");
+        
+        let prefix = "rep" + Math.floor(Math.random() * 10000) + "_";
+        let targets = {};
+        let maxTarget = -1;
+
+        let findNormalizedLines = findLines.map(normalizeLine).filter(l => l !== "");
+        if (findNormalizedLines.length === 0) return;
+
+        lines.forEach(line => {
+            let jump = parseJump(line);
+            if (jump) {
+                targets[jump.target] = prefix + jump.target;
+                maxTarget = Math.max(maxTarget, jump.target);
+            }
+        });
+
+        repLines.forEach(line => {
+            let jump = parseJump(line);
+            if (jump) {
+                targets[jump.target] = prefix + jump.target;
+                maxTarget = Math.max(maxTarget, jump.target);
+            }
+        });
+
+        let newLines = [];
+        let replacedCount = 0;
+        let skipLines = 0;
+
+        for (let i = 0; i <= Math.max(lines.length - 1, maxTarget); i++) {
+            if (targets[i]) newLines.push(targets[i] + ":");
+            
+            if (i < lines.length) {
+                if (skipLines > 0) {
+                    skipLines--;
+                    continue;
+                }
+                
+                let isMatch = false;
+                if (i + findNormalizedLines.length <= lines.length) {
+                    isMatch = true;
+                    for (let j = 0; j < findNormalizedLines.length; j++) {
+                        if (normalizeLine(lines[i + j]) !== findNormalizedLines[j]) {
+                            isMatch = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (isMatch) {
+                    replacedCount++;
+                    skipLines = findNormalizedLines.length - 1;
+                    
+                    for (let j = 0; j < repLines.length; j++) {
+                        let rLine = repLines[j];
+                        let rJump = parseJump(rLine);
+                        if (rJump) {
+                            rJump.parts[1] = targets[rJump.target];
+                            newLines.push(rJump.parts.join(" "));
+                        } else if (rLine.trim() !== "") {
+                            newLines.push(rLine.trim());
+                        }
+                    }
+                } else {
+                    let currentLine = lines[i];
+                    let jump = parseJump(currentLine);
+                    if (jump) {
+                        jump.parts[1] = targets[jump.target];
+                        newLines.push(jump.indent + jump.parts.join(" "));
+                    } else {
+                        newLines.push(currentLine);
+                    }
+                }
+            }
+        }
+
+        if (replacedCount > 0) {
+            logicDialog.canvas.load(newLines.join("\n"));
+            Vars.ui.showInfoFade("Replaced " + replacedCount + " occurrences!");
+        } else {
+            Vars.ui.showInfoFade("No matches found.");
+        }
+    } catch (err) {
+        notify("[scarlet]Replace Error: " + err);
+    }
+}
+
 function performInsert(logicDialog, insertAfter, sourceCode) {
     try {
         let currentCode = logicDialog.canvas.save();
-        
         let prefixOrig = "orig" + Math.floor(Math.random() * 10000) + "_";
         let prefixIns = "ins" + Math.floor(Math.random() * 10000) + "_";
         
@@ -239,14 +279,11 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
     let style = Styles.flatt;
     table.row();
     
-    if (scrollPane) {
-        scrollPane.setScrollingDisabled(true, false);
-    }
+    if (scrollPane) scrollPane.setScrollingDisabled(true, false);
     
     table.button("Copy with Labels", Icon.copy, style, () => {
         dialog.hide();
-        let rawCode = logicDialog.canvas.save();
-        let converted = convertJumpsToLabels(rawCode, "label");
+        let converted = convertJumpsToLabels(logicDialog.canvas.save(), "label");
         Core.app.setClipboardText(converted.code);
         Vars.ui.showInfoFade("Copied to clipboard!");
     }).size(280, 60).left().marginLeft(12).row(); 
@@ -270,8 +307,7 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
                 if (isNaN(end)) return;
                 Vars.ui.showTextInput("Save Snippet", "Enter name:", "", name => {
                     if (!name) return;
-                    let rawCode = logicDialog.canvas.save();
-                    let rangeCode = convertRangeJumpsToLabels(rawCode, start, end, "lbl_");
+                    let rangeCode = convertRangeJumpsToLabels(logicDialog.canvas.save(), start, end, "lbl_");
                     mlogDir.child(name + ".txt").writeString(rangeCode);
                     Vars.ui.showInfoFade("Saved range to " + name);
                 });
@@ -285,12 +321,8 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
         d.addCloseButton();
         
         let listTable = new Table();
-        let files = getMlogFiles();
-        
-        for (let i = 0; i < files.length; i++) {
-            let file = files[i];
+        getMlogFiles().forEach(file => {
             let rowTable = new Table();
-            
             rowTable.button(file.nameWithoutExtension(), () => {
                 try {
                     logicDialog.canvas.load(file.readString());
@@ -306,9 +338,8 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
                     d.hide();
                 });
             }).size(50, 50);
-            
             listTable.add(rowTable).padBottom(5).row();
-        }
+        });
         
         d.cont.add(new ScrollPane(listTable)).width(400).height(400);
         d.show();
@@ -327,8 +358,7 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
                 
                 t.button("From Clipboard", Icon.paste, Styles.flatt, () => {
                     d.hide();
-                    let sourceCode = Core.app.getClipboardText();
-                    performInsert(logicDialog, insertAfter, sourceCode);
+                    performInsert(logicDialog, insertAfter, Core.app.getClipboardText());
                 }).size(280, 60).row();
                 
                 t.button("From QoL File", Icon.folder, Styles.flatt, () => {
@@ -336,14 +366,12 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
                     let fd = new BaseDialog("Select File");
                     fd.addCloseButton();
                     let ft = new Table();
-                    let files = getMlogFiles();
-                    for (let i=0; i<files.length; i++) {
-                        let file = files[i];
+                    getMlogFiles().forEach(file => {
                         ft.button(file.nameWithoutExtension(), () => {
                             fd.hide();
                             performInsert(logicDialog, insertAfter, file.readString());
                         }).size(300, 50).row();
-                    }
+                    });
                     fd.cont.add(new ScrollPane(ft)).width(400).height(400);
                     fd.show();
                 }).size(280, 60).row();
@@ -352,6 +380,29 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
                 d.show();
             });
         });
+    }).size(280, 60).left().marginLeft(12).row();
+    
+    table.button("Replace Code", Icon.edit, style, () => {
+        dialog.hide();
+        let d = new BaseDialog("Replace Code");
+        d.addCloseButton();
+        
+        let t = new Table();
+        t.add("Find exact code:").left().row();
+        let findArea = new Packages.arc.scene.ui.TextArea("");
+        t.add(findArea).width(600).height(120).row();
+        
+        t.add("Replace with:").left().padTop(10).row();
+        let repArea = new Packages.arc.scene.ui.TextArea("");
+        t.add(repArea).width(600).height(120).row();
+        
+        t.button("Replace", () => {
+            performReplace(logicDialog, findArea.getText(), repArea.getText());
+            d.hide();
+        }).size(280, 60).padTop(15).row();
+        
+        d.cont.add(new ScrollPane(t)).width(450).height(400);
+        d.show();
     }).size(280, 60).left().marginLeft(12).row();
     
     dialog.pack();
@@ -367,7 +418,6 @@ Events.run(Trigger.update, () => {
     let logicDialog = Vars.ui.logic;
     if (logicDialog && logicDialog.isShown()) {
         let editBtn = logicDialog.buttons.find("edit");
-        
         if (editBtn != null && editBtn.name === "edit") {
             editBtn.name = "edit_hooked";
             editBtn.addListener(extend(ChangeListener, {
@@ -400,7 +450,6 @@ Events.run(Trigger.update, () => {
             wasShooting = true;
         } else if (wasShooting) {
             let build = Vars.world.buildWorld(p.mouseX, p.mouseY);
-
             if (build != null) {
                 if (build.team != p.team()) {
                     notify("[scarlet]Target belongs to another team");
@@ -415,7 +464,6 @@ Events.run(Trigger.update, () => {
             } else {
                 notify("[scarlet]Invalid target");
             }
-
             pendingMlog = null;
             wasShooting = false;
         }
@@ -468,7 +516,6 @@ interceptor.add("mlog", (args) => {
         notify("[lightgrey]Start and stop shooting at the target processor");
     } else {
         let target = null;
-        
         Groups.build.each(cons(b => {
             if (!target && b.team == Vars.player.team()) {
                 let bName = b.block.name;
