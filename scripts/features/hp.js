@@ -41,7 +41,7 @@ Events.on(WorldLoadEvent, () => {
 const interceptor = require("qol-control/core/interceptor");
 
 interceptor.add("hp", (args) => {
-    if (args[1]) {
+    if (args[1] && args[1] !== "toggle" && args[1] !== "1" && args[1] !== "0" && args[1] !== "true" && args[1] !== "false" && args[1] !== "on" && args[1] !== "off") {
         let found = null;
         Groups.player.each(p => {
             if (Strings.stripColors(p.name).toLowerCase().includes(args[1])) found = p;
@@ -51,7 +51,7 @@ interceptor.add("hp", (args) => {
             notify("Tracking " + found.name);
         } else notify("[scarlet]Player [white]" + args[1] +" [scarlet]not found");
     } else {
-        hpEnabled = !hpEnabled;
+        hpEnabled = interceptor.parseToggle(hpEnabled, args[1] === "toggle" ? args[2] : args[1]);
         if (!hpEnabled) { targetCache = null; trackedPlayer = null; dpsData = {}; }
         notify("[lightgrey]HP Display " + (hpEnabled ? "[green]ON" : "[scarlet]OFF"));
     }

@@ -10,7 +10,7 @@ Events.on(WorldLoadEvent, () => {
 });
 
 interceptor.add("trange", (args) => {
-	trangeEnabled = !trangeEnabled;
+	trangeEnabled = interceptor.parseToggle(trangeEnabled, args[1]);
 	if (!trangeEnabled) cachedTurrets = [];
 	notify(
 		'[lightgrey]Turret Ranges ' +

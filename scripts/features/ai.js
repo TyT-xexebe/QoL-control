@@ -155,13 +155,13 @@ const interceptor = require("qol-control/core/interceptor");
 
 interceptor.add("ai", (a) => {
     const showHelp = () => {
-        notify("[lightgrey]!ai mining <item?>\n!ai build <name? | -1>\n!ai lock\n!ai status \n\n!ai m <item?>\n!ai b <name? | -1>\n!ai l\n!ai s");
+        notify("[lightgrey]!ai mining <item?> <1/0?>\n!ai build <name? | -1> <1/0?>\n!ai lock <1/0?>\n!ai status \n\n!ai m <item?> <1/0?>\n!ai b <name? | -1> <1/0?>\n!ai l <1/0?>\n!ai s");
     };
 
     switch(a[1]) {
         case "lock":
         case "l":
-            lockEnabled = !lockEnabled;
+            lockEnabled = interceptor.parseToggle(lockEnabled, a[2]);
             if (lockEnabled) {
                 let u = Vars.player.unit();
                 lockPos = {x: u.x, y: u.y};
@@ -175,7 +175,7 @@ interceptor.add("ai", (a) => {
             if (a[2] === "-1") {
                 manualTarget = false; followTarget = null;
                 notify("[lightgrey]Build [green]AUTO");
-            } else if (a[2]) {
+            } else if (a[2] && a[2] !== "1" && a[2] !== "0" && a[2] !== "true" && a[2] !== "false" && a[2] !== "on" && a[2] !== "off") {
                 let f = null;
                 Groups.player.each(pl => {
                     if (Strings.stripColors(pl.name).toLowerCase().includes(a[2])) f = pl;
@@ -185,14 +185,14 @@ interceptor.add("ai", (a) => {
                     notify("[lightgrey]Build Follow " + f.name);
                 } else notify("[scarlet]player [white]" + a[2] + " [scarlet]not found or not in your team");
             } else {
-                buildEnabled = !buildEnabled;
+                buildEnabled = interceptor.parseToggle(buildEnabled, a[2]);
                 if (buildEnabled) mineEnabled = lockEnabled = false;
                 notify("[lightgrey]Build " + (buildEnabled ? "[green]ON" : "[scarlet]OFF"));
             }
             break;
         case "mining":
         case "m":
-            if (a.length > 2) {
+            if (a.length > 2 && a[2] !== "1" && a[2] !== "0" && a[2] !== "true" && a[2] !== "false" && a[2] !== "on" && a[2] !== "off") {
                 let changed = [];
                 for (let i = 2; i < a.length; i++) {
                     if (allowedItems.hasOwnProperty(a[i])) {
@@ -201,9 +201,9 @@ interceptor.add("ai", (a) => {
                     }
                 }
                 targetItem = targetTile = null;
-                notify("[lightgrey]Toggle " + changed.join(" "));
+                if (changed.length > 0) notify("[lightgrey]Toggle " + changed.join(" "));
             } else {
-                mineEnabled = !mineEnabled;
+                mineEnabled = interceptor.parseToggle(mineEnabled, a[2]);
                 if (mineEnabled) buildEnabled = lockEnabled = false;
                 notify("[lightgrey]Mining " + (mineEnabled ? "[green]ON" : "[scarlet]OFF"));
             }

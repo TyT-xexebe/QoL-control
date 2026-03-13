@@ -86,7 +86,7 @@ const interceptor = require("qol-control/core/interceptor");
 
 const grabHandler = (args) => {
     if (args[1] === "toggle" || args[1] === "t") {
-        grab.active = !grab.active;
+        grab.active = interceptor.parseToggle(grab.active, args[2]);
         return notify("[lightgrey]Grab " + (grab.active ? "[green]ON" : "[scarlet]OFF"));
     }
 
@@ -99,7 +99,7 @@ const grabHandler = (args) => {
 
     if (args[1] === "status" || args[1] === "s") {
         return notify("[lightgrey]State " + (grab.active ? "[green]ON" : "[scarlet]OFF") +
-                      "\n[lightgrey]Item [accent]" + (grab.item ? grab.item.name : "none") +
+                      "\n[lightgrey]Item " + (grab.item ? "[accent]" + grab.item.name : "none") +
                       "\n[lightgrey]Min [accent]" + grab.min);
     }
 
@@ -114,7 +114,7 @@ const grabHandler = (args) => {
         }
     }
 
-    notify("[lightgray]!grab <item>\n!grab toggle\n!grab min <val>\n!grab status\n\n!gr <item>\n!gr t\n!gr min <val>\n!gr s");
+    notify("[lightgray]!grab <item>\n!grab toggle <1/0?>\n!grab min <val>\n!grab status\n\n!gr <item>\n!gr t <1/0?>\n!gr min <val>\n!gr s");
 };
 
 interceptor.add("grab", grabHandler);

@@ -101,6 +101,15 @@ try {
     }
 } catch(e) {}
 
+function parseToggle(current, arg) {
+    if (!arg) return !current;
+    arg = arg.toLowerCase();
+    if (arg === "1" || arg === "true" || arg === "on" || arg === "yes") return true;
+    if (arg === "0" || arg === "false" || arg === "off" || arg === "no") return false;
+    return !current;
+}
+
 module.exports = {
-    add: registerCommand
+    add: registerCommand,
+    parseToggle: parseToggle
 };

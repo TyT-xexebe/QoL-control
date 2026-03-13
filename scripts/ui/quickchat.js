@@ -9,6 +9,10 @@ let startY = 0;
 let btnX = Core.settings.getFloat("quickchat-btn-x", 150);
 let btnY = Core.settings.getFloat("quickchat-btn-y", 200);
 
+let currentSessionExecuting = false;
+let execTimer = null;
+let clearTimer = null;
+
 function loadData() {
     let data = [];
     try {
@@ -68,27 +72,39 @@ Events.on(EventType.ClientLoadEvent, () => {
 Events.on(EventType.WorldLoadEvent, e => {
     let data = loadData();
     let defCmd = data[0];
+    
     if (Core.settings.getBool("qol-quickchat-running", false)) {
-        Core.settings.put("qol-quickchat-running", new java.lang.Boolean(false));
-        Core.settings.forceSave();
-        if (defCmd.enabled) {
-            defCmd.enabled = false;
-            saveData(data);
-            Timer.schedule(() => {
-                Vars.ui.showInfo("[scarlet]Auto-Execute commands were disabled because the game crashed or closed unexpectedly during their last execution.");
-            }, 2);
+        if (!currentSessionExecuting) {
+            Core.settings.put("qol-quickchat-running", new java.lang.Boolean(false));
+            Core.settings.forceSave();
+            if (defCmd.enabled) {
+                defCmd.enabled = false;
+                saveData(data);
+                Timer.schedule(() => {
+                    Vars.ui.showInfo("[scarlet]Auto-Execute commands were disabled because the game crashed or closed unexpectedly during their last execution.");
+                }, 2);
+            }
+            return;
+        } else {
+            if (execTimer) execTimer.cancel();
+            if (clearTimer) clearTimer.cancel();
+            currentSessionExecuting = false;
+            Core.settings.put("qol-quickchat-running", new java.lang.Boolean(false));
+            Core.settings.forceSave();
         }
-        return;
     }
 
     if (defCmd && defCmd.enabled && defCmd.text && defCmd.text.length > 0) {
         Core.settings.put("qol-quickchat-running", new java.lang.Boolean(true));
         Core.settings.forceSave();
-        Timer.schedule(() => {
+        currentSessionExecuting = true;
+        
+        execTimer = Timer.schedule(() => {
             executeChat(defCmd.text);
-            Timer.schedule(() => {
+            clearTimer = Timer.schedule(() => {
                 Core.settings.put("qol-quickchat-running", new java.lang.Boolean(false));
                 Core.settings.forceSave();
+                currentSessionExecuting = false;
             }, 3);
         }, 1);
     }

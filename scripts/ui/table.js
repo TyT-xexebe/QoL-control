@@ -152,7 +152,7 @@ Events.on(EventType.ClientLoadEvent, e => {
         let val = args[2] ? parseInt(args[2]) : 0;
 
         if (sub === "toggle") {
-            cfg.enabled = !cfg.enabled;
+            cfg.enabled = interceptor.parseToggle(cfg.enabled, args[2]);
             saveCfg();
             notify("[lightgrey]Table " + (cfg.enabled ? "[green]ON" : "[scarlet]OFF"));
         } else if (sub === "rows" && val > 0) {
@@ -183,7 +183,7 @@ Events.on(EventType.ClientLoadEvent, e => {
             rebuildGrid();
             notify("[lightgrey]Table [green]RESET");
         } else {
-            notify("[lightgray]!table toggle\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset");
+            notify("[lightgray]!table toggle <1/0?>\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset");
         }
     });
 

@@ -12,7 +12,7 @@ const origBlockRegions = [];
 
 interceptor.add("render", (args) => {
     if (args.length < 2) {
-        notify("[lightgray]!render <bullet|unit|block>");
+        notify("[lightgray]!render <bullet|unit|block> <1/0?>");
         return;
     }
 
@@ -20,7 +20,7 @@ interceptor.add("render", (args) => {
     let clearReg = Core.atlas.find("clear");
 
     if (subcmd === "bullet") {
-        renderBullets = !renderBullets;
+        renderBullets = interceptor.parseToggle(renderBullets, args[2]);
         let idx = 0;
         
         Vars.content.bullets().each(cons(b => {
@@ -35,7 +35,7 @@ interceptor.add("render", (args) => {
         notify("[lightgray]Bullets " + (renderBullets ? "[green]ON" : "[scarlet]OFF"));
     } 
     else if (subcmd === "unit") {
-        renderUnits = !renderUnits;
+        renderUnits = interceptor.parseToggle(renderUnits, args[2]);
         
         Vars.content.units().each(cons(u => {
             let id = u.id;
@@ -49,7 +49,7 @@ interceptor.add("render", (args) => {
         notify("[lightgray]Units " + (renderUnits ? "[green]ON" : "[scarlet]OFF"));
     } 
     else if (subcmd === "block") {
-        renderBlocks = !renderBlocks;
+        renderBlocks = interceptor.parseToggle(renderBlocks, args[2]);
         
         Vars.content.blocks().each(cons(b => {
             let id = b.id;
@@ -79,6 +79,6 @@ interceptor.add("render", (args) => {
         notify("[lightgray]Blocks " + (renderBlocks ? "[green]ON" : "[scarlet]OFF"));
     } 
     else {
-        notify("[lightgray]!render <bullet|unit|block>");
+        notify("[lightgray]!render <bullet|unit|block> <1/0?>");
     }
 });

@@ -325,7 +325,7 @@ Events.on(PlayerJoin, e => {
 interceptor.add("log", args => {
     let sub = args[1], f = sub || "";
     if (sub === "toggle" || sub === "t") {
-        enabled = !enabled;
+        enabled = interceptor.parseToggle(enabled, args[2]);
         if (enabled) {
             failTraces = {};
             Groups.player.each(p => {
@@ -375,7 +375,7 @@ interceptor.add("log", args => {
         let dt = new Date(), fn = "log_" + dt.getFullYear() + "-" + (dt.getMonth()+1) + "-" + dt.getDate() + "_" + dt.getHours() + "-" + dt.getMinutes() + "-" + dt.getSeconds() + ".txt", f = d.child(fn);
         wLog(f); notify("[lightgrey]Saved to " + f.absolutePath());
     } else if (sub === "help") {
-        notify("[lightgrey]!log toggle\n!log status\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save");
+        notify("[lightgrey]!log toggle <1/0?>\n!log status\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save");
     } else {
         showLogs(f !== "" ? f : null);
     }

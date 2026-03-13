@@ -1,4 +1,5 @@
 const notify = require("qol-control/core/logger").notify;
+const interceptor = require("qol-control/core/interceptor");
 
 const assistState = {
     enabled: false,
@@ -119,11 +120,9 @@ function runAssist() {
     }
 }
 
-const interceptor = require("qol-control/core/interceptor");
-
 const assistHandler = (args) => {
     if (args.length === 1) {
-        notify("[lightgrey]!assist toggle\n!assist toggle <unit>\n!assist max <unit> <val>\n!assist range <val>\n!assist status\n!assist save\n\n!as t\n!as t <unit>\n!as m <unit> <val>\n!as r <val>\n!as s\n!as save");
+        notify("[lightgrey]!assist toggle <1/0?>\n!assist toggle <unit> <1/0?>\n!assist max <unit> <val>\n!assist range <val>\n!assist status\n!assist save\n\n!as t <1/0?>\n!as t <unit> <1/0?>\n!as m <unit> <val>\n!as r <val>\n!as s\n!as save");
         return;
     }
 
@@ -136,18 +135,20 @@ const assistHandler = (args) => {
     }
 
     if (args[1] === "toggle" || args[1] === "t") {
-        if (args.length === 2) {
-            assistState.enabled = !assistState.enabled;
+        if (args.length === 2 || (args.length === 3 && (args[2] === "1" || args[2] === "0" || args[2] === "true" || args[2] === "false" || args[2] === "on" || args[2] === "off"))) {
+            assistState.enabled = interceptor.parseToggle(assistState.enabled, args[2]);
             if (assistState.enabled) {
-                assistTimer = Timer.schedule(() => {
-                    try { 
-                        runAssist(); 
-                    } catch(err) { 
-                        notify("[scarlet]Assist Error: " + err);
-                        if (assistTimer) assistTimer.cancel(); 
-                        assistTimer = null; 
-                    }
-                }, 0, 0.5);
+                if (!assistTimer) {
+                    assistTimer = Timer.schedule(() => {
+                        try { 
+                            runAssist(); 
+                        } catch(err) { 
+                            notify("[scarlet]Assist Error: " + err);
+                            if (assistTimer) assistTimer.cancel(); 
+                            assistTimer = null; 
+                        }
+                    }, 0, 0.5);
+                }
                 notify("[green]Assist ON");
             } else {
                 if (assistTimer) assistTimer.cancel();
@@ -158,7 +159,7 @@ const assistHandler = (args) => {
         } else {
             let type = args[2];
             if (assistState.units.hasOwnProperty(type)) {
-                assistState.units[type] = !assistState.units[type];
+                assistState.units[type] = interceptor.parseToggle(assistState.units[type], args[3]);
                 notify("[lightgrey]Assist for " + type + " is now " + (assistState.units[type] ? "[green]ON" : "[scarlet]OFF"));
             } else {
                 notify("[scarlet]Unknown unit type");

@@ -335,20 +335,28 @@ const miningHandler = (args) => {
 
     if (args.length > 1) {
         let changed = [];
-        for (let i = 1; i < args.length; i++) {
+        let lastArg = args[args.length - 1];
+        let explicitState = null;
+        
+        if (lastArg === "1" || lastArg === "true" || lastArg === "on") explicitState = true;
+        else if (lastArg === "0" || lastArg === "false" || lastArg === "off") explicitState = false;
+        
+        let limit = explicitState !== null ? args.length - 1 : args.length;
+        
+        for (let i = 1; i < limit; i++) {
             let key = args[i];
             if (state.units.hasOwnProperty(key)) {
-                state.units[key] = !state.units[key];
+                state.units[key] = explicitState !== null ? explicitState : !state.units[key];
                 changed.push((state.units[key] ? "[green]" : "[scarlet]") + key);
             } else if (state.items.hasOwnProperty(key)) {
-                state.items[key] = !state.items[key];
+                state.items[key] = explicitState !== null ? explicitState : !state.items[key];
                 changed.push((state.items[key] ? "[green]" : "[scarlet]") + key);
             }
         }
         if (changed.length > 0) return notify("[lightgrey]Toggle " + changed.join(" "));
     }
 
-    notify("[lightgray]!mining status\n!mining <units/items?>\n!mining set <sec>\n!mining free <0-100>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?>\n!m s <sec>\n!m f <0-100>\n!m stop\n!m save");
+    notify("[lightgray]!mining status\n!mining <units/items?> <1/0?>\n!mining set <sec>\n!mining free <0-100>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?> <1/0?>\n!m s <sec>\n!m f <0-100>\n!m stop\n!m save");
 };
 
 interceptor.add("mining", miningHandler);

@@ -12,13 +12,17 @@ you can use `!` or `?` prefixes for commands
 
 If you use Foo's Client, my mod chat commands will conflict with it because of 2 character ID in Foo's messages, to fix this:
 
-    Go to Settings -> QoL Control.
+Go to Settings -> QoL Control.
+Enable "Turn on if you using Foo's client" and restart the game.
 
-    Enable "Turn on if you using Foo's client" and restart the game.
-
-    You must use the ? prefix for my commands (?qol instead of !qol), because Foo's Client already reserves the ! prefix for its own commands.
+You must use the ? prefix for my commands (?qol instead of !qol), because Foo's Client already reserves the ! prefix for its own commands.
 
 ## Commands
+
+**Note on Toggles:** Most commands that toggle a feature on or off (e.g., `!trace toggle`, `!autofill`, `!log toggle`) can now accept an optional argument to explicitly set the state. 
+You can use `1`, `true`, or `on` to enable the feature, and `0`, `false`, or `off` to disable it. 
+For example: `!trace toggle 1` will always turn trace ON, regardless of its previous state. If no argument is provided, it will simply switch the current state.
+This added for easier using commands, and also for quickchat things.
 
 #### `!mining` | `!m`
 Takes all free units on the map (that are enabled in your settings) and distributes them to mine the enabled resources.
@@ -29,8 +33,8 @@ Starts the unit distribution algorithm and updates it every `<sec>` seconds. The
 `!mining stop` | `!m stop`
 Stops the distribution algorithm.
 
-`!mining <units/items?>` | `!m <units/items?>`
-Toggles the setting of a unit or resource to the opposite of what it currently is. Supports entering multiple at once: `!mining scrap poly beryllium`
+`!mining <units/items?> <1/0?>` | `!m <units/items?> <1/0?>`
+Toggles the setting of a unit or resource to the opposite of what it currently is (or explicitly sets it). Supports entering multiple at once: `!mining scrap poly beryllium` or `!mining scrap poly 1`
 
 `!mining status` | `!m st`
 Shows the status of the algorithm, enabled/disabled units and resources, and the current unit distribution.
@@ -44,10 +48,10 @@ Saves the current enabled/disabled settings for units, resources, and the % of f
 #### `!assist` | `!as`
 Units around you within an `n` tile radius will help you build, even if they are currently mining.
 
-`!assist toggle` | `!as t`
+`!assist toggle <1/0?>` | `!as t <1/0?>`
 Toggles assist mode on/off.
 
-`!assist toggle <unit>` | `!as t <unit>`
+`!assist toggle <unit> <1/0?>` | `!as t <unit> <1/0?>`
 Toggles assist mode for a specific unit type.
 
 `!assist max <unit> <val>` | `!as m <unit> <val>`
@@ -65,19 +69,19 @@ Saves the current assist settings as default.
 #### `!ai`
 AI for automatic mining, building help and unit lock.
 
-`!ai mining <item?>` | `!ai m <item?>`
+`!ai mining <item?> <1/0?>` | `!ai m <item?> <1/0?>`
 Toggles automatic mining  (can toggle specific items to mine).
 
-`!ai build <name? | -1>` | `!ai b <name? | -1>`
+`!ai build <name? | -1> <1/0?>` | `!ai b <name? | -1> <1/0?>`
 Toggles automatic building to help another playere to build. If a player name is provided, your unit will follow and help them build. Use `-1` for AUTO mode.
 
-`!ai lock` | `!ai l`
+`!ai lock <1/0?>` | `!ai l <1/0?>`
 Toggles lock mode, will fix your unit coordinates and mining coords.
 
 `!ai status` | `!ai s`
 Shows the current AI status.
 
-#### `!autofill` | `!af`
+#### `!autofill <1/0?>` | `!af <1/0?>`
 Toggles autofilling of turrets with resources from the core / your inventory.
 
 #### `!grab` | `!gr`
@@ -86,7 +90,7 @@ Automatically grabs a specific item from any blocks in your radius.
 `!grab <item>` | `!gr <item>`
 Sets the item to grab and enables it.
 
-`!grab toggle` | `!gr t`
+`!grab toggle <1/0?>` | `!gr t <1/0?>`
 Toggles autograb on/off.
 
 `!grab min <val>` | `!gr min <val>`
@@ -111,16 +115,16 @@ Shows the coordinates of the last found processors.
 Sends a chat message with your current camera coordinates.
 
 #### `!hp`
-`!hp`
+`!hp <1/0?>`
 Toggles the display of HP and shield for the unit you are currently shooting at.
 
-`!hp <name?>`
+`!hp <name?> <1/0?>`
 Tracks a specific player's HP and draws a line to them.
 
 #### `!log`
 Logs block placements, destructions and changed by players in your team. (may cause FPS drops and longer load in world)
 
-`!log toggle` | `!log t`
+`!log toggle <1/0?>` | `!log t <1/0?>`
 Toggles the logger on/off.
 
 `!log status`
@@ -163,7 +167,7 @@ Deletes .txt file
 #### `!trace` | `!tr`
 Automatically possesses a specific unit type when it becomes available.
 
-`!trace toggle` | `!tr t`
+`!trace toggle <1/0?>` | `!tr t <1/0?>`
 Toggles trace mode on/off.
 
 `!trace set <unit>` | `!tr s <unit>`
@@ -175,7 +179,7 @@ Automatically possesses the best available unit based on a priority list.
 `!trace status` | `!tr st`
 Shows the current trace status and priority list.
 
-#### `!trange`
+#### `!trange <1/0?>`
 Toggles the display of enemy turret ranges. (may cause FPS drops)
 
 #### `!table`
@@ -190,10 +194,10 @@ Sets button size.
 `!table reset`
 Resets table.
 
-`!table toggle`
+`!table toggle <1/0?>`
 Toggles On / Off table display.
 
-#### `render <bullet/unit/block>`
+#### `render <bullet/unit/block> <1/0?>`
 Toggles render of <?> (may have some issues on PC, or with using other mods).
 
 #### `server`

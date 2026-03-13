@@ -84,7 +84,7 @@ const initCache = () => {
 };
 
 const autofillHandler = (args) => {
-    autofillEnabled = !autofillEnabled;
+    autofillEnabled = interceptor.parseToggle(autofillEnabled, args[1]);
     notify("[lightgrey]Autofill " + (autofillEnabled ? "[green]ON" : "[scarlet]OFF"));
 };
 
