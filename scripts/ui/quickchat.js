@@ -10,36 +10,88 @@ let btnX = Core.settings.getFloat("quickchat-btn-x", 150);
 let btnY = Core.settings.getFloat("quickchat-btn-y", 200);
 
 function loadData() {
+    let data = [];
     try {
-        return JSON.parse(Core.settings.getString(SETTINGS_KEY, "[]"));
+        data = JSON.parse(Core.settings.getString(SETTINGS_KEY, "[]"));
     } catch (e) {
-        return [];
+        data = [];
     }
+    if (data.length === 0 || data[0].isDefault !== true) {
+        data.unshift({name: "[accent]Auto-Execute", text: "", isDefault: true, enabled: false});
+        saveData(data);
+    }
+    return data;
 }
 
 function saveData(data) {
     Core.settings.put(SETTINGS_KEY, JSON.stringify(data));
+    Core.settings.forceSave();
+}
+
+function executeChat(text) {
+    if (!text) return;
+    let lines = text.split("\n");
+    for(let i = 0; i < lines.length; i++){
+        let line = lines[i];
+        if(line.length > 0){
+            while(line.length > 150) {
+                Call.sendChatMessage(line.substring(0, 150));
+                line = line.substring(150);
+            }
+            if(line.length > 0) {
+                Call.sendChatMessage(line);
+            }
+        }
+    }
 }
 
 let allIcons = [];
 
-Events.on(ClientLoadEvent, () => {
-    Vars.content.getBy(ContentType.block).each(c => {
-        if(c.uiIcon && c.uiIcon !== Core.atlas.find("error") && c.uiIcon !== Core.atlas.find("clear")) allIcons.push({ name: String(c.name), icon: c.uiIcon, order: c.category ? c.category.ordinal() * 100 : 0 });
-    });
-    
+Events.on(EventType.ClientLoadEvent, () => {
     const addIcons = (type, typeOrder) => {
         Vars.content.getBy(type).each(c => {
-            if(c.uiIcon && c.uiIcon !== Core.atlas.find("error") && c.uiIcon !== Core.atlas.find("clear")) allIcons.push({ name: String(c.name), icon: c.uiIcon, order: typeOrder });
+            if(c.uiIcon && c.uiIcon !== Core.atlas.find("error") && c.uiIcon !== Core.atlas.find("clear")) {
+                allIcons.push({ name: String(c.name), icon: c.uiIcon, order: typeOrder || (c.category ? c.category.ordinal() * 100 : 0) });
+            }
         });
     };
     
+    addIcons(ContentType.block);
     addIcons(ContentType.item, 10000);
     addIcons(ContentType.liquid, 10001);
     addIcons(ContentType.unit, 10002);
     allIcons.sort((a, b) => a.order !== b.order ? a.order - b.order : a.name.localeCompare(b.name));
 
     buildHUD();
+});
+
+Events.on(EventType.WorldLoadEvent, e => {
+    let data = loadData();
+    let defCmd = data[0];
+    if (Core.settings.getBool("qol-quickchat-running", false)) {
+        Core.settings.put("qol-quickchat-running", new java.lang.Boolean(false));
+        Core.settings.forceSave();
+        if (defCmd.enabled) {
+            defCmd.enabled = false;
+            saveData(data);
+            Timer.schedule(() => {
+                Vars.ui.showInfo("[scarlet]Auto-Execute commands were disabled because the game crashed or closed unexpectedly during their last execution.");
+            }, 2);
+        }
+        return;
+    }
+
+    if (defCmd && defCmd.enabled && defCmd.text && defCmd.text.length > 0) {
+        Core.settings.put("qol-quickchat-running", new java.lang.Boolean(true));
+        Core.settings.forceSave();
+        Timer.schedule(() => {
+            executeChat(defCmd.text);
+            Timer.schedule(() => {
+                Core.settings.put("qol-quickchat-running", new java.lang.Boolean(false));
+                Core.settings.forceSave();
+            }, 3);
+        }, 1);
+    }
 });
 
 function buildHUD() {
@@ -76,6 +128,7 @@ function buildHUD() {
         touchUp(event, x, y, pointer) {
             Core.settings.put("quickchat-btn-x", new java.lang.Float(btnX));
             Core.settings.put("quickchat-btn-y", new java.lang.Float(btnY));
+            Core.settings.forceSave();
             Timer.schedule(() => { isDragging = false; }, 0.1);
             return true;
         }
@@ -109,38 +162,34 @@ function showMainMenu() {
             
             let btnCell = rowTable.button(cons(b => {
                 b.left();
-                let infoCell = b.add(cmd.name).left().growX().minWidth(0);
-                infoCell.get().setEllipsis(true);
+                b.add(cmd.name).left().growX().minWidth(0).get().setEllipsis(true);
             }), () => {
                 dialog.hide();
-                let lines = cmd.text.split("\n");
-                for(let i = 0; i < lines.length; i++){
-                    let line = lines[i];
-                    if(line.length > 0){
-                        while(line.length > 150) {
-                            Call.sendChatMessage(line.substring(0, 150));
-                            line = line.substring(150);
-                        }
-                        if(line.length > 0) {
-                            Call.sendChatMessage(line);
-                        }
-                    }
-                }
+                executeChat(cmd.text);
             });
             
-            btnCell.size(300, 60).left().padRight(10);
-            btnCell.get().setStyle(Styles.cleart);
+            btnCell.size(cmd.isDefault ? 255 : 300, 60).left().padRight(10).get().setStyle(Styles.cleart);
+            
+            if (cmd.isDefault) {
+                rowTable.button(cmd.enabled ? Icon.ok : Icon.cancel, Styles.cleari, () => {
+                    cmd.enabled = !cmd.enabled;
+                    saveData(data);
+                    showMainMenu();
+                }).size(45, 60);
+            }
             
             rowTable.button(Icon.edit, Styles.cleari, () => showEditDialog(index, cmd)).size(45, 60);
             
-            rowTable.button(Icon.trash, Styles.cleari, () => {
-                Vars.ui.showConfirm("Delete Message", "Are you sure you want to delete '" + cmd.name + "'?", () => {
-                    let currentData = loadData();
-                    currentData.splice(index, 1);
-                    saveData(currentData);
-                    showMainMenu();
-                });
-            }).size(45, 60);
+            if (!cmd.isDefault) {
+                rowTable.button(Icon.trash, Styles.cleari, () => {
+                    Vars.ui.showConfirm("Delete Message", "Are you sure you want to delete '" + cmd.name + "'?", () => {
+                        let currentData = loadData();
+                        currentData.splice(index, 1);
+                        saveData(currentData);
+                        showMainMenu();
+                    });
+                }).size(45, 60);
+            }
             
             table.add(rowTable).padBottom(5).row();
         });
@@ -149,50 +198,54 @@ function showMainMenu() {
     dialog.cont.add(new ScrollPane(table)).width(420).height(400).row();
     
     dialog.cont.button("Add Message", Icon.add, () => {
-        showEditDialog(-1, {name: "", text: ""});
+        showEditDialog(-1, {name: "", text: "", isDefault: false, enabled: true});
     }).size(420, 50).padTop(10);
 }
 
 function showEditDialog(index, cmdData) {
     let d = new BaseDialog(index === -1 ? "Add Message" : "Edit Message");
     let name = cmdData.name;
-    let text = cmdData.text;
+    let text = cmdData.text || "";
     
     let t = new Table();
     
     t.add("Name: ").padRight(5).right();
-    let nameField = t.field(name, n => name = n).size(200, 50).get();
-    
-    t.button(Icon.add, Styles.cleari, () => {
-        showIconPicker(ic => {
-            let unicode = Fonts.getUnicodeStr(ic.name);
-            if(unicode) {
-                name += unicode;
-                nameField.setText(name);
-            }
-        });
-    }).size(50, 50).padLeft(5);
-    t.row();
+    if (cmdData.isDefault) {
+        t.add(name).left().padLeft(5);
+        t.row();
+    } else {
+        let nameField = t.field(name, n => name = n).size(200, 50).get();
+        t.button(Icon.add, Styles.cleari, () => {
+            showIconPicker(ic => {
+                let unicode = Fonts.getUnicodeStr(ic.name);
+                if(unicode) {
+                    name += unicode;
+                    nameField.setText(name);
+                }
+            });
+        }).size(50, 50).padLeft(5);
+        t.row();
+    }
     
     t.add("Text: ").padRight(5).right().padTop(5);
-    let textField = t.area(text, txt => text = txt).size(350, 200).padTop(5).colspan(2).get();
+    t.area(text, txt => text = txt).size(350, 200).padTop(5).colspan(cmdData.isDefault ? 1 : 2);
     t.row();
     
     d.cont.add(t).row();
     
     d.buttons.button("@cancel", Icon.cancel, () => d.hide()).size(150, 50);
     d.buttons.button("@ok", Icon.ok, () => {
-        if (!name || !text) {
-            Vars.ui.showInfo("Name and Text cannot be empty.");
+        if (!name) {
+            Vars.ui.showInfo("Name cannot be empty.");
             return;
         }
         let data = loadData();
-        let newCmd = {name: name, text: text};
         
         if (index === -1) {
-            data.push(newCmd);
+            data.push({name: name, text: text, isDefault: false, enabled: true});
         } else {
-            data[index] = newCmd;
+            data[index].name = name;
+            data[index].text = text;
         }
         
         saveData(data);
