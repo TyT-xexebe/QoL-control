@@ -414,6 +414,8 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
 
 Events.on(ClientLoadEvent, () => initFiles());
 
+let configTableField = null;
+
 Events.run(Trigger.update, () => {
     let logicDialog = Vars.ui.logic;
     if (logicDialog && logicDialog.isShown()) {
@@ -439,6 +441,55 @@ Events.run(Trigger.update, () => {
                     });
                 }
             }));
+        }
+    }
+
+    let configFragment = Vars.control.input.config;
+    if (configFragment && configFragment.isShown()) {
+        let build = configFragment.getSelected();
+        if (build != null && build.block instanceof Packages.mindustry.world.blocks.logic.LogicBlock) {
+            try {
+                if (!configTableField) {
+                    let clazz = configFragment.getClass();
+                    while (clazz != null) {
+                        try {
+                            configTableField = clazz.getDeclaredField("table");
+                            configTableField.setAccessible(true);
+                            break;
+                        } catch (err) {
+                            clazz = clazz.getSuperclass();
+                        }
+                    }
+                }
+                if (configTableField) {
+                    let table = configTableField.get(configFragment);
+                    if (table && table.getChildren().size > 0) {
+                        let hasRestart = false;
+                        for (let i = 0; i < table.getChildren().size; i++) {
+                            let child = table.getChildren().get(i);
+                            if (child.name === "restart_processor_btn") {
+                                hasRestart = true;
+                                break;
+                            }
+                        }
+                        if (!hasRestart) {
+                            let btn = new Packages.arc.scene.ui.ImageButton(Icon.refresh, Styles.cleari);
+                            btn.name = "restart_processor_btn";
+                            btn.clicked(() => {
+                                let target = configFragment.getSelected();
+                                if (target != null && target.block instanceof Packages.mindustry.world.blocks.logic.LogicBlock) {
+                                    target.configure(target.config());
+                                    notify("[green]Processor restarted");
+                                }
+                            });
+                            table.add(btn).size(40);
+                            table.pack();
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore reflection errors
+            }
         }
     }
 
