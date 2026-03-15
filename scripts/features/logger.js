@@ -127,7 +127,9 @@ const showLogs = fName => {
         });
         t.add("").padBottom(10).row();
     }
-    d.cont.add(new ScrollPane(t)).width(Core.graphics.getWidth() * 0.8).height(Core.graphics.getHeight() * 0.8);
+    
+    let scrollHeight = Math.max(200, Core.graphics.getHeight() - 250);
+    d.cont.add(new ScrollPane(t)).width(Core.graphics.getWidth() * 0.8).height(scrollHeight).padTop(250).padBottom(250);
     d.show();
 };
 
