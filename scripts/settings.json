@@ -1,6 +1,7 @@
 {
   "core/optimizer": true,
   "core/unlocker": true,
+  "core/bind": true,
   "features/hp": true,
   "features/trange": true,
   "features/lookat": true,

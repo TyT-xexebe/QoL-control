@@ -5,6 +5,7 @@ const state = {
     units: { mono: true, poly: false, pulsar: true, mega: true, quasar: true },
     items: { copper: true, lead: true, sand: true, coal: true, titanium: true, beryllium: true, scrap: false },
     itemTiers: { copper: 1, lead: 1, sand: 1, scrap: 1, coal: 2, titanium: 3, beryllium: 3 },
+    ignored: {},
     interval: 0,
     freePercent: 50
 };
@@ -14,6 +15,8 @@ try {
     if(u) Object.assign(state.units, JSON.parse(u));
     let i = Core.settings.getString("qol-mining-items", "");
     if(i) Object.assign(state.items, JSON.parse(i));
+    let ig = Core.settings.getString("qol-mining-ignored", "");
+    if(ig) Object.assign(state.ignored, JSON.parse(ig));
     let f = Core.settings.getInt("qol-mining-free", 50);
     state.freePercent = f;
 } catch(e) {}
@@ -85,14 +88,14 @@ function runMining() {
     const priorities = new ObjectMap();
     
     let capacity = core.storageCapacity || 4000;
-    let limit = Math.max(0, capacity - 500);
+    let limit = Math.floor(capacity * 0.9);
     
     Vars.content.items().each(it => {
         if (state.items[it.name] && (Vars.indexer.hasOre(it) || (Vars.indexer.hasWallOre && Vars.indexer.hasWallOre(it)))) {
             let amount = core.items.get(it);
             if (amount < limit) {
                 validItems.push(it);
-                priorities.put(it, 1 / Math.max(amount, 1));
+                priorities.put(it, 1 / Math.pow(Math.max(amount, 1), 2));
             }
         }
     });
@@ -170,7 +173,13 @@ function runMining() {
         if (list.length === 0) continue;
         
         let tier = list[0].type.mineTier;
-        let availableForUnit = validItems.filter(it => (state.itemTiers[it.name] || 1) <= tier);
+        
+        let availableForUnit = validItems.filter(it => {
+            let tierOk = (state.itemTiers[it.name] || 1) <= tier;
+            let unitAllowed = !(state.ignored[typeName] && state.ignored[typeName][it.name]);
+            return tierOk && unitAllowed;
+        });
+        
         if (availableForUnit.length === 0) continue;
 
         let totalPriority = 0;
@@ -267,6 +276,7 @@ const miningHandler = (args) => {
     if (args[1] === "save") {
         Core.settings.put("qol-mining-units", JSON.stringify(state.units));
         Core.settings.put("qol-mining-items", JSON.stringify(state.items));
+        Core.settings.put("qol-mining-ignored", JSON.stringify(state.ignored));
         Core.settings.put("qol-mining-free", state.freePercent);
         notify("[green]Mining settings saved");
         return;
@@ -299,6 +309,49 @@ const miningHandler = (args) => {
         return;
     }
 
+    if (args[1] === "ignore" || args[1] === "ig") {
+        if (args.length < 4) return notify("[lightgrey]!mining ignore <unit> <items.../clear>");
+        
+        let uName = args[2];
+        if (!state.units.hasOwnProperty(uName)) return notify("[scarlet]Unknown unit: " + uName);
+
+        if (args[3] === "clear") {
+            delete state.ignored[uName];
+            return notify("[green]Cleared ignores for " + uName);
+        }
+
+        if (!state.ignored[uName]) state.ignored[uName] = {};
+
+        let changed = [];
+        let lastArg = args[args.length - 1];
+        let explicitState = null;
+
+        if (lastArg === "1" || lastArg === "true" || lastArg === "on") explicitState = true;
+        else if (lastArg === "0" || lastArg === "false" || lastArg === "off") explicitState = false;
+
+        let limit = explicitState !== null ? args.length - 1 : args.length;
+
+        for (let i = 3; i < limit; i++) {
+            let iName = args[i];
+            if (state.items.hasOwnProperty(iName)) {
+                let currentState = state.ignored[uName][iName] || false;
+                let newState = explicitState !== null ? explicitState : !currentState;
+
+                if (newState) {
+                    state.ignored[uName][iName] = true;
+                    changed.push("[scarlet]" + iName);
+                } else {
+                    delete state.ignored[uName][iName];
+                    changed.push("[green]" + iName);
+                }
+            }
+        }
+        
+        if (Object.keys(state.ignored[uName]).length === 0) delete state.ignored[uName];
+        if (changed.length > 0) notify("[lightgrey]" + uName + " ignores: " + changed.join(" "));
+        return;
+    }
+
     if (args[1] === "status" || args[1] === "st") {
         let uStr = "", iStr = "";
         for (let k in state.units) uStr += (state.units[k] ? "[green]" : "[scarlet]") + k + " ";
@@ -321,12 +374,21 @@ const miningHandler = (args) => {
                 statsStr += "\n[lightgrey]" + uName + " | " + row;
             }
         }
+
+        let igStr = "";
+        for (let uName in state.ignored) {
+            let igItems = Object.keys(state.ignored[uName]);
+            if (igItems.length > 0) {
+                igStr += "\n[lightgrey]" + uName + " ignores: [scarlet]" + igItems.join(", ");
+            }
+        }
         
         let finalMsg = "\n[lightgrey]State " + (miningTask ? "[lightgrey]Active ([accent]" + state.interval + "[lightgrey]s)" : "[scarlet]Inactive") +
                        "\n[lightgrey]Units " + uStr +
                        "\n[lightgrey]Items " + iStr +
                        "\n[lightgrey]Free " + "[accent]" + state.freePercent + "%";
                        
+        if (igStr !== "") finalMsg += igStr;
         if (statsStr !== "") finalMsg += "\n\n[lightgrey]Stats:" + statsStr;
         
         notify(finalMsg);
@@ -356,7 +418,7 @@ const miningHandler = (args) => {
         if (changed.length > 0) return notify("[lightgrey]Toggle " + changed.join(" "));
     }
 
-    notify("[lightgray]!mining status\n!mining <units/items?> <1/0?>\n!mining set <sec>\n!mining free <0-100>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?> <1/0?>\n!m s <sec>\n!m f <0-100>\n!m stop\n!m save");
+    notify("[lightgray]!mining status\n!mining <units/items?> <1/0?>\n!mining ignore <unit> <items.../clear>\n!mining set <sec>\n!mining free <0-100>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?> <1/0?>\n!m ig <unit> <items.../clear>\n!m s <sec>\n!m f <0-100>\n!m stop\n!m save");
 };
 
 interceptor.add("mining", miningHandler);

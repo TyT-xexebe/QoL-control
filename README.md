@@ -42,6 +42,12 @@ Shows the status of the algorithm, enabled/disabled units and resources, and the
 `!mining free <%>` | `!m f <%>`
 Sets the % (0-100) of free units. Any player can take `<%>` of the units from the miner, and it won't take them back. To give the units back to the miner, you must give them a rts task to mine, or the units must not move for 5 seconds (within a 2-tile radius).
 
+`!mining ignore <unit> <items.../clear> <1/0?> | !m ig <unit? <items.../clear> <1/0?>`
+Toggles the setting of a unit which items it will ignore to mine
+Supports entering multiple items at once:
+`!m ig poly scrap lead`
+!!! settings of `!m <items?>` >>> then `!m ig` !!!
+
 `!mining save` | `!m save`
 Saves the current enabled/disabled settings for units, resources, and the % of free units as default settings.
 
