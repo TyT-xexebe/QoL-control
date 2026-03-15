@@ -50,7 +50,6 @@ const getConfig = b => {
 const getP = u => {
     if (!u || !u.isPlayer()) return null;
     let p = u.getPlayer();
-    if (p.team() !== Vars.player.team()) return null;
     if (!pids[p.id] && !failTraces[p.id]) {
         pids[p.id] = "?";
         try { reqTraces[p.id] = Date.now(); Call.adminRequest(p, Packages.mindustry.net.Packets.AdminAction.trace, null); } 
@@ -159,7 +158,7 @@ Events.on(BlockBuildEndEvent, e => {
 });
 
 Events.on(ConfigEvent, e => {
-    if (!enabled || !e.player || e.player.team() !== Vars.player.team()) return;
+    if (!enabled || !e.player) return;
     let p = { n: e.player.name, t: e.player.team().name, id: e.player.id };
     if (!pids[p.id] && !failTraces[p.id]) {
         pids[p.id] = "?";
@@ -316,7 +315,7 @@ Events.on(ClientLoadEvent, setupTrace);
 if (Vars.ui && Vars.ui.traces) setupTrace();
 
 Events.on(PlayerJoin, e => {
-    if (enabled && e.player && e.player.team() === Vars.player.team()) {
+    if (enabled && e.player) {
         try { if (!failTraces[e.player.id]) { reqTraces[e.player.id] = Date.now(); Call.adminRequest(e.player, Packages.mindustry.net.Packets.AdminAction.trace, null); } } 
         catch(err) { failTraces[e.player.id] = true; }
     }
@@ -329,7 +328,7 @@ interceptor.add("log", args => {
         if (enabled) {
             failTraces = {};
             Groups.player.each(p => {
-                if (p !== Vars.player && p.team() === Vars.player.team()) {
+                if (p !== Vars.player) {
                     try { reqTraces[p.id] = Date.now(); Call.adminRequest(p, Packages.mindustry.net.Packets.AdminAction.trace, null); } 
                     catch(err) { failTraces[p.id] = true; }
                 }
