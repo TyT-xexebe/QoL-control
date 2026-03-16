@@ -4,15 +4,18 @@ const interceptor = require("qol-control/core/interceptor");
 let renderBullets = true;
 let renderUnits = true;
 let renderBlocks = true;
+let renderLayers = true;
 
 const origBulletSizes = [];
 const origUnitSizes = [];
-const origBlockSizes = [];
+const origBlockSizes =[];
 const origBlockRegions = [];
+const origBlockDrawers =[];
 
 function restoreOriginals() {
     let clearReg = Core.atlas.find("clear");
     let idx = 0;
+    
     Vars.content.bullets().each(cons(b => {
         if (origBulletSizes[idx] !== undefined && b.drawSize === -10000) {
             b.drawSize = origBulletSizes[idx];
@@ -38,6 +41,13 @@ function restoreOriginals() {
             if (b.topRegion === clearReg) b.topRegion = orig.topRegion;
             b.clipSize = origBlockSizes[id];
         }
+
+        try {
+            if (origBlockDrawers[id] !== undefined && b.drawer) {
+                b.drawer = origBlockDrawers[id];
+            }
+        } catch (e) {
+        }
     }));
 }
 
@@ -47,7 +57,7 @@ Events.on(ClientLoadEvent, () => {
 
 interceptor.add("render", (args) => {
     if (args.length < 2) {
-        notify("[lightgray]!render <bullet|unit|block> <1/0?>");
+        notify("[lightgray]!render <bullet|unit|block|layer> <1/0?>");
         return;
     }
 
@@ -102,7 +112,28 @@ interceptor.add("render", (args) => {
         }));
         notify("[lightgray]Blocks " + (renderBlocks ? "[green]ON" : "[scarlet]OFF"));
     } 
+    else if (subcmd === "layer") {
+        renderLayers = interceptor.parseToggle(renderLayers, args[2]);
+        
+        let DrawDefault = Packages.mindustry.world.draw.DrawDefault;
+        let simpleDrawer = new DrawDefault();
+
+        Vars.content.blocks().each(cons(b => {
+            let id = b.id;
+            try {
+                if (b.drawer !== undefined && b.drawer !== null) {
+                    if (origBlockDrawers[id] === undefined) {
+                        origBlockDrawers[id] = b.drawer;
+                    }
+                    
+                    b.drawer = renderLayers ? origBlockDrawers[id] : simpleDrawer;
+                }
+            } catch (e) {
+            }
+        }));
+        notify("[lightgray]Block Layers " + (renderLayers ? "[green]ON" : "[scarlet]OFF"));
+    }
     else {
-        notify("[lightgray]!render <bullet|unit|block> <1/0?>");
+        notify("[lightgray]!render <bullet|unit|block|layer> <1/0?>");
     }
 });

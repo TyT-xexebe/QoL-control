@@ -1,6 +1,7 @@
 Events.on(ClientLoadEvent, cons(e => {
     const s = Core.settings;
     const none = Fx.none;
+    const noneSound = Sounds.none;
     const clearReg = Core.atlas.find("clear");
     
     const safeSet = (obj, prop, value) => {
@@ -9,8 +10,9 @@ Events.on(ClientLoadEvent, cons(e => {
         } catch (err) {}
     };
 
-    const boolKeys = [
-        "bloom", "shadows", "weather", "animatedwater", "ambientlight", "lasers", "smoothlighting"
+    const boolKeys =[
+        "bloom", "shadows", "weather", "animatedwater", "ambientlight", 
+        "lasers", "smoothlighting", "fluidparticles"
     ];
     for(let i = 0; i < boolKeys.length; i++){
         s.put(boolKeys[i], false);
@@ -19,12 +21,17 @@ Events.on(ClientLoadEvent, cons(e => {
     const zeroInt = new java.lang.Integer(0);
     s.put("screenshake", zeroInt);
     s.put("corpses", zeroInt); 
+    s.put("debris", zeroInt); 
+    s.put("particles", zeroInt);
     
     Vars.content.blocks().each(cons(b => {
         b.emitLight = false;
         b.lightRadius = 0;
         
-        const blockFx = [
+        safeSet(b, "ambientSound", noneSound);
+        safeSet(b, "loopSound", noneSound);
+        
+        const blockFx =[
             "destroyEffect", "breakEffect", "placeEffect", "updateEffect",
             "craftEffect", "consumeEffect", "smokeEffect", "shootEffect",
             "ammoUseEffect", "chargeEffect", "drillEffect", "generateEffect"
@@ -57,9 +64,6 @@ Events.on(ClientLoadEvent, cons(e => {
                         b.variantRegions[j] = clearReg;
                     }
                 }
-            } catch(err) {}
-            
-            try {
                 if (b.regions != null) {
                     for (let j = 0; j < b.regions.length; j++) {
                         b.regions[j] = clearReg;
@@ -78,8 +82,9 @@ Events.on(ClientLoadEvent, cons(e => {
         b.lightRadius = 0;
         b.lightOpacity = 0;
         b.trailLength = 0;
+        safeSet(b, "trailEffect", none);
         
-        const bulletFx = [
+        const bulletFx =[
             "hitEffect", "despawnEffect", "shootEffect", "smokeEffect"
         ];
         for(let i = 0; i < bulletFx.length; i++){
@@ -108,6 +113,18 @@ Events.on(ClientLoadEvent, cons(e => {
         }
     }));
 
+    Vars.content.liquids().each(cons(l => {
+        l.lightColor = Packages.arc.graphics.Color.clear;
+        safeSet(l, "effect", none);
+        safeSet(l, "boilEffect", none);
+        safeSet(l, "vaporEffect", none);
+    }));
+
+    Vars.content.statusEffects().each(cons(s => {
+        safeSet(s, "effect", none);
+        safeSet(s, "parentizeEffect", none);
+    }));
+
     try {
         const fxClass = java.lang.Class.forName("mindustry.content.Fx");
         const fields = fxClass.getFields();
@@ -119,7 +136,7 @@ Events.on(ClientLoadEvent, cons(e => {
                 try {
                     let effect = field.get(null);
                     if(effect != null){
-                        effect.lifetime *= 0.3; 
+                        effect.lifetime *= 0.3;
                     }
                 } catch(err) {}
             }

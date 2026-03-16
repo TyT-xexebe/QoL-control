@@ -203,8 +203,8 @@ Resets table.
 `!table toggle <1/0?>`
 Toggles On / Off table display.
 
-#### `render <bullet/unit/block> <1/0?>`
-Toggles render of <?> (may have some issues on PC, or with using other mods).
+#### `render <bullet/unit/block/layer> <1/0?>`
+Toggles render of <?> (may have some issues on PC, or with using other mods, layers cursed af).
 
 #### `server`
 Fast join to servers which you added to it.
