@@ -145,8 +145,11 @@ Draws the logged actions on the map, optionally filtered by player name.
 `!log revert <name>`
 Reverts all block destructions made by a specific player.
 
+`!log chat`
+Show chat loga (join/leave/ingame name change also).
+
 `!log save`
-Saves the logs to a file in Mindustry directory (/qol/)
+Saves the logs to a file in Mindustry directory (/qol/).
 
 #### `!lookat` | `!la`
 `!lookat <x> <y>` | `!la <x> <y>`

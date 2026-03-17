@@ -3,6 +3,9 @@ const interceptor = require("qol-control/core/interceptor");
 
 let enabled = false, logs = {}, buffers = {}, shadowMap = {}, pids = {}, reqTraces = {}, failTraces = {}, traceAdded = false, lastUpdate = 0, drawName = null;
 let cachedDraws = [], lastDrawCount = 0, lastDrawName = null;
+let chatLogs = [];
+let knownPlayers = {};
+let playerCheckTimer = 0;
 
 const setShadow = (t, b, c, r) => {
     if (!t) return;
@@ -93,6 +96,15 @@ const wLog = f => {
         });
         out += "\n";
     }
+    
+    if (chatLogs.length > 0) {
+        out += "=== CHAT LOGS ===\n";
+        chatLogs.forEach(c => {
+            out += fTime(c.time) + " | " + Strings.stripColors(c.n) + " | " + c.msg + "\n";
+        });
+        out += "\n";
+    }
+    
     f.writeString(out);
 };
 
@@ -100,7 +112,7 @@ const updLog = () => {
     flushAll();
     let hasLogs = false;
     for (let id in logs) { if (logs[id].length) { hasLogs = true; break; } }
-    if (!hasLogs) return;
+    if (!hasLogs && chatLogs.length === 0) return;
     let d = Core.settings.getDataDirectory().child("qol");
     if (!d.exists()) d.mkdirs();
     wLog(d.child("main_log.txt"));
@@ -133,11 +145,38 @@ const showLogs = fName => {
     d.show();
 };
 
+const showChatLogs = () => {
+    let d = new BaseDialog("Chat Logs");
+    d.addCloseButton();
+    let t = new Table();
+    
+    if (chatLogs.length === 0) {
+        t.add("[lightgrey]No chat logs recorded.").row();
+    } else {
+        chatLogs.forEach(c => {
+            t.add("[lightgrey]" + fTime(c.time) + " []" + c.n + "[white]: " + c.msg).left().row();
+        });
+    }
+    
+    let scrollHeight = Math.max(200, Core.graphics.getHeight() - 250);
+    d.cont.add(new ScrollPane(t)).width(Core.graphics.getWidth() * 0.8).height(scrollHeight).padTop(250).padBottom(250);
+    d.show();
+};
+
 const rmShadow = s => {
     if (!s || !s.b) return;
     let sz = s.b.size, off = Math.floor((sz - 1) / 2);
     for (let dx = 0; dx < sz; dx++) for (let dy = 0; dy < sz; dy++) delete shadowMap[(s.cx - off + dx) + "," + (s.cy - off + dy)];
 };
+
+Events.on(PlayerChatEvent, e => {
+    if (!enabled || !e.player || !e.message) return;
+    chatLogs.push({
+        time: Date.now(),
+        n: e.player.name,
+        msg: e.message
+    });
+});
 
 Events.on(BlockBuildEndEvent, e => {
     if (!enabled) return;
@@ -206,10 +245,12 @@ Events.on(PayloadDropEvent, e => {
 
 Events.on(WorldLoadEvent, () => {
     logs = {}; buffers = {}; pids = {}; reqTraces = {}; failTraces = {}; drawName = null;
-    cachedDraws = []; lastDrawCount = 0; lastDrawName = null;
+    cachedDraws = []; lastDrawCount = 0; lastDrawName = null; chatLogs = [];
+    knownPlayers = {};
     initShadowMap();
     let f = Core.settings.getDataDirectory().child("qol").child("main_log.txt");
     if (f.exists()) f.writeString("");
+    enabled = false;
 });
 
 if (Vars.world && Vars.world.tiles) initShadowMap();
@@ -264,7 +305,34 @@ const updateCachedDraws = () => {
 };
 
 Events.run(Trigger.update, () => {
-    if (enabled && Date.now() - lastUpdate > 5000) { lastUpdate = Date.now(); updLog(); }
+    if (!enabled) return;
+    
+    if (Date.now() - lastUpdate > 5000) { lastUpdate = Date.now(); updLog(); }
+    
+    playerCheckTimer += Time.delta;
+    if (playerCheckTimer > 60) {
+        playerCheckTimer = 0;
+        let currentPlayers = {};
+        
+        Groups.player.each(p => {
+            currentPlayers[p.id] = p.name;
+            if (!knownPlayers[p.id]) {
+                chatLogs.push({ time: Date.now(), n: p.name, msg: "[green]Joined the server" });
+                try { if (!failTraces[p.id]) { reqTraces[p.id] = Date.now(); Call.adminRequest(p, Packages.mindustry.net.Packets.AdminAction.trace, null); } } 
+                catch(err) { failTraces[p.id] = true; }
+            } else if (knownPlayers[p.id] !== p.name) {
+                chatLogs.push({ time: Date.now(), n: knownPlayers[p.id], msg: "[accent]Changed name to [white]" + p.name });
+            }
+        });
+        
+        for (let id in knownPlayers) {
+            if (!currentPlayers[id]) {
+                chatLogs.push({ time: Date.now(), n: knownPlayers[id], msg: "[scarlet]Left the server" });
+            }
+        }
+        
+        knownPlayers = currentPlayers;
+    }
 });
 
 Events.run(Trigger.draw, () => {
@@ -316,20 +384,15 @@ const setupTrace = () => {
 Events.on(ClientLoadEvent, setupTrace);
 if (Vars.ui && Vars.ui.traces) setupTrace();
 
-Events.on(PlayerJoin, e => {
-    if (enabled && e.player) {
-        try { if (!failTraces[e.player.id]) { reqTraces[e.player.id] = Date.now(); Call.adminRequest(e.player, Packages.mindustry.net.Packets.AdminAction.trace, null); } } 
-        catch(err) { failTraces[e.player.id] = true; }
-    }
-});
-
 interceptor.add("log", args => {
     let sub = args[1], f = sub || "";
     if (sub === "toggle" || sub === "t") {
         enabled = interceptor.parseToggle(enabled, args[2]);
         if (enabled) {
             failTraces = {};
+            knownPlayers = {};
             Groups.player.each(p => {
+                knownPlayers[p.id] = p.name;
                 if (p !== Vars.player) {
                     try { reqTraces[p.id] = Date.now(); Call.adminRequest(p, Packages.mindustry.net.Packets.AdminAction.trace, null); } 
                     catch(err) { failTraces[p.id] = true; }
@@ -340,7 +403,9 @@ interceptor.add("log", args => {
     } else if (sub === "status") {
         let tot = 0, pls = [];
         for (let id in logs) if (logs[id].length) { tot += logs[id].length; pls.push(logs[id][0].n); }
-        notify("[accent]Logger Status\n[lightgrey]Enabled: " + (enabled ? "[green]Yes" : "[scarlet]No") + "\n[lightgrey]Logs: [accent]" + tot + "\n[lightgrey]Players: [white]" + (pls.length ? pls.join("[lightgrey], [white]") : "None"));
+        notify("[accent]Logger Status\n[lightgrey]Enabled: " + (enabled ? "[green]Yes" : "[scarlet]No") + "\n[lightgrey]Logs: [accent]" + tot + "\n[lightgrey]Chat msgs: [accent]" + chatLogs.length + "\n[lightgrey]Players: [white]" + (pls.length ? pls.join("[lightgrey], [white]") : "None"));
+    } else if (sub === "chat") {
+        showChatLogs();
     } else if (sub === "show") {
         let target = args[2] || "";
         if (drawName !== null && (target === "" || drawName === target)) {
@@ -370,18 +435,14 @@ interceptor.add("log", args => {
         flushAll();
         let hasLogs = false;
         for (let id in logs) { if (logs[id].length) { hasLogs = true; break; } }
-        if (!hasLogs) return notify("[scarlet]No logs to save.");
+        if (!hasLogs && chatLogs.length === 0) return notify("[scarlet]No logs to save.");
         let d = Core.settings.getDataDirectory().child("qol");
         if (!d.exists()) d.mkdirs();
         let dt = new Date(), fn = "log_" + dt.getFullYear() + "-" + (dt.getMonth()+1) + "-" + dt.getDate() + "_" + dt.getHours() + "-" + dt.getMinutes() + "-" + dt.getSeconds() + ".txt", f = d.child(fn);
         wLog(f); notify("[lightgrey]Saved to " + f.absolutePath());
     } else if (sub === "help") {
-        notify("[lightgrey]!log toggle <1/0?>\n!log status\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save");
+        notify("[lightgrey]!log toggle <1/0?>\n!log status\n!log chat\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save");
     } else {
         showLogs(f !== "" ? f : null);
     }
-});
-
-Events.on(WorldLoadEvent, e => {
-    enabled = false;
 });
