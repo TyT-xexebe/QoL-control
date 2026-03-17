@@ -135,8 +135,8 @@ function buildHUD() {
                 isDragging = true;
             }
             if(isDragging){
-                btnX = Mathf.clamp(event.stageX, 25, Core.graphics.getWidth() - 25);
-                btnY = Mathf.clamp(event.stageY, 25, Core.graphics.getHeight() - 25);
+                btnX = Mathf.clamp(event.stageX, 25, Core.scene.getWidth() - 25);
+                btnY = Mathf.clamp(event.stageY, 25, Core.scene.getHeight() - 25);
                 table.setPosition(btnX, btnY);
             }
             return true;
@@ -150,8 +150,13 @@ function buildHUD() {
         }
     }));
 
-    table.update(() => {
+    Events.run(Trigger.update, () => {
+        if (!table) return;
+
+        btnX = Mathf.clamp(btnX, 25, Core.scene.getWidth() - 25);
+        btnY = Mathf.clamp(btnY, 25, Core.scene.getHeight() - 25);
         table.setPosition(btnX, btnY);
+        
         let visible = Vars.state.isGame() && Vars.ui.hudfrag.shown;
         if(table.visible !== visible) table.visible = visible;
     });

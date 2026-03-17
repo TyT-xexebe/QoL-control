@@ -24,5 +24,6 @@
   "ui/camera": true,
   "ui/table": true,
   "ui/buildpause": true,
+  "ui/binfo": true,
   "ui/quickchat": true
 }

@@ -248,6 +248,10 @@ Long texts that exceed the games 150 character limit are automatically split int
 
 Includes a default Auto Execute button that automatically sends your text or commands every time you join server/world. It has crash protection that disables it if the game crashes during execution.
 
+#### Build info
+
+Shows build info (name, team, hp, itmes, liquids, power, battery) when hover/tap on it
+
 #### Omnimovement + rotateSpeed for units
 
 #### Mlog Editor Extensions
