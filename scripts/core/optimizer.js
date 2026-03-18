@@ -153,16 +153,18 @@ Events.run(Trigger.preDraw, () => {
     Vars.enableDarkness = false;
 });
 
-Events.on(EventType.TapEvent, cons(e => {
-    let b = e.tile.build;
-    if (b != null) {
-        if (b.block == Blocks.worldProcessor) {
-            try {
-                b.onConfigureTapped();
-            } catch(err) {
-                let code = b.code != null ? String(b.code) : "";
-                Vars.ui.logic.show(code, b.executor, true, cons(c => {}));
-            }
+let h=0, b=null, o=false;
+Events.run(Trigger.update, () => {
+    let t = (Vars.state.isGame() && !Core.scene.hasMouse() && Core.input.isTouched()) ? Vars.world.tileWorld(Core.input.mouseWorldX(), Core.input.mouseWorldY()) : null;
+    let c = t ? t.build : null;
+    
+    if(!c || c.block != Blocks.worldProcessor) return h=0, b=null, o=false;
+    
+    if(b == c){
+        if((h += Time.delta) > 60 && !o){
+            o = true;
+            try{ c.onConfigureTapped(); }
+            catch(e){ Vars.ui.logic.show(c.code ? String(c.code) : "", c.executor, true, cons(x=>{})); }
         }
-    }
-}));
+    } else { b=c; h=0; o=false; }
+});
