@@ -94,4 +94,6 @@ Events.on(ClientLoadEvent, cons(e => {
     Vars.maxSchematicSize = 512;
     Vars.renderer.minZoom = 0.1;
     Vars.renderer.maxZoom = 10.0;
+
+    Vars.content.units().each(u => { u.rotateSpeed = 1000; u.omniMovement = true; });
 }));
