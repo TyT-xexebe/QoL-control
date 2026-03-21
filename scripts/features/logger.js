@@ -6,10 +6,12 @@ let cachedDraws = [], lastDrawCount = 0, lastDrawName = null;
 let chatLogs = [];
 let knownPlayers = {};
 let playerCheckTimer = 0;
+let unitScanTimer = 0;
+let unitCommanders = {};
 
 const setShadow = (t, b, c, r) => {
     if (!t) return;
-    let s = b.size, off = Math.floor((s - 1) / 2), rot = r !== undefined ? r : (t.build ? t.build.rotation : 0);
+    let s = b.size || 1, off = Math.floor((s - 1) / 2), rot = r !== undefined ? r : (t.build ? t.build.rotation : 0);
     let obj = { b: b, c: c, r: rot, cx: t.x, cy: t.y };
     for (let dx = 0; dx < s; dx++) for (let dy = 0; dy < s; dy++) shadowMap[(t.x - off + dx) + "," + (t.y - off + dy)] = obj;
 };
@@ -50,9 +52,16 @@ const getConfig = b => {
     }
 };
 
-const getP = u => {
-    if (!u || !u.isPlayer()) return null;
-    let p = u.getPlayer();
+const getP = obj => {
+    if (!obj) return null;
+    let p = null;
+    if (obj instanceof Packages.mindustry.gen.Player) {
+        p = obj;
+    } else if (obj.isPlayer && obj.isPlayer()) {
+        p = obj.getPlayer();
+    }
+    if (!p) return null;
+
     if (!pids[p.id] && !failTraces[p.id]) {
         pids[p.id] = "?";
         try { reqTraces[p.id] = Date.now(); Call.adminRequest(p, Packages.mindustry.net.Packets.AdminAction.trace, null); } 
@@ -90,8 +99,9 @@ const wLog = f => {
             let cStr = l.coords[0].x + "," + l.coords[0].y + (l.count > 1 ? " ... " + l.coords[l.coords.length-1].x + "," + l.coords[l.coords.length-1].y : "");
             let rot = Number(l.r) % 4;
             let rStr = (l.b && l.b.rotate !== false && (l.act === "build" || l.act === "destroy" || l.act === "changed")) ? " | " + (arr[rot] !== undefined ? arr[rot] : l.r) : "";
+            if (l.act === "rotated" || l.act === "lost") rStr = "";
             if (l.act === "rotated") rStr = " | " + l.cStr;
-            let displayConf = l.act === "rotated" ? "" : " | " + l.cStr;
+            let displayConf = (l.act === "rotated" || l.act === "lost") ? "" : " | " + l.cStr;
             out += fTime(l.start) + " | " + l.act + " | " + (l.b ? l.b.name : "unknown") + rStr + displayConf + " | " + cStr + " | x" + l.count + "\n";
         });
         out += "\n";
@@ -129,12 +139,13 @@ const showLogs = fName => {
         if (!lgs.length || (fName && Strings.stripColors(lgs[0].n).toLowerCase().indexOf(fName.toLowerCase()) === -1)) continue;
         t.add("[accent]" + lgs[0].n + (pids[id] && pids[id] !== "?" ? " [accent]#" + pids[id] : "") + " [lightgrey](" + lgs[0].t + ")").left().row();
         lgs.forEach(l => {
-            let col = l.act === "build" ? "[green]" : (l.act === "destroy" ? "[red]" : "[accent]");
+            let col = l.act === "build" ? "[green]" : (l.act === "destroy" ? "[red]" : (l.act === "lost" ? "[magenta]" : "[accent]"));
             let cStr = l.coords[0].x + "," + l.coords[0].y + (l.count > 1 ? " ... " + l.coords[l.coords.length-1].x + "," + l.coords[l.coords.length-1].y : "");
             let rot = Number(l.r) % 4;
             let rStr = (l.b && l.b.rotate !== false && (l.act === "build" || l.act === "destroy" || l.act === "changed")) ? " | [lightgrey]" + (arr[rot] !== undefined ? arr[rot] : l.r) : "";
+            if (l.act === "rotated" || l.act === "lost") rStr = "";
             if (l.act === "rotated") rStr = " | [lightgrey]" + l.cStr;
-            let displayConf = l.act === "rotated" ? "" : " | [lightgrey]" + l.cStr;
+            let displayConf = (l.act === "rotated" || l.act === "lost") ? "" : " | [lightgrey]" + l.cStr;
             t.add("[lightgrey]" + fTime(l.start) + " | " + col + l.act + "[] | " + (l.b ? l.b.emoji() : "") + rStr + displayConf + " | [white]" + cStr + " | [accent]x" + l.count).left().row();
         });
         t.add("").padBottom(10).row();
@@ -165,17 +176,13 @@ const showChatLogs = () => {
 
 const rmShadow = s => {
     if (!s || !s.b) return;
-    let sz = s.b.size, off = Math.floor((sz - 1) / 2);
+    let sz = s.b.size || 1, off = Math.floor((sz - 1) / 2);
     for (let dx = 0; dx < sz; dx++) for (let dy = 0; dy < sz; dy++) delete shadowMap[(s.cx - off + dx) + "," + (s.cy - off + dy)];
 };
 
 Events.on(PlayerChatEvent, e => {
     if (!enabled || !e.player || !e.message) return;
-    chatLogs.push({
-        time: Date.now(),
-        n: e.player.name,
-        msg: e.message
-    });
+    chatLogs.push({ time: Date.now(), n: e.player.name, msg: e.message });
 });
 
 Events.on(BlockBuildEndEvent, e => {
@@ -200,12 +207,8 @@ Events.on(BlockBuildEndEvent, e => {
 
 Events.on(ConfigEvent, e => {
     if (!enabled || !e.player) return;
-    let p = { n: e.player.name, t: e.player.team().name, id: e.player.id };
-    if (!pids[p.id] && !failTraces[p.id]) {
-        pids[p.id] = "?";
-        try { reqTraces[p.id] = Date.now(); Call.adminRequest(e.player, Packages.mindustry.net.Packets.AdminAction.trace, null); } 
-        catch(err) { failTraces[p.id] = true; }
-    }
+    let p = getP(e.player);
+    if (!p) return;
     let b = e.tile.block, k = e.tile.tile.x + "," + e.tile.tile.y, s = shadowMap[k];
     let oStr = s ? fConf(s.c, b) : "unknown", nStr = fConf(e.value, b);
     let r = s ? s.r : e.tile.rotation;
@@ -243,10 +246,59 @@ Events.on(PayloadDropEvent, e => {
     addLog(p.id, p.n, p.t, "drop", b, cStr, c, e.build.rotation, e.build.tileX(), e.build.tileY());
 });
 
+Events.on(EventType.UnitControlEvent, e => {
+    if (!enabled || !e.player || !e.unit) return;
+    let p = getP(e.player);
+    if (p) {
+        unitCommanders[e.unit.id] = p;
+    }
+});
+
+Events.on(EventType.UnitDestroyEvent, e => {
+    if (!enabled || !e.unit) return;
+    let u = e.unit;
+
+    if (u.type && (u.type.name === "alpha" || u.type.name === "beta" || u.type.name === "gamma" || 
+                   u.type.name === "evoke" || u.type.name === "incite" || u.type.name === "emanate" || 
+                   u.type.coreUnit)) {
+        delete unitCommanders[u.id];
+        return;
+    }
+
+    let p = null;
+
+    if (u.isPlayer()) {
+        p = getP(u);
+    } else if (u.lastCommanded) {
+        let cmdrName = String(u.lastCommanded); 
+        
+        Groups.player.each(player => {
+            if (String(player.coloredName()) === cmdrName || String(player.name) === cmdrName) {
+                p = getP(player);
+            }
+        });
+        
+        if (!p) {
+            let stripped = Strings.stripColors(cmdrName);
+            p = { id: "offline_" + stripped, n: stripped, t: u.team.name };
+        }
+    }
+
+    if (!p && unitCommanders[u.id]) {
+        p = unitCommanders[u.id];
+    }
+    
+    if (p) {
+        addLog(p.id, p.n, p.t, "lost", u.type, "", null, 0, Math.round(u.x / 8), Math.round(u.y / 8));
+    }
+    
+    delete unitCommanders[u.id];
+});
+
 Events.on(WorldLoadEvent, () => {
     logs = {}; buffers = {}; pids = {}; reqTraces = {}; failTraces = {}; drawName = null;
     cachedDraws = []; lastDrawCount = 0; lastDrawName = null; chatLogs = [];
-    knownPlayers = {};
+    knownPlayers = {}; unitCommanders = {};
     initShadowMap();
     let f = Core.settings.getDataDirectory().child("qol").child("main_log.txt");
     if (f.exists()) f.writeString("");
@@ -273,29 +325,41 @@ const updateCachedDraws = () => {
     let grid = {};
     allLogs.forEach(l => {
         if (!l.b || l.b.name === "air") return;
-        l.coords.forEach(c => {
-            let s = l.b.size, off = Math.floor((s - 1) / 2);
-            let drawObj = { act: l.act, b: l.b, r: l.r, x: c.x, y: c.y, id: Math.random() };
-            for (let dx = 0; dx < s; dx++) {
-                for (let dy = 0; dy < s; dy++) {
-                    let k = (c.x - off + dx) + "," + (c.y - off + dy);
-                    let existing = grid[k];
-                    if (existing) {
-                        let es = existing.b.size, eoff = Math.floor((es - 1) / 2);
-                        for (let edx = 0; edx < es; edx++) {
-                            for (let edy = 0; edy < es; edy++) {
-                                delete grid[(existing.x - eoff + edx) + "," + (existing.y - eoff + edy)];
+        
+        if (l.act === "lost") {
+            let c = l.coords[l.coords.length - 1]; 
+            let kCenter = c.x + "," + c.y + "_lost_" + l.b.name;
+            
+            if (grid[kCenter]) {
+                grid[kCenter].count += l.count;
+            } else {
+                grid[kCenter] = { act: l.act, b: l.b, r: l.r, x: c.x, y: c.y, id: Math.random(), count: l.count };
+            }
+        } else {
+            l.coords.forEach(c => {
+                let s = l.b.size || 1, off = Math.floor((s - 1) / 2);
+                let drawObj = { act: l.act, b: l.b, r: l.r, x: c.x, y: c.y, id: Math.random(), count: 1 };
+                for (let dx = 0; dx < s; dx++) {
+                    for (let dy = 0; dy < s; dy++) {
+                        let k = (c.x - off + dx) + "," + (c.y - off + dy);
+                        let existing = grid[k];
+                        if (existing && existing.act !== "lost") {
+                            let es = existing.b.size || 1, eoff = Math.floor((es - 1) / 2);
+                            for (let edx = 0; edx < es; edx++) {
+                                for (let edy = 0; edy < es; edy++) {
+                                    delete grid[(existing.x - eoff + edx) + "," + (existing.y - eoff + edy)];
+                                }
                             }
                         }
                     }
                 }
-            }
-            for (let dx = 0; dx < s; dx++) {
-                for (let dy = 0; dy < s; dy++) {
-                    grid[(c.x - off + dx) + "," + (c.y - off + dy)] = drawObj;
+                for (let dx = 0; dx < s; dx++) {
+                    for (let dy = 0; dy < s; dy++) {
+                        grid[(c.x - off + dx) + "," + (c.y - off + dy)] = drawObj;
+                    }
                 }
-            }
-        });
+            });
+        }
     });
     cachedDraws = [];
     for (let k in grid) {
@@ -333,18 +397,67 @@ Events.run(Trigger.update, () => {
         
         knownPlayers = currentPlayers;
     }
+
+    unitScanTimer += Time.delta;
+    if (unitScanTimer > 60) {
+        unitScanTimer = 0;
+        Groups.unit.each(u => {
+            if (u.isPlayer()) {
+                unitCommanders[u.id] = getP(u);
+            } else {
+                let ctrl = u.controller();
+                if (ctrl instanceof Packages.mindustry.ai.types.CommandAI) {
+                    let cmdr = ctrl.commander;
+                    if (cmdr && cmdr.isPlayer && cmdr.isPlayer()) {
+                        unitCommanders[u.id] = getP(cmdr);
+                    }
+                }
+            }
+        });
+    }
 });
 
 Events.run(Trigger.draw, () => {
     if (!enabled || drawName === null) return;
     updateCachedDraws();
     let bnd = Core.camera.bounds(Tmp.r1);
+    
     cachedDraws.forEach(d => {
-        let col = d.act === "build" ? Color.green : (d.act === "destroy" ? Color.red : Pal.accent);
-        let offset = d.b.size % 2 === 0 ? Vars.tilesize / 2 : 0;
-        let wx = d.x * Vars.tilesize + offset, wy = d.y * Vars.tilesize + offset, off = (d.b.size * Vars.tilesize) / 2;
+        let col = d.act === "build" ? Color.green : (d.act === "destroy" ? Color.red : (d.act === "lost" ? Color.magenta : Pal.accent));
+        
+        let wx, wy, drawSize;
+        
+        if (d.act === "lost") {
+            wx = d.x * Vars.tilesize;
+            wy = d.y * Vars.tilesize;
+            drawSize = d.b.hitSize ? d.b.hitSize : (Vars.tilesize * 2);
+            drawSize = Math.max(drawSize, Vars.tilesize * 1.5);
+        } else {
+            let s = d.b.size || 1;
+            let offset = s % 2 === 0 ? Vars.tilesize / 2 : 0;
+            wx = d.x * Vars.tilesize + offset;
+            wy = d.y * Vars.tilesize + offset;
+            drawSize = s * Vars.tilesize;
+        }
+        
+        let off = drawSize / 2;
         if (wx + off < bnd.x || wy + off < bnd.y || wx - off > bnd.x + bnd.width || wy - off > bnd.y + bnd.height) return;
-        Draw.color(col, 0.5); Draw.rect(d.b.uiIcon, wx, wy, d.b.size * Vars.tilesize, d.b.size * Vars.tilesize, d.r * 90); Draw.color();
+        
+        Draw.color(col, 0.5); 
+        Draw.rect(d.b.uiIcon, wx, wy, drawSize, drawSize, d.r * 90); 
+        Draw.color();
+        
+        if (d.act === "lost" && d.count > 1) {
+            let font = Fonts.outline;
+            let oldScaleX = font.getData().scaleX;
+            let oldScaleY = font.getData().scaleY;
+            try {
+                font.getData().setScale(0.35);
+                font.draw(java.lang.String.valueOf("x" + d.count), wx, wy + (drawSize / 2) + 4, 0, 1, false);
+            } finally {
+                font.getData().setScale(oldScaleX, oldScaleY);
+            }
+        }
     });
 });
 
@@ -389,8 +502,7 @@ interceptor.add("log", args => {
     if (sub === "toggle" || sub === "t") {
         enabled = interceptor.parseToggle(enabled, args[2]);
         if (enabled) {
-            failTraces = {};
-            knownPlayers = {};
+            failTraces = {}; knownPlayers = {};
             Groups.player.each(p => {
                 knownPlayers[p.id] = p.name;
                 if (p !== Vars.player) {
