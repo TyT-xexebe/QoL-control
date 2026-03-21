@@ -16,10 +16,11 @@ let btnX = Core.settings.getFloat("binfo-x", 15);
 let btnY = Core.settings.getFloat("binfo-y", 180);
 
 const formatNum = n => {
-    let abs = Math.abs(n);
-    if(abs >= 1000000) return (n / 1000000).toFixed(1).replace(".0", "") + "m";
-    if(abs >= 1000) return (n / 1000).toFixed(1).replace(".0", "") + "k";
-    return Math.floor(n).toString();
+    let num = Number(n);
+    let abs = Math.abs(num);
+    if(abs >= 1000000) return (Math.round(num / 100000) / 10) + "m";
+    if(abs >= 1000) return (Math.round(num / 100) / 10) + "k";
+    return Math.floor(num).toString();
 };
 
 const initUI = () => {
