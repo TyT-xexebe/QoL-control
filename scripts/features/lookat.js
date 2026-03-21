@@ -91,8 +91,13 @@ Events.run(Trigger.draw, () => {
 
         Draw.color(Pal.accent);
         Draw.alpha(0.3 + Mathf.absin(Time.time, 8, 0.7));
-        Lines.stroke(2 + scl);
+        Lines.stroke(1 + scl);
+        
         Lines.circle(wx, wy, r + pulse);
+        
+        let crossSize = r * 0.1;
+        Lines.line(wx - crossSize, wy, wx + crossSize, wy);
+        Lines.line(wx, wy - crossSize, wx, wy + crossSize);
         
         Draw.reset();
 
