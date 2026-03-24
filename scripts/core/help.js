@@ -21,7 +21,9 @@ const helpData = {
     "features/server": { cmd: "server", desc: "[lightgrey]Server manager\n\n[accent]!server[lightgrey] - opens UI to manage and connect to servers" },
     "features/mute": { cmd: "mute", desc: "[lightgrey]Local chat mute for specific players\n\n[accent]!mute\nlist[lightgrey] - show all muted players\n[accent]add <name>[lightgrey] - mute exact player name\n[accent]addp <name>[lightgrey] - mute any player containing this name (partial)\n[accent]remove <name>[lightgrey] - unmute player\n\n[accent]Shortcuts:[lightgrey] !mute rem <name>" },
     "features/map": { cmd: "map", desc: "[lightgrey]Shows current map stats" },
-    "core/bind": { cmd: "bind", desc: "[lightgrey]Keybinding for PC users" }
+    "core/bind": { cmd: "bind", desc: "[lightgrey]Keybinding for PC users" },
+    "features/cam": { cmd: "cam", desc: "[lightgrey]Shows camera and cursor position of players\n\n[accent]!cam <name?>[lightgrey] - shows camera & cursor position of all players / selected by name" },
+    "ui/core": { cmd: "core", desc: "[lightgrey]Shows core resourses of any team on map\n\n[accent]!core <#team>[lightgrey] - toggles core resourses display of team #id you selected (sharded, crux, blue, malis, green also supported)" }
 };
 
 interceptor.add("qol", (args) => {

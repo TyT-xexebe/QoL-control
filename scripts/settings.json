@@ -20,10 +20,12 @@
   "features/server": true,
   "features/mute": true,
   "features/map": true,
+  "features/cam": true,
   "ui/render": true,
   "ui/camera": true,
   "ui/table": true,
-  "ui/buildpause": true,
+  "ui/buildpause": false,
   "ui/binfo": true,
+  "ui/core": true,
   "ui/quickchat": true
 }

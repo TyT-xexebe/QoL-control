@@ -231,6 +231,15 @@ Unmutes a player by removing them from the mute list.
 
 Shows current map stats.
 
+#### `!cam <name?>`
+
+Shows camera & cursor position of all players / selected player
+
+#### `!core <#team>`
+
+Displays core resourses of team #id you selected, can displays multiple.
+Supports `sharded, crux, malis, green, blue` also.`!core` will show core resourses of your team.
+
 ## Features
 
 #### Camera lock button

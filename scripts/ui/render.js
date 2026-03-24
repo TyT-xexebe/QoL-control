@@ -5,6 +5,7 @@ let renderBullets = true;
 let renderUnits = true;
 let renderBlocks = true;
 let renderLayers = true;
+let enablePhysics = true;
 
 const origBulletSizes = [];
 const origUnitSizes = [];
@@ -57,7 +58,7 @@ Events.on(ClientLoadEvent, () => {
 
 interceptor.add("render", (args) => {
     if (args.length < 2) {
-        notify("[lightgray]!render <bullet|unit|block|layer> <1/0?>");
+        notify("[lightgray]!render <bullet|unit|block|layer|phys> <1/0?>");
         return;
     }
 
@@ -133,7 +134,23 @@ interceptor.add("render", (args) => {
         }));
         notify("[lightgray]Block Layers " + (renderLayers ? "[green]ON" : "[scarlet]OFF"));
     }
+    else if (subcmd === "phys") {
+        enablePhysics = interceptor.parseToggle(enablePhysics, args[2]);
+        
+        if (!enablePhysics) {
+            // Отключаем коллизии: очищаем дерево и ставим пустую функцию обновления
+            Groups.unit.collideTree.clear();
+            Groups.unit.collideTree.update = () => {}; 
+        } else {
+            // Включаем обратно: пересоздаем дерево коллизий
+            let bounds = Groups.unit.collideTree.bounds;
+            Groups.unit.collideTree = new Packages.arc.math.geom.QuadTree(bounds);
+            Groups.unit.each(cons(u => Groups.unit.collideTree.insert(u)));
+        }
+        
+        notify("[lightgray]Physics " + (enablePhysics ? "[green]ON" : "[scarlet]OFF"));
+    }
     else {
-        notify("[lightgray]!render <bullet|unit|block|layer> <1/0?>");
+        notify("[lightgray]!render <bullet|unit|block|layer|phys> <1/0?>");
     }
 });
