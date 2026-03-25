@@ -264,6 +264,19 @@ Includes a default Auto Execute button that automatically sends your text or com
 
 Shows build info (name, team, hp, itmes, liquids, power, battery) when hover/tap on it
 
+#### Custom map
+
+Adds a draggable real time minimap that displays terrain, better units, other players (eye icons), and your current camera viewport.
+Use `!cmap` to toggle it on/off, and `!cmap <size>` to change its size.
+
+Left-click / Tap: Opens the standard full-screen map.
+
+Left-drag / Tap & drag: Moves the minimap widget around the screen.
+
+Right-click / Long-press (0.4s): Instantly teleports your camera to the selected location.
+
+Right-drag / Long-press & drag: Smoothly pans your camera across the map.
+
 #### Omnimovement + rotateSpeed for units
 
 #### Mlog Editor Extensions

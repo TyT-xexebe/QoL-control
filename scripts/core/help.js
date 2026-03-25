@@ -23,7 +23,8 @@ const helpData = {
     "features/map": { cmd: "map", desc: "[lightgrey]Shows current map stats" },
     "core/bind": { cmd: "bind", desc: "[lightgrey]Keybinding for PC users" },
     "features/cam": { cmd: "cam", desc: "[lightgrey]Shows camera and cursor position of players\n\n[accent]!cam <name?>[lightgrey] - shows camera & cursor position of all players / selected by name" },
-    "ui/core": { cmd: "core", desc: "[lightgrey]Shows core resourses of any team on map\n\n[accent]!core <#team>[lightgrey] - toggles core resourses display of team #id you selected (sharded, crux, blue, malis, green also supported)" }
+    "ui/core": { cmd: "core", desc: "[lightgrey]Shows core resourses of any team on map\n\n[accent]!core <#team>[lightgrey] - toggles core resourses display of team #id you selected (sharded, crux, blue, malis, green also supported)" },
+    "ui/map": { cmd: "cmap",desc: "[lightgrey]Custom map with some features\n[accent]!cmap <size>[lightgrey] - toggles / sets <size> of custom map" }
 };
 
 interceptor.add("qol", (args) => {

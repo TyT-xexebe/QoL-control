@@ -27,5 +27,6 @@
   "ui/buildpause": false,
   "ui/binfo": true,
   "ui/core": true,
-  "ui/quickchat": true
+  "ui/quickchat": true,
+  "ui/map": true
 }

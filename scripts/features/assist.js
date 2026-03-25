@@ -149,12 +149,12 @@ const assistHandler = (args) => {
                         }
                     }, 0, 0.5);
                 }
-                notify("[green]Assist ON");
+                notify("[lightgrey]Assist [green]ON");
             } else {
                 if (assistTimer) assistTimer.cancel();
                 assistTimer = null;
                 releaseAssistUnits();
-                notify("[scarlet]Assist OFF");
+                notify("[lightgrey]Assist [scarlet]OFF");
             }
         } else {
             let type = args[2];
