@@ -29,7 +29,7 @@ Events.run(Trigger.draw, () => {
 
 		Vars.indexer.allBuildings(u.x, u.y, 800, (b) => {
 			if (b.team !== u.team && b.block.category === Category.turret) {
-				let r = b.block.range;
+				let r = typeof b.range === "function" ? b.range() : b.block.range;
 				let limit = r + 100;
 
 				if (u.dst2(b) <= limit * limit) {
