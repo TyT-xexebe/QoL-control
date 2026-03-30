@@ -105,6 +105,9 @@ Sets the minimum amount of item in block to grab it.
 `!grab status` | `!gr s`
 Shows the current grab status.
 
+`!grab effects | !gr e`
+Toggles blocks effect display.
+
 #### `!cghost` | `!cg`
 Clears all your ghost blocks (destroyed blocks waiting to be rebuilt) if they in enemy turrets range.
 

@@ -8,7 +8,8 @@ const grab = {
     index: 0,
     lastGrab: 0,
     lastSearch: 0,
-    range: 216
+    range: 216,
+    effects: Core.settings.getBool("qol-grab-effects", true)
 };
 
 function findTargets() {
@@ -27,7 +28,7 @@ Events.on(WorldLoadEvent, () => {
 });
 
 Events.run(Trigger.draw, () => {
-    if (!grab.active || !grab.item || grab.targets.length === 0) return;
+    if (!grab.active || !grab.item || grab.targets.length === 0 || !grab.effects) return;
     
     Draw.color(Pal.accent);
     Draw.alpha(Math.abs(Math.sin(Time.time / 15)));
@@ -90,6 +91,12 @@ const grabHandler = (args) => {
         return notify("[lightgrey]Grab " + (grab.active ? "[green]ON" : "[scarlet]OFF"));
     }
 
+    if (args[1] === "effects" || args[1] === "e") {
+        grab.effects = interceptor.parseToggle(grab.effects, args[2]);
+        Core.settings.put("qol-grab-effects", grab.effects);
+        return notify("[lightgrey]Effects " + (grab.effects ? "[green]ON" : "[scarlet]OFF"));
+    }
+
     if (args[1] === "min" && args[2]) {
         let val = parseInt(args[2]);
         if (isNaN(val) || val < 1) return notify("[scarlet]<min> invalid");
@@ -100,7 +107,8 @@ const grabHandler = (args) => {
     if (args[1] === "status" || args[1] === "s") {
         return notify("[lightgrey]State " + (grab.active ? "[green]ON" : "[scarlet]OFF") +
                       "\n[lightgrey]Item " + (grab.item ? "[accent]" + grab.item.name : "none") +
-                      "\n[lightgrey]Min [accent]" + grab.min);
+                      "\n[lightgrey]Min [accent]" + grab.min +
+                      "\n[lightgrey]Effects " + (grab.effects ? "[green]ON" : "[scarlet]OFF"));
     }
 
     if (args[1]) {
@@ -114,7 +122,7 @@ const grabHandler = (args) => {
         }
     }
 
-    notify("[lightgray]!grab <item>\n!grab toggle <1/0?>\n!grab min <val>\n!grab status\n\n!gr <item>\n!gr t <1/0?>\n!gr min <val>\n!gr s");
+    notify("[lightgray]!grab <item>\n!grab toggle <1/0?>\n!grab min <val>\n!grab effects <1/0?>\n!grab status\n\n!gr <item>\n!gr t <1/0?>\n!gr min <val>\n!gr e <1/0?>\n!gr s");
 };
 
 interceptor.add("grab", grabHandler);
