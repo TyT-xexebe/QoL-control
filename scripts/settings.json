@@ -20,7 +20,7 @@
   "features/server": true,
   "features/mute": true,
   "features/map": true,
-  "features/cam": true,
+  "features/track": true,
   "ui/render": true,
   "ui/camera": true,
   "ui/table": true,

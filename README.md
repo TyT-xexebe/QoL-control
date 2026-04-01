@@ -209,10 +209,10 @@ Resets table.
 `!table toggle <1/0?>`
 Toggles On / Off table display.
 
-#### `render <bullet/unit/block/layer> <1/0?>`
+#### `!render <bullet/unit/block/layer> <1/0?>`
 Toggles render of <?> (may have some issues on PC, or with using other mods, layers cursed af).
 
-#### `server`
+#### `!server`
 Fast join to servers which you added to it.
 
 #### `!mute`
@@ -234,9 +234,13 @@ Unmutes a player by removing them from the mute list.
 
 Shows current map stats.
 
-#### `!cam <name?>`
+#### `!bind`
 
-Shows camera & cursor position of all players / selected player
+You can add keybinds for your PC to launch some commands or text in chat.
+
+#### `!track <name?>`
+
+Shows cursor position of all players / selected player and unit controlled by RTS.
 
 #### `!core <#team>`
 
