@@ -7,6 +7,9 @@ let trackedPlayer = null;
 let unitCommanders = {};
 let unitScanTimer = 0;
 
+let rallyPoints = [];
+let rallyScanTimer = 0;
+
 const getPlayerObj = obj => {
     if (!obj) return null;
     if (obj instanceof Packages.mindustry.gen.Player) return obj;
@@ -16,6 +19,7 @@ const getPlayerObj = obj => {
 
 Events.on(WorldLoadEvent, () => {
     unitCommanders = {};
+    rallyPoints = [];
 });
 
 Events.run(Trigger.update, () => {
@@ -84,6 +88,26 @@ Events.run(Trigger.update, () => {
         
         unitCommanders = newCommanders;
     }
+
+    rallyScanTimer += Time.delta;
+    if (rallyScanTimer > 180) {
+        rallyScanTimer = 0;
+        let newPoints = [];
+        
+        Groups.build.each(b => {
+            if (b.commandPos && b.commandPos.x !== undefined) {
+                if (b.commandPos.x !== 0 || b.commandPos.y !== 0) {
+                    newPoints.push({
+                        x: b.x, y: b.y,
+                        tx: b.commandPos.x, ty: b.commandPos.y,
+                        color: b.team.color,
+                        team: b.team
+                    });
+                }
+            }
+        });
+        rallyPoints = newPoints;
+    }
 });
 
 interceptor.add("track", (args) => {
@@ -104,6 +128,7 @@ interceptor.add("track", (args) => {
         if (!trackEnabled) {
             trackedPlayer = null;
             unitCommanders = {};
+            rallyPoints = [];
         }
         notify("[lightgray]Tracking Display " + (trackEnabled ? "[green]ON" : "[scarlet]OFF"));
     }
@@ -191,4 +216,21 @@ Events.run(Trigger.draw, () => {
         
         Draw.reset();
     });
+
+    if (rallyPoints.length > 0) {
+        Draw.z(Layer.max);
+        rallyPoints.forEach(p => {
+            if (trackedPlayer && p.team !== trackedPlayer.team()) return;
+
+            Draw.color(p.color, 0.4);
+            Lines.stroke(1.5);
+            
+            let dist = Math.abs(p.x - p.tx) + Math.abs(p.y - p.ty);
+            let segments = Math.floor(Math.max(2, dist / 8));
+            Lines.dashLine(p.x, p.y, p.tx, p.ty, segments);
+            
+            Lines.square(p.tx, p.ty, 4, 45);
+        });
+        Draw.reset();
+    }
 });

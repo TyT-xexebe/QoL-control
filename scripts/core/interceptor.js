@@ -10,13 +10,15 @@ function handleCommand(msg) {
         msg = msg.replace(/[\s\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uE000-\uF8FF\uFFF0-\uFFFF\x00-\x1F\u0F80-\u107F]+$/, '');
     }
 
-    if (!msg.startsWith("!") && !msg.startsWith("?")) return false;
-    let args = msg.substring(1).split(" ");
+    let cleanMsg = msg.replace(/^\/(t|a)\s+/i, '');
+
+    if (!cleanMsg.startsWith("!") && !cleanMsg.startsWith("?")) return false;
+    let args = cleanMsg.substring(1).split(" ");
     let cmd = args[0].toLowerCase();
     
     if (commands.hasOwnProperty(cmd)) {
         try {
-            commands[cmd](args, msg);
+            commands[cmd](args, cleanMsg);
         } catch(e) {}
         
         return true;
@@ -41,10 +43,8 @@ try {
                         let msgField = object.getClass().getField("message");
                         let msg = msgField.get(object);
                         
-                        if (msg && (msg.startsWith("!") || msg.startsWith("?"))) {
-                            if (handleCommand(msg)) {
-                                return;
-                            }
+                        if (msg && handleCommand(msg)) {
+                            return;
                         }
                     }
                 } catch (e) {}
@@ -87,7 +87,7 @@ try {
     if (!alreadyAdded) {
         let filter = new JavaAdapter(ChatFilter, {
             filter: function(player, text) {
-                if (player === Vars.player && text && (text.startsWith("!") || text.startsWith("?"))) {
+                if (player === Vars.player && text) {
                     if (handleCommand(text)) {
                         return null;
                     }

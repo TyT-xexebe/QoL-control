@@ -7,79 +7,67 @@ const MIN_CORE_ITEMS = 100;
 const DEFAULT_PRIORITY = 10;
 
 const TURRET_PRIORITY = {
-    "foreshadow": 100,
-    "fuse": 90,
-    "spectre": 80,
-    "swarmer": 70,
-    "cyclone": 60,
-    "salvo": 50,
-    "scatter": 40,
-    "hail": 30
+    "fuse": 100, "cyclone": 90, "foreshadow": 80, "swarmer": 70,
+    "ripple": 60, "scatter": 50, "salvo": 40, "hail": 30
 };
 
 const GLOBAL_AMMO_PRIORITY = [
-    "surge-alloy",
-    "plastanium",
-    "thorium",
-    "blast-compound",
-    "pyratite",
-    "metaglass",
-    "lead"
+    "surge-alloy", "plastanium", "thorium", "blast-compound",
+    "pyratite", "metaglass", "lead"
 ];
 
 let lastActionTime = 0;
 let cacheInitialized = false;
 
 const targets = [];
-const validTurretIds = []; 
+const validTargetIds = []; 
 const bestAmmoById = [];
 const priorityById = [];
+const ignoreMinCoreById = [];
+
+let domeBlock, siliconItem, phaseItem;
 
 const initCache = () => {
     if (cacheInitialized) return;
     let ItemTurret = Packages.mindustry.world.blocks.defense.turrets.ItemTurret;
     
+    domeBlock = Vars.content.block("overdrive-dome");
+    siliconItem = Vars.content.item("silicon");
+    phaseItem = Vars.content.item("phase-fabric");
+    
     Vars.content.blocks().each(cons(b => {
         priorityById[b.id] = DEFAULT_PRIORITY;
+        ignoreMinCoreById[b.id] = false;
         
         if (b instanceof ItemTurret) {
             let ammoTypes = b.ammoTypes;
             if (ammoTypes) {
                 let list = [];
-                
-                // ИСПРАВЛЕНИЕ: Безопасный перебор предметов. 
-                // Обходит баг с IllegalAccessException в итераторах ObjectMap на новых версиях Java.
                 let allItems = Vars.content.items();
                 for(let i = 0; i < allItems.size; i++) {
                     let item = allItems.get(i);
-                    
                     if(ammoTypes.containsKey(item)) {
                         let bullet = ammoTypes.get(item);
-                        
                         let pIndex = GLOBAL_AMMO_PRIORITY.indexOf(item.name);
-                        let score = 0;
-                        if (pIndex !== -1) {
-                            score = 1000 - pIndex; 
-                        } else {
-                            let rMult = bullet.reloadMultiplier || 1;
-                            let aMult = bullet.ammoMultiplier || 1;
-                            score = (bullet.damage + bullet.splashDamage) * aMult * rMult;
-                        }
+                        let score = pIndex !== -1 ? 1000 - pIndex : (bullet.damage + bullet.splashDamage) * (bullet.ammoMultiplier || 1) * (bullet.reloadMultiplier || 1);
                         list.push({ item: item, score: score });
                     }
                 }
-                
                 list.sort((a, b) => b.score - a.score);
-                
                 bestAmmoById[b.id] = list.map(e => e.item);
-                validTurretIds[b.id] = true;
-                
-                if (TURRET_PRIORITY[b.name] !== undefined) {
-                    priorityById[b.id] = TURRET_PRIORITY[b.name];
-                }
+                validTargetIds[b.id] = true;
+                if (TURRET_PRIORITY[b.name] !== undefined) priorityById[b.id] = TURRET_PRIORITY[b.name];
             }
         }
     }));
+
+    if (domeBlock && siliconItem && phaseItem) {
+        bestAmmoById[domeBlock.id] = [siliconItem, phaseItem];
+        validTargetIds[domeBlock.id] = true;
+        priorityById[domeBlock.id] = 200;
+        ignoreMinCoreById[domeBlock.id] = true;
+    }
+    
     cacheInitialized = true;
 };
 
@@ -120,15 +108,19 @@ Events.run(Trigger.update, () => {
     
     for (let i = 0; i < turrets.size; i++) {
         let b = turrets.get(i);
-        let blockId = b.block.id;
-        
-        if (validTurretIds[blockId]) {
-            if (b.within(px, py, buildRange)) {
-                if (b.totalAmmo <= b.block.maxAmmo / 2) {
+        if (validTargetIds[b.block.id] && b.within(px, py, buildRange)) {
+            if (b.totalAmmo <= b.block.maxAmmo / 2) targets.push(b);
+        }
+    }
+
+    if (domeBlock) {
+        Groups.build.each(b => {
+            if (b.block === domeBlock && b.team === p.team() && b.within(px, py, buildRange)) {
+                if (b.items && (b.items.get(siliconItem) === 0 || b.items.get(phaseItem) === 0)) {
                     targets.push(b);
                 }
             }
-        }
+        });
     }
 
     if (targets.length === 0) return;
@@ -145,6 +137,8 @@ Events.run(Trigger.update, () => {
         for (let i = 0; i < targets.length; i++) {
             let t = targets[i];
             if (t.acceptItem(t, stack.item)) {
+                if (t.block === domeBlock && t.items && t.items.get(stack.item) > 0) continue;
+                
                 Call.transferInventory(p, t);
                 lastActionTime = now;
                 itemTransferred = true;
@@ -168,7 +162,11 @@ Events.run(Trigger.update, () => {
             let chosenItem = null;
             for (let j = 0; j < bestItems.length; j++) {
                 let item = bestItems[j];
-                if (core.items.get(item) >= MIN_CORE_ITEMS) {
+                
+                if (t.block === domeBlock && t.items && t.items.get(item) > 0) continue;
+                
+                let minReq = ignoreMinCoreById[t.block.id] ? 0 : MIN_CORE_ITEMS;
+                if (core.items.get(item) > minReq) {
                     chosenItem = item;
                     break;
                 }

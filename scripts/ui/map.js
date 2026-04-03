@@ -8,6 +8,10 @@ let btnX = Core.settings.getFloat("map-x", 15);
 let btnY = Core.settings.getFloat("map-y", 400);
 let mapSize = Core.settings.getInt("map-size", 200);
 
+let playerMode = Core.settings.getInt("cmap-player-mode", 0);
+let unitOutline = Core.settings.getBool("cmap-unit-outline", false);
+let unitSize = Core.settings.getFloat("cmap-unit-size", 24);
+
 const initUI = () => {
     if(setup || !Vars.ui || !Vars.ui.hudGroup) return;
     setup = true;
@@ -29,14 +33,29 @@ const initUI = () => {
             Draw.rect(region, this.x + this.width / 2, this.y + this.height / 2, this.width, this.height);
             
             let scl = Packages.arc.scene.ui.layout.Scl.scl();
-            let scale = scl * 24; 
+            let scale = scl * unitSize; 
             
             Vars.state.teams.present.each(data => {
-                Draw.color(data.team.color);
                 data.units.each(u => {
                     if (!u.isPlayer() && u.type.drawMinimap) {
                         let icon = u.type.fullIcon;
-                        Draw.rect(icon, this.x + u.x / max * this.width, this.y + u.y / max * this.height, scale, scale * icon.height / icon.width, u.rotation - 90);
+                        let px = this.x + u.x / max * this.width;
+                        let py = this.y + u.y / max * this.height;
+                        let iw = scale;
+                        let ih = scale * icon.height / icon.width;
+                        let rot = u.rotation - 90;
+                        
+                        if (unitOutline) {
+                            Draw.color(Packages.arc.graphics.Color.white);
+                            let off = scl * 1.5;
+                            Draw.rect(icon, px + off, py, iw, ih, rot);
+                            Draw.rect(icon, px - off, py, iw, ih, rot);
+                            Draw.rect(icon, px, py + off, iw, ih, rot);
+                            Draw.rect(icon, px, py - off, iw, ih, rot);
+                        }
+                        
+                        Draw.color(data.team.color);
+                        Draw.rect(icon, px, py, iw, ih, rot);
                     }
                 });
             });
@@ -44,9 +63,22 @@ const initUI = () => {
             Draw.color();
             let eye = Icon.eye.getRegion();
             let eyeScl = scl * 0.625; 
+            let font = Fonts.def;
+            let oldSclX = font.getData().scaleX;
+            let oldSclY = font.getData().scaleY;
+            
             Groups.player.each(p => {
                 if (p.unit() && p !== Vars.player) {
-                    Draw.rect(eye, this.x + p.x / max * this.width, this.y + p.y / max * this.height, eye.width * eyeScl, eye.height * eyeScl);
+                    let px = this.x + p.x / max * this.width;
+                    let py = this.y + p.y / max * this.height;
+                    
+                    if (playerMode === 0) {
+                        Draw.rect(eye, px, py, eye.width * eyeScl, eye.height * eyeScl);
+                    } else {
+                        font.getData().setScale(scl * 0.6);
+                        font.draw(p.name, px, py + scl * 4, Packages.arc.util.Align.center);
+                        font.getData().setScale(oldSclX, oldSclY);
+                    }
                 }
             });
             
@@ -145,22 +177,47 @@ Events.on(WorldLoadEvent, () => {
     Packages.arc.util.Reflect.set(Vars.renderer.minimap, "zoom", new java.lang.Float(Math.max(t.height, t.width) / 32));
 });
 
-interceptor.add("cmap", (args) => {
-    let val = args[1];
-    if (val && /^\d+$/.test(val) && val !== "0" && val !== "1") {
-        mapSize = Math.max(50, Math.min(parseInt(val), 1000));
-        Core.settings.put("map-size", new java.lang.Integer(mapSize));
+interceptor.add("cmap", () => {
+    let dialog = new BaseDialog("Minimap Settings");
+    dialog.addCloseButton();
+    let cont = dialog.cont;
+    
+    cont.check("Enable Minimap", mapEnabled, b => {
+        mapEnabled = b;
+        Core.settings.put("map-enabled", new java.lang.Boolean(b));
+    }).pad(4).row();
+    
+    cont.check("Unit Outlines", unitOutline, b => {
+        unitOutline = b;
+        Core.settings.put("cmap-unit-outline", new java.lang.Boolean(b));
+    }).pad(4).row();
+    
+    let modeBtn;
+    modeBtn = cont.button("Player Display: " + (playerMode === 0 ? "Icon" : "Name"), () => {
+        playerMode = playerMode === 0 ? 1 : 0;
+        modeBtn.get().setText("Player Display: " + (playerMode === 0 ? "Icon" : "Name"));
+        Core.settings.put("cmap-player-mode", new java.lang.Integer(playerMode));
+    }).size(240, 50).pad(4);
+    cont.row();
+    
+    cont.label(() => "Map Size: " + mapSize).padTop(10).row();
+    cont.slider(50, 1000, 10, mapSize, s => {
+        mapSize = s;
+        Core.settings.put("map-size", new java.lang.Integer(s));
         if (mapTable && mapElem) {
             mapTable.clearChildren();
             mapTable.add(mapElem).size(mapSize);
             mapTable.pack();
         }
-        notify("[lightgray]Map size set to [accent]" + mapSize);
-    } else {
-        mapEnabled = interceptor.parseToggle(mapEnabled, val);
-        Core.settings.put("map-enabled", new java.lang.Boolean(mapEnabled));
-        notify("[lightgray]Minimap " + (mapEnabled ? "[green]ON" : "[scarlet]OFF"));
-    }
+    }).width(240).pad(4).row();
+    
+    cont.label(() => "Unit Size: " + Math.floor(unitSize)).padTop(10).row();
+    cont.slider(10, 60, 1, unitSize, s => {
+        unitSize = s;
+        Core.settings.put("cmap-unit-size", new java.lang.Float(s));
+    }).width(240).pad(4).row();
+    
+    dialog.show();
 });
 
 Events.run(Trigger.update, () => {

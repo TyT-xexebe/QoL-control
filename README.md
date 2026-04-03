@@ -240,12 +240,16 @@ You can add keybinds for your PC to launch some commands or text in chat.
 
 #### `!track <name?>`
 
-Shows cursor position of all players / selected player and unit controlled by RTS.
+Shows cursor position of all players / selected player and unit controlled by RTS and unit factory's set path. 
 
 #### `!core <#team>`
 
 Displays core resourses of team #id you selected, can displays multiple.
 Supports `sharded, crux, malis, green, blue` also.`!core` will show core resourses of your team.
+
+#### `!colors`
+
+You can customise all your mindustry colors from Pal.java.
 
 ## Features
 
@@ -273,8 +277,8 @@ Shows build info (name, team, hp, itmes, liquids, power, battery) when hover/tap
 
 #### Custom map
 
-Adds a draggable real time minimap that displays terrain, better units, other players (eye icons), and your current camera viewport.
-Use `!cmap` to toggle it on/off, and `!cmap <size>` to change its size.
+Adds a draggable real time minimap that displays terrain, better units, other players (eye icons / nicknames), and your current camera viewport.
+Use `!cmap` to setting it.
 
 Left-click / Tap: Opens the standard full-screen map.
 
