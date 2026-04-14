@@ -22,7 +22,7 @@ const helpData = {
     "features/mute": { cmd: "mute", desc: "[lightgrey]Local chat mute for specific players\n\n[accent]!mute\nlist[lightgrey] - show all muted players\n[accent]add <name>[lightgrey] - mute exact player name\n[accent]addp <name>[lightgrey] - mute any player containing this name (partial)\n[accent]remove <name>[lightgrey] - unmute player\n\n[accent]Shortcuts:[lightgrey] !mute rem <name>" },
     "features/map": { cmd: "map", desc: "[lightgrey]Shows current map stats" },
     "core/bind": { cmd: "bind", desc: "[lightgrey]Keybinding for PC users" },
-    "features/track": { cmd: "track", desc: "[lightgrey]Shows cursor and RTS control of players and unit factory's set path\n\n[accent]!track <name?>[lightgrey] - all players / selected by name" },
+    "features/track": { cmd: "track", desc: "[lightgrey]Shows cursor and RTS control of players and unit factory's set path\n\n[accent]!track <name?>[lightgrey] - all players / selected by name\n[accent]!track <rts/rec>[lightgrey] - on/off displays of player rts/recpnstructor rally" },
     "ui/core": { cmd: "core", desc: "[lightgrey]Shows core resourses of any team on map\n\n[accent]!core <#team>[lightgrey] - toggles core resourses display of team #id you selected (sharded, crux, blue, malis, green also supported)" },
     "ui/map": { cmd: "cmap", desc: "[lightgrey]Custom map with some features\n[accent]!cmap[lightgrey] - settings" },
     "core/colors": { cmd: "colors", desc: "[accent]!colors [lightgrey] - customise your mindustry colors from Pal.java" }

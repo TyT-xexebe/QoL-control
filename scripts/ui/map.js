@@ -12,6 +12,10 @@ let playerMode = Core.settings.getInt("cmap-player-mode", 0);
 let unitOutline = Core.settings.getBool("cmap-unit-outline", false);
 let unitSize = Core.settings.getFloat("cmap-unit-size", 24);
 
+let unitCache = [];
+let cacheTimer = 0;
+const colorWhite = Packages.arc.graphics.Color.white;
+
 const initUI = () => {
     if(setup || !Vars.ui || !Vars.ui.hudGroup) return;
     setup = true;
@@ -34,31 +38,46 @@ const initUI = () => {
             
             let scl = Packages.arc.scene.ui.layout.Scl.scl();
             let scale = scl * unitSize; 
+            let off = scl * 1.5;
             
-            Vars.state.teams.present.each(data => {
-                data.units.each(u => {
-                    if (!u.isPlayer() && u.type.drawMinimap) {
-                        let icon = u.type.fullIcon;
-                        let px = this.x + u.x / max * this.width;
-                        let py = this.y + u.y / max * this.height;
-                        let iw = scale;
-                        let ih = scale * icon.height / icon.width;
-                        let rot = u.rotation - 90;
-                        
-                        if (unitOutline) {
-                            Draw.color(Packages.arc.graphics.Color.white);
-                            let off = scl * 1.5;
-                            Draw.rect(icon, px + off, py, iw, ih, rot);
-                            Draw.rect(icon, px - off, py, iw, ih, rot);
-                            Draw.rect(icon, px, py + off, iw, ih, rot);
-                            Draw.rect(icon, px, py - off, iw, ih, rot);
-                        }
-                        
-                        Draw.color(data.team.color);
-                        Draw.rect(icon, px, py, iw, ih, rot);
-                    }
-                });
-            });
+            let pxScl = this.width / max;
+            let pyScl = this.height / max;
+            let cacheLen = unitCache.length;
+            
+            if (unitOutline) {
+                Draw.color(colorWhite);
+                for(let i = 0; i < cacheLen; i++) {
+                    let u = unitCache[i];
+                    if (!u || !u.isAdded() || u.dead) continue;
+                    
+                    let icon = u.type.fullIcon;
+                    let px = this.x + u.x * pxScl;
+                    let py = this.y + u.y * pyScl;
+                    let iw = scale;
+                    let ih = scale * icon.height / icon.width;
+                    let rot = u.rotation - 90;
+                    
+                    Draw.rect(icon, px + off, py, iw, ih, rot);
+                    Draw.rect(icon, px - off, py, iw, ih, rot);
+                    Draw.rect(icon, px, py + off, iw, ih, rot);
+                    Draw.rect(icon, px, py - off, iw, ih, rot);
+                }
+            }
+            
+            for(let i = 0; i < cacheLen; i++) {
+                let u = unitCache[i];
+                if (!u || !u.isAdded() || u.dead) continue;
+                
+                let icon = u.type.fullIcon;
+                let px = this.x + u.x * pxScl;
+                let py = this.y + u.y * pyScl;
+                let iw = scale;
+                let ih = scale * icon.height / icon.width;
+                let rot = u.rotation - 90;
+                
+                Draw.color(u.team.color);
+                Draw.rect(icon, px, py, iw, ih, rot);
+            }
             
             Draw.color();
             let eye = Icon.eye.getRegion();
@@ -67,24 +86,30 @@ const initUI = () => {
             let oldSclX = font.getData().scaleX;
             let oldSclY = font.getData().scaleY;
             
+            if (playerMode === 1) {
+                font.getData().setScale(scl * 0.6);
+            }
+            
             Groups.player.each(p => {
                 if (p.unit() && p !== Vars.player) {
-                    let px = this.x + p.x / max * this.width;
-                    let py = this.y + p.y / max * this.height;
+                    let px = this.x + p.x * pxScl;
+                    let py = this.y + p.y * pyScl;
                     
                     if (playerMode === 0) {
                         Draw.rect(eye, px, py, eye.width * eyeScl, eye.height * eyeScl);
                     } else {
-                        font.getData().setScale(scl * 0.6);
                         font.draw(p.name, px, py + scl * 4, Packages.arc.util.Align.center);
-                        font.getData().setScale(oldSclX, oldSclY);
                     }
                 }
             });
             
+            if (playerMode === 1) {
+                font.getData().setScale(oldSclX, oldSclY);
+            }
+            
             Lines.stroke(scl * 3);
             let cam = Core.camera;
-            Lines.rect(this.x + (cam.position.x - cam.width / 2) / max * this.width, this.y + (cam.position.y - cam.height / 2) / max * this.height, cam.width / max * this.width, cam.height / max * this.height);
+            Lines.rect(this.x + (cam.position.x - cam.width / 2) * pxScl, this.y + (cam.position.y - cam.height / 2) * pyScl, cam.width * pxScl, cam.height * pyScl);
             
             Draw.reset();
             this.clipEnd();
@@ -173,6 +198,7 @@ if(Vars.ui && Vars.ui.hudGroup) initUI();
 else Events.on(ClientLoadEvent, initUI);
 
 Events.on(WorldLoadEvent, () => {
+    unitCache = [];
     let t = Vars.world.tiles;
     Packages.arc.util.Reflect.set(Vars.renderer.minimap, "zoom", new java.lang.Float(Math.max(t.height, t.width) / 32));
 });
@@ -235,4 +261,19 @@ Events.run(Trigger.update, () => {
     btnX = Mathf.clamp(btnX, 0, Core.scene.getWidth() - mapTable.getWidth());
     btnY = Mathf.clamp(btnY, 0, Core.scene.getHeight() - mapTable.getHeight());
     mapTable.setPosition(btnX, btnY);
+    
+    cacheTimer += Time.delta;
+    if (cacheTimer > 30) {
+        cacheTimer = 0;
+        let cacheLen = 0;
+        Vars.state.teams.present.each(data => {
+            data.units.each(u => {
+                if (!u.isPlayer() && u.type && u.type.drawMinimap) {
+                    unitCache[cacheLen++] = u;
+                }
+            });
+        });
+        unitCache.length = cacheLen;
+        unitCache.sort((a, b) => a.maxHealth - b.maxHealth);
+    }
 });

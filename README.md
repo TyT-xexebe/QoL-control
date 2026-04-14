@@ -242,6 +242,9 @@ You can add keybinds for your PC to launch some commands or text in chat.
 
 Shows cursor position of all players / selected player and unit controlled by RTS and unit factory's set path. 
 
+`!track <rts/rec>`
+Turns on/off displays of players rts / reconstructor rally.
+
 #### `!core <#team>`
 
 Displays core resourses of team #id you selected, can displays multiple.
