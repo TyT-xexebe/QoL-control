@@ -123,6 +123,9 @@ Shows the coordinates of the last found processors.
 #### `!here <text?> `
 Sends a chat message with your current camera coordinates.
 
+#### `!herec <text?> `
+Sends a chat message with your current cursor coordinates.
+
 #### `!hp`
 `!hp <1/0?>`
 Toggles the display of HP and shield for the unit you are currently shooting at.
