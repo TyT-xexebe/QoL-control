@@ -352,10 +352,13 @@ By default it contains `attem` and `wpx`.
 
 All logs from `!log save` saving in `/qol/`, it also always have default log `/qol/main_log.txt` from your last game if `!log toggle` was enabled.
 
-## Who Cares
+## Optimization
 
-The mod code is complete garbage, and about 30% of it was written with AI.  
-Don't judge too hard — it works, and it works well xD
+The mod has been fully refactored and restructured to be lightweight, with reusable UI components and minimal performance footprint. It runs smoothly even when multiple modules are enabled!
+
+## Processor fix
+
+Fixing game  bug when processors with large code not placing on servers.
 
 ## Issues
 

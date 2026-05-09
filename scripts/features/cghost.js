@@ -1,25 +1,33 @@
-const notify = require("qol-control/core/logger").notify;
-const interceptor = require("qol-control/core/interceptor");
+const notify = require('qol-control/core/logger').notify;
+const interceptor = require('qol-control/core/interceptor');
 
 const cghostHandler = (args) => {
-    let teamData = Vars.player.team().data();
-    if (!teamData) return;
-    let toRemove = new IntSeq();
-    teamData.plans.each(plan => {
-        if (!Vars.world.build(plan.x, plan.y)) {
-            let wx = plan.x * 8, wy = plan.y * 8;
-            let danger = false;
-            Vars.indexer.allBuildings(wx, wy, 800, b => {
-                if (b.team !== Vars.player.team() && b.block.range && b.dst(wx, wy) <= b.block.range) danger = true;
-            });
-            if (danger) toRemove.add(Point2.pack(plan.x, plan.y));
-        }
-    });
-    if (toRemove.size > 0) {
-        Call.deletePlans(Vars.player, toRemove.toArray());
-        notify("[lightgrey]Cleared [accent]" + toRemove.size + " [lightgrey]ghosts");
-    } else notify("[lightgrey]Ghosts clear");
+	let teamData = Vars.player.team().data();
+	if (!teamData) return;
+	let toRemove = new IntSeq();
+	teamData.plans.each((plan) => {
+		if (!Vars.world.build(plan.x, plan.y)) {
+			let wx = plan.x * 8,
+				wy = plan.y * 8;
+			let danger = false;
+			Vars.indexer.allBuildings(wx, wy, 800, (b) => {
+				if (
+					b.team !== Vars.player.team() &&
+					b.block.range &&
+					b.dst(wx, wy) <= b.block.range
+				)
+					danger = true;
+			});
+			if (danger) toRemove.add(Point2.pack(plan.x, plan.y));
+		}
+	});
+	if (toRemove.size > 0) {
+		Call.deletePlans(Vars.player, toRemove.toArray());
+		notify(
+			'[lightgray]Cleared [accent]' + toRemove.size + ' [lightgray]ghosts'
+		);
+	} else notify('[lightgray]Ghosts clear');
 };
 
-interceptor.add("cghost", cghostHandler);
-interceptor.add("cg", cghostHandler);
+interceptor.add('cghost', cghostHandler);
+interceptor.add('cg', cghostHandler);

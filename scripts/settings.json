@@ -3,6 +3,7 @@
   "core/unlocker": true,
   "core/bind": true,
   "core/colors": true,
+  "core/logicfix": true,
   "features/hp": true,
   "features/trange": true,
   "features/lookat": true,

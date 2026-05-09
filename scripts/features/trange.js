@@ -1,5 +1,5 @@
 const notify = require('qol-control/core/logger').notify;
-const interceptor = require("qol-control/core/interceptor");
+const interceptor = require('qol-control/core/interceptor');
 
 let trangeEnabled = false;
 let trangeUpdateTimer = 0;
@@ -9,11 +9,11 @@ Events.on(WorldLoadEvent, () => {
 	cachedTurrets = [];
 });
 
-interceptor.add("trange", (args) => {
+interceptor.add('trange', (args) => {
 	trangeEnabled = interceptor.parseToggle(trangeEnabled, args[1]);
 	if (!trangeEnabled) cachedTurrets = [];
 	notify(
-		'[lightgrey]Turret Ranges ' +
+		'[lightgray]Turret Ranges ' +
 			(trangeEnabled ? '[green]ON' : '[scarlet]OFF')
 	);
 });
@@ -29,7 +29,8 @@ Events.run(Trigger.draw, () => {
 
 		Vars.indexer.allBuildings(u.x, u.y, 800, (b) => {
 			if (b.team !== u.team && b.block.category === Category.turret) {
-				let r = typeof b.range === "function" ? b.range() : b.block.range;
+				let r =
+					typeof b.range === 'function' ? b.range() : b.block.range;
 				let limit = r + 100;
 
 				if (u.dst2(b) <= limit * limit) {

@@ -1,129 +1,157 @@
-const notify = require("qol-control/core/logger").notify;
+const notify = require('qol-control/core/logger').notify;
 
 const grab = {
-    active: false,
-    item: null,
-    min: 10,
-    targets: [],
-    index: 0,
-    lastGrab: 0,
-    lastSearch: 0,
-    range: 216,
-    effects: Core.settings.getBool("qol-grab-effects", true)
+	active: false,
+	item: null,
+	min: 10,
+	targets: [],
+	index: 0,
+	lastGrab: 0,
+	lastSearch: 0,
+	range: 216,
+	effects: Core.settings.getBool('qol-grab-effects', true),
 };
 
 function findTargets() {
-    grab.targets = [];
-    let u = Vars.player.unit();
-    if (!u) return;
-    Vars.indexer.allBuildings(u.x, u.y, grab.range, b => {
-        if (b.team === Vars.player.team() && b.items) grab.targets.push(b);
-    });
+	grab.targets = [];
+	let u = Vars.player.unit();
+	if (!u) return;
+	Vars.indexer.allBuildings(u.x, u.y, grab.range, (b) => {
+		if (b.team === Vars.player.team() && b.items) grab.targets.push(b);
+	});
 }
 
 Events.on(WorldLoadEvent, () => {
-    grab.active = false;
-    grab.item = null;
-    grab.targets = [];
+	grab.active = false;
+	grab.item = null;
+	grab.targets = [];
 });
 
 Events.run(Trigger.draw, () => {
-    if (!grab.active || !grab.item || grab.targets.length === 0 || !grab.effects) return;
-    
-    Draw.color(Pal.accent);
-    Draw.alpha(Math.abs(Math.sin(Time.time / 15)));
-    
-    for (let b of grab.targets) {
-        if (b.isValid() && b.items.get(grab.item) >= grab.min) {
-            Drawf.select(b.x, b.y, b.block.size * 4, Pal.accent);
-        }
-    }
-    Draw.reset();
+	if (
+		!grab.active ||
+		!grab.item ||
+		grab.targets.length === 0 ||
+		!grab.effects
+	)
+		return;
+
+	Draw.color(Pal.accent);
+	Draw.alpha(Math.abs(Math.sin(Time.time / 15)));
+
+	for (let b of grab.targets) {
+		if (b.isValid() && b.items.get(grab.item) >= grab.min) {
+			Drawf.select(b.x, b.y, b.block.size * 4, Pal.accent);
+		}
+	}
+	Draw.reset();
 });
 
 Events.run(Trigger.update, () => {
-    let u = Vars.player.unit();
-    if (!u || !grab.active || !grab.item) return;
+	let u = Vars.player.unit();
+	if (!u || !grab.active || !grab.item) return;
 
-    let now = Time.millis();
+	let now = Time.millis();
 
-    if (now > grab.lastSearch) {
-        findTargets();
-        grab.lastSearch = now + 1000;
-    }
+	if (now > grab.lastSearch) {
+		findTargets();
+		grab.lastSearch = now + 1000;
+	}
 
-    if (grab.targets.length === 0 || now - grab.lastGrab < 250) return;
+	if (grab.targets.length === 0 || now - grab.lastGrab < 250) return;
 
-    let space = u.type.itemCapacity - u.stack.amount;
-    if (u.stack.amount > 0 && u.stack.item !== grab.item) space = 0;
+	let space = u.type.itemCapacity - u.stack.amount;
+	if (u.stack.amount > 0 && u.stack.item !== grab.item) space = 0;
 
-    if (space > 0) {
-        let checked = 0;
-        let r2 = grab.range * grab.range;
+	if (space > 0) {
+		let checked = 0;
+		let r2 = grab.range * grab.range;
 
-        while (checked < grab.targets.length) {
-            grab.index = (grab.index + 1) % grab.targets.length;
-            let b = grab.targets[grab.index];
+		while (checked < grab.targets.length) {
+			grab.index = (grab.index + 1) % grab.targets.length;
+			let b = grab.targets[grab.index];
 
-            if (b && b.isValid() && b.team === Vars.player.team()) {
-                if (u.dst2(b) <= r2) {
-                    let has = b.items.get(grab.item);
-                    if (has >= grab.min) {
-                        Call.requestItem(Vars.player, b, grab.item, Math.min(has, space));
-                        grab.lastGrab = now;
-                        return;
-                    }
-                }
-            } else if (b) {
-                grab.targets.splice(grab.index, 1);
-                continue;
-            }
-            checked++;
-        }
-    }
+			if (b && b.isValid() && b.team === Vars.player.team()) {
+				if (u.dst2(b) <= r2) {
+					let has = b.items.get(grab.item);
+					if (has >= grab.min) {
+						Call.requestItem(
+							Vars.player,
+							b,
+							grab.item,
+							Math.min(has, space)
+						);
+						grab.lastGrab = now;
+						return;
+					}
+				}
+			} else if (b) {
+				grab.targets.splice(grab.index, 1);
+				continue;
+			}
+			checked++;
+		}
+	}
 });
 
-const interceptor = require("qol-control/core/interceptor");
+const interceptor = require('qol-control/core/interceptor');
 
 const grabHandler = (args) => {
-    if (args[1] === "toggle" || args[1] === "t") {
-        grab.active = interceptor.parseToggle(grab.active, args[2]);
-        return notify("[lightgrey]Grab " + (grab.active ? "[green]ON" : "[scarlet]OFF"));
-    }
+	if (args[1] === 'toggle' || args[1] === 't') {
+		grab.active = interceptor.parseToggle(grab.active, args[2]);
+		return notify(
+			'[lightgray]Grab ' + (grab.active ? '[green]ON' : '[scarlet]OFF')
+		);
+	}
 
-    if (args[1] === "effects" || args[1] === "e") {
-        grab.effects = interceptor.parseToggle(grab.effects, args[2]);
-        Core.settings.put("qol-grab-effects", grab.effects);
-        return notify("[lightgrey]Effects " + (grab.effects ? "[green]ON" : "[scarlet]OFF"));
-    }
+	if (args[1] === 'effects' || args[1] === 'e') {
+		grab.effects = interceptor.parseToggle(grab.effects, args[2]);
+		Core.settings.put('qol-grab-effects', grab.effects);
+		return notify(
+			'[lightgray]Effects ' +
+				(grab.effects ? '[green]ON' : '[scarlet]OFF')
+		);
+	}
 
-    if (args[1] === "min" && args[2]) {
-        let val = parseInt(args[2]);
-        if (isNaN(val) || val < 1) return notify("[scarlet]<min> invalid");
-        grab.min = val;
-        return notify("[lightgrey]Grab <min> [accent]" + val);
-    }
+	if (args[1] === 'min' && args[2]) {
+		let val = parseInt(args[2]);
+		if (isNaN(val) || val < 1) return notify('[scarlet]<min> invalid');
+		grab.min = val;
+		return notify('[lightgray]Grab <min> [accent]' + val);
+	}
 
-    if (args[1] === "status" || args[1] === "s") {
-        return notify("[lightgrey]State " + (grab.active ? "[green]ON" : "[scarlet]OFF") +
-                      "\n[lightgrey]Item " + (grab.item ? "[accent]" + grab.item.name : "none") +
-                      "\n[lightgrey]Min [accent]" + grab.min +
-                      "\n[lightgrey]Effects " + (grab.effects ? "[green]ON" : "[scarlet]OFF"));
-    }
+	if (args[1] === 'status' || args[1] === 's') {
+		return notify(
+			'[lightgray]State ' +
+				(grab.active ? '[green]ON' : '[scarlet]OFF') +
+				'\n[lightgray]Item ' +
+				(grab.item ? '[accent]' + grab.item.name : 'none') +
+				'\n[lightgray]Min [accent]' +
+				grab.min +
+				'\n[lightgray]Effects ' +
+				(grab.effects ? '[green]ON' : '[scarlet]OFF')
+		);
+	}
 
-    if (args[1]) {
-        let found = Vars.content.getByName(ContentType.item, args[1]);
-        if (found) {
-            grab.item = found;
-            grab.active = true;
-            return notify("[lightgrey]Grab [green]ON [lightgrey]([accent]" + found.name + "[lightgrey])");
-        } else {
-            return notify("[scarlet]Item " + args[1] + " not found");
-        }
-    }
+	if (args[1]) {
+		let found = Vars.content.getByName(ContentType.item, args[1]);
+		if (found) {
+			grab.item = found;
+			grab.active = true;
+			return notify(
+				'[lightgray]Grab [green]ON [lightgray]([accent]' +
+					found.name +
+					'[lightgray])'
+			);
+		} else {
+			return notify('[scarlet]Item ' + args[1] + ' not found');
+		}
+	}
 
-    notify("[lightgray]!grab <item>\n!grab toggle <1/0?>\n!grab min <val>\n!grab effects <1/0?>\n!grab status\n\n!gr <item>\n!gr t <1/0?>\n!gr min <val>\n!gr e <1/0?>\n!gr s");
+	notify(
+		'[lightgray]!grab <item>\n!grab toggle <1/0?>\n!grab min <val>\n!grab effects <1/0?>\n!grab status\n\n!gr <item>\n!gr t <1/0?>\n!gr min <val>\n!gr e <1/0?>\n!gr s'
+	);
 };
 
-interceptor.add("grab", grabHandler);
-interceptor.add("gr", grabHandler);
+interceptor.add('grab', grabHandler);
+interceptor.add('gr', grabHandler);
