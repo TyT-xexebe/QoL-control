@@ -327,7 +327,7 @@ const miningHandler = (args) => {
 			miningTask = null;
 			stopIdleTracker();
 			notify('[scarlet]Mining stopped');
-		} else notify('[lightgray]Mining not running');
+		} else notify('[lightgrey]Mining not running');
 		return;
 	}
 
@@ -343,7 +343,7 @@ const miningHandler = (args) => {
 	if (args[1] === 'free' || args[1] === 'f') {
 		let pct = parseInt(args[2]);
 		if (isNaN(pct) || pct < 0 || pct > 100)
-			return notify('[lightgray]!mining free <0-100>');
+			return notify('[lightgrey]!mining free <0-100>');
 		state.freePercent = pct;
 		notify('[green]Free units set to [accent]' + pct + '%');
 		return;
@@ -352,7 +352,7 @@ const miningHandler = (args) => {
 	if (args[1] === 'set' || args[1] === 's') {
 		let time = parseFloat(args[2]);
 		if (isNaN(time) || time < 0)
-			return notify('[lightgray]!mining set <sec>');
+			return notify('[lightgrey]!mining set <sec>');
 
 		state.interval = time;
 		if (time === 0) {
@@ -381,7 +381,7 @@ const miningHandler = (args) => {
 
 	if (args[1] === 'ignore' || args[1] === 'ig') {
 		if (args.length < 4)
-			return notify('[lightgray]!mining ignore <unit> <items.../clear>');
+			return notify('[lightgrey]!mining ignore <unit> <items.../clear>');
 
 		let uName = args[2];
 		if (!state.units.hasOwnProperty(uName))
@@ -425,7 +425,7 @@ const miningHandler = (args) => {
 		if (Object.keys(state.ignored[uName]).length === 0)
 			delete state.ignored[uName];
 		if (changed.length > 0)
-			notify('[lightgray]' + uName + ' ignores: ' + changed.join(' '));
+			notify('[lightgrey]' + uName + ' ignores: ' + changed.join(' '));
 		return;
 	}
 
@@ -451,7 +451,7 @@ const miningHandler = (args) => {
 			}
 
 			if (row !== '') {
-				statsStr += '\n[lightgray]' + uName + ' | ' + row;
+				statsStr += '\n[lightgrey]' + uName + ' | ' + row;
 			}
 		}
 
@@ -460,7 +460,7 @@ const miningHandler = (args) => {
 			let igItems = Object.keys(state.ignored[uName]);
 			if (igItems.length > 0) {
 				igStr +=
-					'\n[lightgray]' +
+					'\n[lightgrey]' +
 					uName +
 					' ignores: [scarlet]' +
 					igItems.join(', ');
@@ -468,23 +468,23 @@ const miningHandler = (args) => {
 		}
 
 		let finalMsg =
-			'\n[lightgray]State ' +
+			'\n[lightgrey]State ' +
 			(miningTask
-				? '[lightgray]Active ([accent]' +
+				? '[lightgrey]Active ([accent]' +
 					state.interval +
-					'[lightgray]s)'
+					'[lightgrey]s)'
 				: '[scarlet]Inactive') +
-			'\n[lightgray]Units ' +
+			'\n[lightgrey]Units ' +
 			uStr +
-			'\n[lightgray]Items ' +
+			'\n[lightgrey]Items ' +
 			iStr +
-			'\n[lightgray]Free ' +
+			'\n[lightgrey]Free ' +
 			'[accent]' +
 			state.freePercent +
 			'%';
 
 		if (igStr !== '') finalMsg += igStr;
-		if (statsStr !== '') finalMsg += '\n\n[lightgray]Stats:' + statsStr;
+		if (statsStr !== '') finalMsg += '\n\n[lightgrey]Stats:' + statsStr;
 
 		notify(finalMsg);
 		return;
@@ -519,7 +519,7 @@ const miningHandler = (args) => {
 			}
 		}
 		if (changed.length > 0)
-			return notify('[lightgray]Toggle ' + changed.join(' '));
+			return notify('[lightgrey]Toggle ' + changed.join(' '));
 	}
 
 	notify(

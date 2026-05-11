@@ -40,14 +40,15 @@ function togglePanel(team) {
 function createPanel(team) {
 	if (!Vars.ui || !Vars.ui.hudGroup) return;
 
-	let table = new Table(Tex.pane);
+	let table = new Table(Styles.black5);
+	table.margin(0);
 	table.touchable = Packages.arc.scene.event.Touchable.enabled;
 
 	let label = new Label('');
 	label.setWrap(true);
 	label.setAlignment(Packages.arc.util.Align.topLeft);
 	label.setFontScale(0.9);
-	table.add(label).width(180).pad(6);
+	table.add(label).width(200);
 	table.pack();
 
 	Vars.ui.hudGroup.addChild(table);

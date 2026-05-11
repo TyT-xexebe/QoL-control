@@ -13,7 +13,7 @@ interceptor.add('trange', (args) => {
 	trangeEnabled = interceptor.parseToggle(trangeEnabled, args[1]);
 	if (!trangeEnabled) cachedTurrets = [];
 	notify(
-		'[lightgray]Turret Ranges ' +
+		'[lightgrey]Turret Ranges ' +
 			(trangeEnabled ? '[green]ON' : '[scarlet]OFF')
 	);
 });

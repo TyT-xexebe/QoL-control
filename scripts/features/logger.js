@@ -252,7 +252,7 @@ const showLogs = (fName) => {
 			'[accent]' +
 				lgs[0].n +
 				(pids[id] && pids[id] !== '?' ? ' [accent]#' + pids[id] : '') +
-				' [lightgray](' +
+				' [lightgrey](' +
 				lgs[0].t +
 				')'
 		)
@@ -284,17 +284,17 @@ const showLogs = (fName) => {
 				(l.act === 'build' ||
 					l.act === 'destroy' ||
 					l.act === 'changed')
-					? ' | [lightgray]' +
+					? ' | [lightgrey]' +
 						(arr[rot] !== undefined ? arr[rot] : l.r)
 					: '';
 			if (l.act === 'rotated' || l.act === 'lost') rStr = '';
-			if (l.act === 'rotated') rStr = ' | [lightgray]' + l.cStr;
+			if (l.act === 'rotated') rStr = ' | [lightgrey]' + l.cStr;
 			let displayConf =
 				l.act === 'rotated' || l.act === 'lost'
 					? ''
-					: ' | [lightgray]' + l.cStr;
+					: ' | [lightgrey]' + l.cStr;
 			t.add(
-				'[lightgray]' +
+				'[lightgrey]' +
 					fTime(l.start) +
 					' | ' +
 					col +
@@ -330,11 +330,11 @@ const showChatLogs = () => {
 	let t = new Table();
 
 	if (chatLogs.length === 0) {
-		t.add('[lightgray]No chat logs recorded.').row();
+		t.add('[lightgrey]No chat logs recorded.').row();
 	} else {
 		chatLogs.forEach((c) => {
 			t.add(
-				'[lightgray]' +
+				'[lightgrey]' +
 					fTime(c.time) +
 					' []' +
 					c.n +
@@ -921,7 +921,7 @@ interceptor.add('log', (args) => {
 				}
 			});
 		} else drawName = null;
-		notify('[lightgray]Logger ' + (enabled ? '[green]ON' : '[scarlet]OFF'));
+		notify('[lightgrey]Logger ' + (enabled ? '[green]ON' : '[scarlet]OFF'));
 	} else if (sub === 'status') {
 		let tot = 0,
 			pls = [];
@@ -931,14 +931,14 @@ interceptor.add('log', (args) => {
 				pls.push(logs[id][0].n);
 			}
 		notify(
-			'[accent]Logger Status\n[lightgray]Enabled: ' +
+			'[accent]Logger Status\n[lightgrey]Enabled: ' +
 				(enabled ? '[green]Yes' : '[scarlet]No') +
-				'\n[lightgray]Logs: [accent]' +
+				'\n[lightgrey]Logs: [accent]' +
 				tot +
-				'\n[lightgray]Chat msgs: [accent]' +
+				'\n[lightgrey]Chat msgs: [accent]' +
 				chatLogs.length +
-				'\n[lightgray]Players: [white]' +
-				(pls.length ? pls.join('[lightgray], [white]') : 'None')
+				'\n[lightgrey]Players: [white]' +
+				(pls.length ? pls.join('[lightgrey], [white]') : 'None')
 		);
 	} else if (sub === 'chat') {
 		showChatLogs();
@@ -946,11 +946,11 @@ interceptor.add('log', (args) => {
 		let target = args[2] || '';
 		if (drawName !== null && (target === '' || drawName === target)) {
 			drawName = null;
-			notify('[lightgray]Map drawing [scarlet]OFF');
+			notify('[lightgrey]Map drawing [scarlet]OFF');
 		} else {
 			drawName = target;
 			notify(
-				'[lightgray]Drawing logs for ' +
+				'[lightgrey]Drawing logs for ' +
 					(target ? '[accent]' + target : '[accent]all')
 			);
 		}
@@ -1025,10 +1025,10 @@ interceptor.add('log', (args) => {
 				'.txt',
 			f = d.child(fn);
 		wLog(f);
-		notify('[lightgray]Saved to ' + f.absolutePath());
+		notify('[lightgrey]Saved to ' + f.absolutePath());
 	} else if (sub === 'help') {
 		notify(
-			'[lightgray]!log toggle <1/0?>\n!log status\n!log chat\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save'
+			'[lightgrey]!log toggle <1/0?>\n!log status\n!log chat\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save'
 		);
 	} else {
 		showLogs(f !== '' ? f : null);

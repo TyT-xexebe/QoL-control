@@ -45,7 +45,7 @@ function injectCode(target, code) {
 		let LogicBlock = Packages.mindustry.world.blocks.logic.LogicBlock;
 		target.configure(LogicBlock.compress(code, target.links));
 		notify(
-			'[green]Injected at [lightgray]' +
+			'[green]Injected at [lightgrey]' +
 				target.tileX() +
 				' ' +
 				target.tileY()
@@ -696,7 +696,7 @@ interceptor.add('mlog', (args) => {
 		let files = getMlogFiles();
 		if (files.length > 0) {
 			notify(
-				'[lightgray]Available files:\n- ' +
+				'[lightgrey]Available files:\n- ' +
 					files.map((f) => f.nameWithoutExtension()).join('\n- ')
 			);
 		} else {
@@ -732,7 +732,7 @@ interceptor.add('mlog', (args) => {
 	if (mode === 'set') {
 		pendingMlog = code;
 		wasShooting = false;
-		notify('[lightgray]Start and stop shooting at the target processor');
+		notify('[lightgrey]Start and stop shooting at the target processor');
 	} else {
 		let target = null;
 		Groups.build.each(

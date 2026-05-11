@@ -67,7 +67,7 @@ function findTrace() {
 
 	if (unit && possess(unit)) {
 		trace.lastTry = Time.millis() + 250;
-		notify('[lightgray]Possess [accent]' + unit.type.name);
+		notify('[lightgrey]Possess [accent]' + unit.type.name);
 	}
 }
 
@@ -97,7 +97,7 @@ const traceHandler = (args) => {
 	if (sub === 'toggle' || sub === 't') {
 		trace.enabled = interceptor.parseToggle(trace.enabled, args[2]);
 		notify(
-			'[lightgray]Trace ' + (trace.enabled ? '[green]ON' : '[scarlet]OFF')
+			'[lightgrey]Trace ' + (trace.enabled ? '[green]ON' : '[scarlet]OFF')
 		);
 	} else if ((sub === 'set' && args[2]) || (sub === 's' && args[2])) {
 		let found = Vars.content.getByName(ContentType.unit, args[2]);
@@ -105,24 +105,24 @@ const traceHandler = (args) => {
 			trace.mode = 'set';
 			trace.target = args[2].toLowerCase();
 			notify(
-				'[lightgray]Mode [green]SET [lightgray]([accent]' +
+				'[lightgrey]Mode [green]SET [lightgrey]([accent]' +
 					trace.target +
-					'[lightgray])'
+					'[lightgrey])'
 			);
 		} else notify('[scarlet]Unit ' + args[2] + ' [scarlet]not found');
 	} else if (sub === 'find' || sub === 'f') {
 		trace.mode = 'find';
-		notify('[lightgray]Mode [green]FIND');
+		notify('[lightgrey]Mode [green]FIND');
 	} else if (sub === 'status' || sub === 'st') {
 		notify(
-			'\n[lightgray]State ' +
+			'\n[lightgrey]State ' +
 				(trace.enabled ? '[green]ON' : '[scarlet]OFF') +
-				'\n[lightgray]Mode [accent]' +
+				'\n[lightgrey]Mode [accent]' +
 				(trace.mode || 'none') +
-				'\n[lightgray]Target [accent]' +
+				'\n[lightgrey]Target [accent]' +
 				(trace.target || 'none') +
-				'\n[lightgray]Priority [accent]' +
-				trace.priority.join('[lightgray] > [accent]')
+				'\n[lightgrey]Priority [accent]' +
+				trace.priority.join('[lightgrey] > [accent]')
 		);
 	} else {
 		notify(

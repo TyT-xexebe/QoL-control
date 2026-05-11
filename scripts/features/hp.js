@@ -81,7 +81,7 @@ interceptor.add('hp', (args) => {
 			dpsData = {};
 		}
 		notify(
-			'[lightgray]HP Display ' +
+			'[lightgrey]HP Display ' +
 				(hpEnabled ? '[green]ON' : '[scarlet]OFF')
 		);
 	}

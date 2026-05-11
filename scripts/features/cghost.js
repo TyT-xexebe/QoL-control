@@ -24,9 +24,9 @@ const cghostHandler = (args) => {
 	if (toRemove.size > 0) {
 		Call.deletePlans(Vars.player, toRemove.toArray());
 		notify(
-			'[lightgray]Cleared [accent]' + toRemove.size + ' [lightgray]ghosts'
+			'[lightgrey]Cleared [accent]' + toRemove.size + ' [lightgrey]ghosts'
 		);
-	} else notify('[lightgray]Ghosts clear');
+	} else notify('[lightgrey]Ghosts clear');
 };
 
 interceptor.add('cghost', cghostHandler);

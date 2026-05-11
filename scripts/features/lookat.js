@@ -216,7 +216,7 @@ var lookatHandler = function (args) {
 
 				if (c != null) {
 					Core.camera.position.set(c.x * 8, c.y * 8);
-					notify('[lightgray]Jump [accent]' + c.x + ', ' + c.y);
+					notify('[lightgrey]Jump [accent]' + c.x + ', ' + c.y);
 				} else {
 					notify('[scarlet]Invalid index');
 				}
@@ -236,11 +236,11 @@ var lookatHandler = function (args) {
 
 					var hiddenTag = c.hidden ? ' [darkgrey](hidden)[]' : '';
 					str +=
-						'\n[lightgray]' +
+						'\n[lightgrey]' +
 						(i + 1) +
 						' - ' +
 						c.nick +
-						'[lightgray] - [accent]' +
+						'[lightgrey] - [accent]' +
 						c.x +
 						' ' +
 						c.y +
@@ -255,7 +255,7 @@ var lookatHandler = function (args) {
 
 		if (!isNaN(x) && !isNaN(y)) {
 			Core.camera.position.set(x * 8, y * 8);
-			notify('[lightgray]Jump [accent]' + x + ', ' + y);
+			notify('[lightgrey]Jump [accent]' + x + ', ' + y);
 		} else {
 			notify(
 				'[lightgray]!lookat <x> <y>\n!lookat last <n?>\n\n!la <x> <y>\n!la l <n?>'

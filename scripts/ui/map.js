@@ -2,7 +2,7 @@ const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
 
 let setup = false;
-let mapTable, mapElem;
+let mapTable, mapElem, coordsLabel;
 let mapEnabled = Core.settings.getBool('map-enabled', false);
 let btnX = Core.settings.getFloat('map-x', 15);
 let btnY = Core.settings.getFloat('map-y', 400);
@@ -158,6 +158,12 @@ const initUI = () => {
 		);
 	};
 
+	mapElem.update(() => {
+		if (isPanning && Vars.control.input.panning !== undefined) {
+			Vars.control.input.panning = true;
+		}
+	});
+
 	mapElem.addListener(
 		extend(InputListener, {
 			touchDown(e, x, y, p, btn) {
@@ -232,7 +238,28 @@ const initUI = () => {
 		})
 	);
 
-	mapTable.add(mapElem).size(mapSize);
+	coordsLabel = new Label('');
+	coordsLabel.setFontScale(0.75);
+	coordsLabel.setAlignment(Packages.arc.util.Align.center);
+
+	coordsLabel.update(() => {
+		if (Vars.player) {
+			let px = Vars.player.tileX();
+			let py = Vars.player.tileY();
+			let mx = Packages.mindustry.core.World.toTile(
+				Core.input.mouseWorld().x
+			);
+			let my = Packages.mindustry.core.World.toTile(
+				Core.input.mouseWorld().y
+			);
+			coordsLabel.setText(
+				'[lightgray]' + px + ',' + py + ' []' + mx + ',' + my
+			);
+		}
+	});
+
+	mapTable.add(mapElem).size(mapSize).row();
+	mapTable.add(coordsLabel).width(mapSize).padTop(2);
 	mapTable.pack();
 	Vars.ui.hudGroup.addChild(mapTable);
 	mapTable.setPosition(btnX, btnY);
@@ -301,7 +328,8 @@ interceptor.add('cmap', () => {
 		Core.settings.put('map-size', new java.lang.Integer(s));
 		if (mapTable && mapElem) {
 			mapTable.clearChildren();
-			mapTable.add(mapElem).size(mapSize);
+			mapTable.add(mapElem).size(mapSize).row();
+			mapTable.add(coordsLabel).width(mapSize).padTop(2);
 			mapTable.pack();
 		}
 	})

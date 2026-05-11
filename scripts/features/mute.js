@@ -137,8 +137,8 @@ interceptor.add('mute', (args) => {
 				.map(
 					(m) =>
 						(m.type === 'exact'
-							? '[lightgray][Exact][]'
-							: '[lightgray][Partial][]') +
+							? '[lightgrey][Exact][]'
+							: '[lightgrey][Partial][]') +
 						' [white]' +
 						m.value
 				)
@@ -217,7 +217,7 @@ interceptor.add('mute', (args) => {
 		}
 	} else {
 		notify(
-			'[lightgray]!mute list\n!mute add <val>\n!mute addp <partial>\n!mute remove <val>'
+			'[lightgrey]!mute list\n!mute add <val>\n!mute addp <partial>\n!mute remove <val>'
 		);
 	}
 });

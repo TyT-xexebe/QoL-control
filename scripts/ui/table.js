@@ -82,7 +82,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		a.order !== b.order ? a.order - b.order : a.name.localeCompare(b.name)
 	);
 
-	let uiTable = new Table(Tex.buttonTrans);
+	let uiTable = new Table(Styles.black5);
 	uiTable.margin(0);
 	let gridTable = new Table();
 	gridTable.margin(0);

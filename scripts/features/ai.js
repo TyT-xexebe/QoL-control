@@ -50,11 +50,11 @@ const buildOreTree = () => {
 	}
 	let elapsed = (Time.millis() - start) / 1000;
 	notify(
-		'[lightgray]Ore Tree - [accent]' +
+		'[lightgrey]Ore Tree - [accent]' +
 			count +
-			'[lightgray] ores was found | [accent]' +
+			'[lightgrey] ores was found | [accent]' +
 			elapsed.toFixed(4) +
-			'[lightgray]s'
+			'[lightgrey]s'
 	);
 };
 
@@ -215,7 +215,7 @@ const interceptor = require('qol-control/core/interceptor');
 interceptor.add('ai', (a) => {
 	const showHelp = () => {
 		notify(
-			'[lightgray]!ai mining <item?> <1/0?>\n!ai build <name? | -1> <1/0?>\n!ai lock <1/0?>\n!ai status \n\n!ai m <item?> <1/0?>\n!ai b <name? | -1> <1/0?>\n!ai l <1/0?>\n!ai s'
+			'[lightgrey]!ai mining <item?> <1/0?>\n!ai build <name? | -1> <1/0?>\n!ai lock <1/0?>\n!ai status \n\n!ai m <item?> <1/0?>\n!ai b <name? | -1> <1/0?>\n!ai l <1/0?>\n!ai s'
 		);
 	};
 
@@ -230,7 +230,7 @@ interceptor.add('ai', (a) => {
 				mineEnabled = buildEnabled = false;
 			}
 			notify(
-				'[lightgray]Lock ' +
+				'[lightgrey]Lock ' +
 					(lockEnabled ? '[green]ON' : '[scarlet]OFF')
 			);
 			break;
@@ -239,7 +239,7 @@ interceptor.add('ai', (a) => {
 			if (a[2] === '-1') {
 				manualTarget = false;
 				followTarget = null;
-				notify('[lightgray]Build [green]AUTO');
+				notify('[lightgrey]Build [green]AUTO');
 			} else if (
 				a[2] &&
 				a[2] !== '1' &&
@@ -262,7 +262,7 @@ interceptor.add('ai', (a) => {
 					followTarget = f;
 					manualTarget = buildEnabled = true;
 					mineEnabled = lockEnabled = false;
-					notify('[lightgray]Build Follow ' + f.name);
+					notify('[lightgrey]Build Follow ' + f.name);
 				} else
 					notify(
 						'[scarlet]player [white]' +
@@ -273,7 +273,7 @@ interceptor.add('ai', (a) => {
 				buildEnabled = interceptor.parseToggle(buildEnabled, a[2]);
 				if (buildEnabled) mineEnabled = lockEnabled = false;
 				notify(
-					'[lightgray]Build ' +
+					'[lightgrey]Build ' +
 						(buildEnabled ? '[green]ON' : '[scarlet]OFF')
 				);
 			}
@@ -301,12 +301,12 @@ interceptor.add('ai', (a) => {
 				}
 				targetItem = targetTile = null;
 				if (changed.length > 0)
-					notify('[lightgray]Toggle ' + changed.join(' '));
+					notify('[lightgrey]Toggle ' + changed.join(' '));
 			} else {
 				mineEnabled = interceptor.parseToggle(mineEnabled, a[2]);
 				if (mineEnabled) buildEnabled = lockEnabled = false;
 				notify(
-					'[lightgray]Mining ' +
+					'[lightgrey]Mining ' +
 						(mineEnabled ? '[green]ON' : '[scarlet]OFF')
 				);
 			}
@@ -343,15 +343,15 @@ interceptor.add('ai', (a) => {
 					Strings.stripColors(followTarget.name)
 				: '[scarlet]none';
 			notify(
-				'[lightgray]Lock ' +
+				'[lightgrey]Lock ' +
 					(lockEnabled ? '[green]ON' : '[scarlet]OFF') +
-					'\n[lightgray]Build ' +
+					'\n[lightgrey]Build ' +
 					(buildEnabled ? '[green]ON' : '[scarlet]OFF') +
 					' | ' +
 					bTrg +
-					'\n[lightgray]Mining ' +
+					'\n[lightgrey]Mining ' +
 					(mineEnabled ? '[green]ON' : '[scarlet]OFF') +
-					'\n[lightgray]Ores ' +
+					'\n[lightgrey]Ores ' +
 					res
 			);
 			break;

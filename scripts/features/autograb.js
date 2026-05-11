@@ -100,7 +100,7 @@ const grabHandler = (args) => {
 	if (args[1] === 'toggle' || args[1] === 't') {
 		grab.active = interceptor.parseToggle(grab.active, args[2]);
 		return notify(
-			'[lightgray]Grab ' + (grab.active ? '[green]ON' : '[scarlet]OFF')
+			'[lightgrey]Grab ' + (grab.active ? '[green]ON' : '[scarlet]OFF')
 		);
 	}
 
@@ -108,7 +108,7 @@ const grabHandler = (args) => {
 		grab.effects = interceptor.parseToggle(grab.effects, args[2]);
 		Core.settings.put('qol-grab-effects', grab.effects);
 		return notify(
-			'[lightgray]Effects ' +
+			'[lightgrey]Effects ' +
 				(grab.effects ? '[green]ON' : '[scarlet]OFF')
 		);
 	}
@@ -117,18 +117,18 @@ const grabHandler = (args) => {
 		let val = parseInt(args[2]);
 		if (isNaN(val) || val < 1) return notify('[scarlet]<min> invalid');
 		grab.min = val;
-		return notify('[lightgray]Grab <min> [accent]' + val);
+		return notify('[lightgrey]Grab <min> [accent]' + val);
 	}
 
 	if (args[1] === 'status' || args[1] === 's') {
 		return notify(
-			'[lightgray]State ' +
+			'[lightgrey]State ' +
 				(grab.active ? '[green]ON' : '[scarlet]OFF') +
-				'\n[lightgray]Item ' +
+				'\n[lightgrey]Item ' +
 				(grab.item ? '[accent]' + grab.item.name : 'none') +
-				'\n[lightgray]Min [accent]' +
+				'\n[lightgrey]Min [accent]' +
 				grab.min +
-				'\n[lightgray]Effects ' +
+				'\n[lightgrey]Effects ' +
 				(grab.effects ? '[green]ON' : '[scarlet]OFF')
 		);
 	}
@@ -139,9 +139,9 @@ const grabHandler = (args) => {
 			grab.item = found;
 			grab.active = true;
 			return notify(
-				'[lightgray]Grab [green]ON [lightgray]([accent]' +
+				'[lightgrey]Grab [green]ON [lightgrey]([accent]' +
 					found.name +
-					'[lightgray])'
+					'[lightgrey])'
 			);
 		} else {
 			return notify('[scarlet]Item ' + args[1] + ' not found');

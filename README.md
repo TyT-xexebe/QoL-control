@@ -356,10 +356,6 @@ All logs from `!log save` saving in `/qol/`, it also always have default log `/q
 
 The mod has been fully refactored and restructured to be lightweight, with reusable UI components and minimal performance footprint. It runs smoothly even when multiple modules are enabled!
 
-## Processor fix
-
-Fixing game  bug when processors with large code not placing on servers.
-
 ## Issues
 
 Make an issue on GitHub if you find bugs.

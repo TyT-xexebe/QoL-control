@@ -51,7 +51,7 @@ const detectorHandler = (args) => {
 		} else {
 			let coordsStr = lastReplacedCoords
 				.map((c) => c.x + ' ' + c.y)
-				.join('[accent] | [lightgray]');
+				.join('[accent] | [lightgrey]');
 			notify('[lightgray]Last used:\n' + coordsStr);
 		}
 		return;

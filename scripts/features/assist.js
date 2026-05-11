@@ -154,7 +154,7 @@ function runAssist() {
 const assistHandler = (args) => {
 	if (args.length === 1) {
 		notify(
-			'[lightgray]!assist toggle <1/0?>\n!assist toggle <unit> <1/0?>\n!assist max <unit> <val>\n!assist range <val>\n!assist status\n!assist save\n\n!as t <1/0?>\n!as t <unit> <1/0?>\n!as m <unit> <val>\n!as r <val>\n!as s\n!as save'
+			'[lightgrey]!assist toggle <1/0?>\n!assist toggle <unit> <1/0?>\n!assist max <unit> <val>\n!assist range <val>\n!assist status\n!assist save\n\n!as t <1/0?>\n!as t <unit> <1/0?>\n!as m <unit> <val>\n!as r <val>\n!as s\n!as save'
 		);
 		return;
 	}
@@ -204,12 +204,12 @@ const assistHandler = (args) => {
 						0.5
 					);
 				}
-				notify('[lightgray]Assist [green]ON');
+				notify('[lightgrey]Assist [green]ON');
 			} else {
 				if (assistTimer) assistTimer.cancel();
 				assistTimer = null;
 				releaseAssistUnits();
-				notify('[lightgray]Assist [scarlet]OFF');
+				notify('[lightgrey]Assist [scarlet]OFF');
 			}
 		} else {
 			let type = args[2];
@@ -219,7 +219,7 @@ const assistHandler = (args) => {
 					args[3]
 				);
 				notify(
-					'[lightgray]Assist for ' +
+					'[lightgrey]Assist for ' +
 						type +
 						' is now ' +
 						(assistState.units[type] ? '[green]ON' : '[scarlet]OFF')
@@ -236,10 +236,10 @@ const assistHandler = (args) => {
 		let val = parseInt(args[3]);
 		if (assistState.max.hasOwnProperty(type) && !isNaN(val) && val >= 0) {
 			assistState.max[type] = val;
-			notify('[lightgray]Max ' + type + ' set to [accent]' + val);
+			notify('[lightgrey]Max ' + type + ' set to [accent]' + val);
 		} else {
 			notify(
-				'[scarlet]Invalid unit type or value\n[lightgray]!assist max <unit> <val>'
+				'[scarlet]Invalid unit type or value\n[lightgrey]!assist max <unit> <val>'
 			);
 		}
 		return;
@@ -250,12 +250,12 @@ const assistHandler = (args) => {
 		if (!isNaN(val) && val > 0) {
 			assistState.range = val * 8;
 			notify(
-				'[lightgray]Assist range set to [accent]' +
+				'[lightgrey]Assist range set to [accent]' +
 					val +
-					'[lightgray] blocks'
+					'[lightgrey] blocks'
 			);
 		} else {
-			notify('[scarlet]Invalid range\n[lightgray]!assist range <val>');
+			notify('[scarlet]Invalid range\n[lightgrey]!assist range <val>');
 		}
 		return;
 	}
@@ -266,17 +266,17 @@ const assistHandler = (args) => {
 			uStr +=
 				(assistState.units[k] ? '[green]' : '[scarlet]') +
 				k +
-				'[lightgray](' +
+				'[lightgrey](' +
 				assistState.max[k] +
 				') ';
 		}
 		notify(
-			'\n[lightgray]Assist ' +
+			'\n[lightgrey]Assist ' +
 				(assistState.enabled ? '[green]ON' : '[scarlet]OFF') +
-				'\n[lightgray]Range [accent]' +
+				'\n[lightgrey]Range [accent]' +
 				assistState.range / 8 +
 				' blocks' +
-				'\n[lightgray]Units ' +
+				'\n[lightgrey]Units ' +
 				uStr
 		);
 		return;
