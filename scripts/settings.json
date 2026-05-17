@@ -23,6 +23,7 @@
   "features/mute": true,
   "features/map": true,
   "features/track": true,
+  "features/multitask": true,
   "ui/render": true,
   "ui/camera": true,
   "ui/table": true,
