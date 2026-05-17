@@ -29,7 +29,7 @@ function init() {
 		let boosted = false;
 
 		if (!Vars.mobile) {
-			shouldShoot = Core.input.keyDown(Binding.shoot);
+			shouldShoot = Core.input.keyDown(Binding.select);
 			boosted = p.unit().isFlying() && p.unit().type.canBoost;
 		} else {
 			let state = Vars.state;
