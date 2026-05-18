@@ -50,7 +50,7 @@ Events.run(Trigger.draw, () => {
 							if (type.name.indexOf('overdrive') > -1) color = Color.valueOf("feb380");
 							else color = Pal.accent;
 							
-							Draw.color(color, 0.2);
+							Draw.color(color, 0.5);
 							Lines.circle(bld.x, bld.y, r);
 						}
 					}
@@ -86,7 +86,7 @@ Events.run(Trigger.draw, () => {
 						else if (b.category === Category.turret) color = Color.valueOf("f25555");
 					}
 					
-					Draw.color(color, 0.4);
+					Draw.color(color, 0.7);
 					if (b.sides !== undefined) {
 						Lines.poly(px, py, b.sides, r, b.shieldRotation !== undefined ? b.shieldRotation : 0);
 					} else {
