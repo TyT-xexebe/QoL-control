@@ -191,11 +191,19 @@ Sets a specific unit type to automatically possess.
 `!trace find` | `!tr f`
 Automatically possesses the best available unit based on a priority list.
 
+`!trace fconfig <units...>`
+Changes priority list to your own.
+You need type units with commas in priority line you want:
+`quasar, mega, cleroi, mono`..c
+
 `!trace status` | `!tr st`
 Shows the current trace status and priority list.
 
 #### `!trange <1/0?>`
 Toggles the display of enemy turret ranges. (may cause FPS drops)
+
+#### `!urange <1/0?>`
+Toggles the display of enemy unit ranges. (may cause FPS drops)
 
 #### `!table`
 Table of schematics which can be changed and moved.
@@ -258,6 +266,14 @@ Supports `sharded, crux, malis, green, blue` also.`!core` will show core resours
 You can customise all your mindustry colors from Pal.java.
 
 ## Features
+
+#### Plan Range & Block Highlight
+
+Highlights the range of planned blocks, as well as currently selected overdrive projectors (and domes) and mass drivers.
+
+#### Multitask (Shoot while Building/Mining)
+
+Allows you to shoot enemies without interrupting your mining or building processes.
 
 #### Camera lock button
 

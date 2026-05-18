@@ -153,7 +153,7 @@ function showMainMenu() {
 		});
 	}
 
-	dialog.cont.add(new ScrollPane(table)).width(420).height(400).row();
+	dialog.cont.add(new ScrollPane(table)).width(520).height(400).row();
 
 	dialog.cont
 		.button('Add Category', Icon.add, () => {
@@ -165,7 +165,7 @@ function showMainMenu() {
 				}
 			});
 		})
-		.size(420, 50)
+		.size(520, 50)
 		.padTop(10);
 }
 
@@ -184,7 +184,7 @@ function showCategory(catName) {
 		.add('[accent]' + catName + ' Servers')
 		.growX()
 		.left();
-	dialog.cont.add(header).width(420).padBottom(10).row();
+	dialog.cont.add(header).width(520).padBottom(10).row();
 
 	let table = new Table();
 	table.top().left();
@@ -208,7 +208,10 @@ function showCategory(catName) {
 				cons((b) => {
 					b.left();
 
-					let infoCell = b
+					let infoTable = new Table();
+					infoTable.left().defaults().left();
+
+					let nameLabel = infoTable
 						.add(
 							nameColor +
 								srv.name +
@@ -217,15 +220,27 @@ function showCategory(catName) {
 								':' +
 								normSrv.port
 						)
-						.left()
 						.growX()
-						.minWidth(0);
-					infoCell.get().setEllipsis(true);
+						.minWidth(0)
+						.get();
+					nameLabel.setEllipsis(true);
+					infoTable.row();
+
+					let mapLabel = infoTable
+						.add('')
+						.growX()
+						.minWidth(0)
+						.padTop(2)
+						.get();
+					mapLabel.setEllipsis(true);
+
+					b.add(infoTable).left().growX().minWidth(0);
 
 					let pingLabel = b
 						.add('[lightgray]Pinging...')
 						.right()
 						.padLeft(5)
+						.minWidth(80)
 						.get();
 					pingLabel.setAlignment(16);
 
@@ -242,6 +257,8 @@ function showCategory(catName) {
 													host.players +
 													' [lightgray]online'
 											);
+										if (mapLabel)
+											mapLabel.setText('[lightgray]Map: [white]' + host.mapname);
 									})
 								);
 							}),
@@ -266,14 +283,14 @@ function showCategory(catName) {
 				}
 			);
 
-			btnCell.size(300, 60).left().padRight(10);
+			btnCell.size(380, 80).left().padRight(10);
 			btnCell.get().setStyle(Styles.cleart);
 
 			rowTable
 				.button(Icon.edit, Styles.cleari, () =>
 					showEditServerDialog(catName, srvIndex, srv)
 				)
-				.size(45, 60);
+				.size(45, 80);
 
 			rowTable
 				.button(Icon.trash, Styles.cleari, () => {
@@ -288,19 +305,44 @@ function showCategory(catName) {
 						}
 					);
 				})
-				.size(45, 60);
+				.size(45, 80);
+
+			// Кнопки Вверх / Вниз для перемещения серверов в списке
+			let orderTable = new Table();
+			orderTable.button(Icon.upOpen, Styles.cleari, () => {
+				if (srvIndex > 0) {
+					let currentData = loadData();
+					let temp = currentData[catName][srvIndex];
+					currentData[catName][srvIndex] = currentData[catName][srvIndex - 1];
+					currentData[catName][srvIndex - 1] = temp;
+					saveData(currentData);
+					showCategory(catName);
+				}
+			}).size(30, 40).row();
+			orderTable.button(Icon.downOpen, Styles.cleari, () => {
+				let currentData = loadData();
+				if (srvIndex < currentData[catName].length - 1) {
+					let temp = currentData[catName][srvIndex];
+					currentData[catName][srvIndex] = currentData[catName][srvIndex + 1];
+					currentData[catName][srvIndex + 1] = temp;
+					saveData(currentData);
+					showCategory(catName);
+				}
+			}).size(30, 40);
+			
+			rowTable.add(orderTable).padLeft(5);
 
 			table.add(rowTable).padBottom(5).row();
 		});
 	}
 
-	dialog.cont.add(new ScrollPane(table)).width(420).height(340).row();
+	dialog.cont.add(new ScrollPane(table)).width(520).height(340).row();
 
 	dialog.cont
 		.button('Add Server', Icon.add, () => {
 			showEditServerDialog(catName, -1, { name: '', ip: '', port: 6567 });
 		})
-		.size(420, 50)
+		.size(520, 50)
 		.padTop(10);
 }
 

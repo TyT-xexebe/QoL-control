@@ -38,6 +38,10 @@ const helpData = {
 		cmd: 'trange',
 		desc: '[accent]!trange <1/0?>[lightgrey] - toggle nearby enemy turret range display blue[AIR] brown[GROUND] purple[BOTH] (uses FPS)',
 	},
+	'features/urange': {
+		cmd: 'urange',
+		desc: '[accent]!urange <1/0?>[lightgrey] - toggle nearby enemy unit range display blue[AIR] brown[GROUND] purple[BOTH] (uses FPS)',
+	},
 	'features/mlog': {
 		cmd: 'mlog',
 		desc: '[lightgrey]Mlog inserter\n\n[accent]!mlog <filename>[lightgrey] - insert /qol/mlog/<filename>.txt into any empty processor\n[accent]!mlog <filename> set[lightgrey] - select processor manually by shooting it\n[accent]!mlog list[lightgrey] - see aviable mlog codes\n[accent]!mlog remove <filename>[lightgrey] - removes .txt file',

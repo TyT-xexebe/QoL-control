@@ -1,20 +1,17 @@
 const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
+const ArcReflect = Packages.arc.util.Reflect;
 
 let renderBullets = true;
 let renderUnits = true;
 let renderBlocks = true;
 let renderLayers = true;
-let enablePhysics = true;
 
 const origBulletSizes = [];
 const origUnitSizes = [];
-const origBlockSizes = [];
-const origBlockRegions = [];
 const origBlockDrawers = [];
 
 function restoreOriginals() {
-	let clearReg = Core.atlas.find('clear');
 	let idx = 0;
 
 	Vars.content.bullets().each(
@@ -38,17 +35,6 @@ function restoreOriginals() {
 	Vars.content.blocks().each(
 		cons((b) => {
 			let id = b.id;
-			if (origBlockRegions[id] !== undefined && b.clipSize === -10000) {
-				let orig = origBlockRegions[id];
-				if (b.region === clearReg) b.region = orig.region;
-				if (b.baseRegion === clearReg) b.baseRegion = orig.baseRegion;
-				if (b.bottomRegion === clearReg)
-					b.bottomRegion = orig.bottomRegion;
-				if (b.teamRegion === clearReg) b.teamRegion = orig.teamRegion;
-				if (b.topRegion === clearReg) b.topRegion = orig.topRegion;
-				b.clipSize = origBlockSizes[id];
-			}
-
 			try {
 				if (origBlockDrawers[id] !== undefined && b.drawer) {
 					b.drawer = origBlockDrawers[id];
@@ -62,9 +48,45 @@ Events.on(ClientLoadEvent, () => {
 	restoreOriginals();
 });
 
+let savedTileSize = -1;
+let savedLinkSize = -1;
+let savedLightSize = -1;
+let savedDestroyedSize = -1;
+
+Events.run(Trigger.drawOver, () => {
+	if (!renderBlocks) {
+		try {
+			let bRenderer = Vars.renderer.blocks;
+			let tview = ArcReflect.get(bRenderer, "tileview");
+			if(tview) { savedTileSize = tview.size; tview.size = 0; }
+			
+			let pLinks = ArcReflect.get(bRenderer, "procLinks");
+			if(pLinks) { savedLinkSize = pLinks.size; pLinks.size = 0; }
+			
+			let pLights = ArcReflect.get(bRenderer, "procLights");
+			if(pLights) { savedLightSize = pLights.size; pLights.size = 0; }
+			
+			let destr = ArcReflect.get(bRenderer, "destroyed");
+			if(destr) { savedDestroyedSize = destr.size; destr.size = 0; }
+		} catch (e) {}
+	}
+});
+
+Events.run(Trigger.postDraw, () => {
+	if (!renderBlocks) {
+		try {
+			let bRenderer = Vars.renderer.blocks;
+			if(savedTileSize !== -1) { ArcReflect.get(bRenderer, "tileview").size = savedTileSize; savedTileSize = -1; }
+			if(savedLinkSize !== -1) { ArcReflect.get(bRenderer, "procLinks").size = savedLinkSize; savedLinkSize = -1; }
+			if(savedLightSize !== -1) { ArcReflect.get(bRenderer, "procLights").size = savedLightSize; savedLightSize = -1; }
+			if(savedDestroyedSize !== -1) { ArcReflect.get(bRenderer, "destroyed").size = savedDestroyedSize; savedDestroyedSize = -1; }
+		} catch (e) {}
+	}
+});
+
 interceptor.add('render', (args) => {
 	if (args.length < 2) {
-		notify('[lightgray]!render <bullet|unit|block|layer|phys> <1/0?>');
+		notify('[lightgray]!render <bullet|unit|block|layer> <1/0?>');
 		return;
 	}
 
@@ -103,36 +125,7 @@ interceptor.add('render', (args) => {
 		);
 	} else if (subcmd === 'block') {
 		renderBlocks = interceptor.parseToggle(renderBlocks, args[2]);
-		let clearReg = Core.atlas.find('clear');
-		Vars.content.blocks().each(
-			cons((b) => {
-				let id = b.id;
-				if (origBlockRegions[id] === undefined) {
-					origBlockRegions[id] = {
-						region: b.region,
-						baseRegion: b.baseRegion,
-						bottomRegion: b.bottomRegion,
-						teamRegion: b.teamRegion,
-						topRegion: b.topRegion,
-					};
-					origBlockSizes[id] = b.clipSize;
-				}
-				let orig = origBlockRegions[id];
-				if (b.region != null)
-					b.region = renderBlocks ? orig.region : clearReg;
-				if (b.baseRegion != null)
-					b.baseRegion = renderBlocks ? orig.baseRegion : clearReg;
-				if (b.bottomRegion != null)
-					b.bottomRegion = renderBlocks
-						? orig.bottomRegion
-						: clearReg;
-				if (b.teamRegion != null)
-					b.teamRegion = renderBlocks ? orig.teamRegion : clearReg;
-				if (b.topRegion != null)
-					b.topRegion = renderBlocks ? orig.topRegion : clearReg;
-				b.clipSize = renderBlocks ? origBlockSizes[id] : -10000;
-			})
-		);
+		
 		notify(
 			'[lightgray]Blocks ' + (renderBlocks ? '[green]ON' : '[scarlet]OFF')
 		);

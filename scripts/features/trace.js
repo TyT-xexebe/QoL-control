@@ -1,24 +1,34 @@
 const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
 
+const defaultPriority = [
+	'vanquish',
+	'reign',
+	'vela',
+	'arkyid',
+	'scepter',
+	'obviate',
+	'precept',
+	'avert',
+	'quasar',
+	'cleroi',
+];
+
 const trace = {
 	enabled: false,
 	mode: null,
 	target: null,
-	priority: [
-		'vanquish',
-		'reign',
-		'vela',
-		'arkyid',
-		'scepter',
-		'obviate',
-		'precept',
-		'avert',
-		'quasar',
-		'cleroi',
-	],
+	priority: [],
 	lastTry: 0,
 };
+
+let rawConfig = String(Core.settings.getString('qol-trace-priority', ''));
+if (rawConfig) {
+	trace.priority = rawConfig.split(',').map((s) => s.trim()).filter((s) => s);
+} else {
+	trace.priority = defaultPriority.slice();
+	Core.settings.put('qol-trace-priority', trace.priority.join(','));
+}
 
 function isFree(u) {
 	return (
@@ -53,8 +63,14 @@ function findTrace() {
 				unit = u;
 		});
 	} else if (trace.mode === 'find') {
-		if (Vars.player.unit() && !Vars.player.unit().dead) return;
-		let best = Infinity;
+		let currentUnit = Vars.player.unit();
+		let currentIdx = Infinity;
+		if (currentUnit && !currentUnit.dead) {
+			currentIdx = trace.priority.indexOf(currentUnit.type.name);
+			if (currentIdx === -1) currentIdx = Infinity;
+		}
+
+		let best = currentIdx;
 		Groups.unit.each((u) => {
 			if (u.team != team || !isFree(u)) return;
 			let idx = trace.priority.indexOf(u.type.name);
@@ -80,12 +96,16 @@ Events.on(UnitCreateEvent, (e) => {
 		return;
 	if (trace.mode === 'set' && e.unit.type.name === trace.target)
 		possess(e.unit);
-	else if (
-		trace.mode === 'find' &&
-		!Vars.player.unit() &&
-		trace.priority.includes(e.unit.type.name)
-	)
-		possess(e.unit);
+	else if (trace.mode === 'find') {
+		let currentUnit = Vars.player.unit();
+		let currentIdx = Infinity;
+		if (currentUnit && !currentUnit.dead) {
+			currentIdx = trace.priority.indexOf(currentUnit.type.name);
+			if (currentIdx === -1) currentIdx = Infinity;
+		}
+		let newIdx = trace.priority.indexOf(e.unit.type.name);
+		if (newIdx !== -1 && newIdx < currentIdx) possess(e.unit);
+	}
 });
 
 Events.on(WorldLoadEvent, () => {
@@ -113,6 +133,25 @@ const traceHandler = (args) => {
 	} else if (sub === 'find' || sub === 'f') {
 		trace.mode = 'find';
 		notify('[lightgrey]Mode [green]FIND');
+	} else if (sub === 'fconfig') {
+		let newConfig = args.slice(2).join(' ');
+		if (newConfig) {
+			let list = newConfig.split(',').map((s) => s.trim()).filter((s) => s);
+			let validList = list.filter((s) => Vars.content.getByName(ContentType.unit, s));
+			
+			if (validList.length > 0) {
+				trace.priority = validList;
+				Core.settings.put('qol-trace-priority', validList.join(','));
+				if (validList.length !== list.length) {
+					notify('[orange]Saved, but some invalid units were skipped.');
+				}
+				notify('[lightgrey]Priority updated:\n[accent]' + trace.priority.join('[lightgrey] > [accent]'));
+			} else {
+				notify('[scarlet]No valid units provided for priority configuration.');
+			}
+		} else {
+			notify('[lightgray]Current priority:\n[accent]' + trace.priority.join('[lightgrey] > [accent]') + '\n\n[lightgray]To change: !trace fconfig unit1, unit2, ...');
+		}
 	} else if (sub === 'status' || sub === 'st') {
 		notify(
 			'\n[lightgrey]State ' +
@@ -126,7 +165,7 @@ const traceHandler = (args) => {
 		);
 	} else {
 		notify(
-			'[lightgray]!trace toggle <1/0?>\n!trace set <unit>\n!trace find\n!trace status\n\n!tr t <1/0?>\n!tr s <unit>\n!tr f\n!tr st'
+			'[lightgray]!trace toggle <1/0?>\n!trace set <unit>\n!trace find\n!trace fconfig [units...]\n!trace status\n\n!tr t <1/0?>\n!tr s <unit>\n!tr f\n!tr st'
 		);
 	}
 };
