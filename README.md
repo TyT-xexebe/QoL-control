@@ -336,7 +336,19 @@ Replace Code
 Finds and replaces specific lines or multi-line blocks of code throughout all processor.
 Automatically protects and updates all jump targets using labels, ensuring that replacing code blocks of different lengths wont break your existing jumps.
 
-^! Its a testing feature that may contain bugs !^
+##### Processor Tracker & Variables
+Provides real-time visualization and debugging for logic processors directly in the world.
+
+Visual Connections
+Visually tracks processor variables and connections, drawing target lines from the processor to the blocks or units it controls.
+
+Variables Window
+View live variable values, pause the processor execution, refresh config, and search through variables.
+
+Tracker Window
+Add track rules to variables. Set conditions (`==`, `!=`, `>`, `<`, `>=`, `<=`, `changed`, `typeof`, `contains`) and actions (`none`, `pause`, `highlight`, `count`, `notify`, `camera`) to trigger when a variable state changes.
+The `camera` action allows dynamic tracking of block/unit coordinates, or explicitly specified `x,y` coordinates, automatically shifting your view.
+
 
 ## Performance
 

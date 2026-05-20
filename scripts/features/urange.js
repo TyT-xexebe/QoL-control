@@ -43,7 +43,12 @@ Events.run(Trigger.draw, () => {
 							color = Color.valueOf('84f5f5');
 						}
 
-						cachedUnits.push({ x: unit.x, y: unit.y, r: r, color: color });
+						cachedUnits.push({
+							x: unit.x,
+							y: unit.y,
+							r: r,
+							color: color,
+						});
 					}
 				}
 			}

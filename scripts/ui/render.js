@@ -57,17 +57,29 @@ Events.run(Trigger.drawOver, () => {
 	if (!renderBlocks) {
 		try {
 			let bRenderer = Vars.renderer.blocks;
-			let tview = ArcReflect.get(bRenderer, "tileview");
-			if(tview) { savedTileSize = tview.size; tview.size = 0; }
-			
-			let pLinks = ArcReflect.get(bRenderer, "procLinks");
-			if(pLinks) { savedLinkSize = pLinks.size; pLinks.size = 0; }
-			
-			let pLights = ArcReflect.get(bRenderer, "procLights");
-			if(pLights) { savedLightSize = pLights.size; pLights.size = 0; }
-			
-			let destr = ArcReflect.get(bRenderer, "destroyed");
-			if(destr) { savedDestroyedSize = destr.size; destr.size = 0; }
+			let tview = ArcReflect.get(bRenderer, 'tileview');
+			if (tview) {
+				savedTileSize = tview.size;
+				tview.size = 0;
+			}
+
+			let pLinks = ArcReflect.get(bRenderer, 'procLinks');
+			if (pLinks) {
+				savedLinkSize = pLinks.size;
+				pLinks.size = 0;
+			}
+
+			let pLights = ArcReflect.get(bRenderer, 'procLights');
+			if (pLights) {
+				savedLightSize = pLights.size;
+				pLights.size = 0;
+			}
+
+			let destr = ArcReflect.get(bRenderer, 'destroyed');
+			if (destr) {
+				savedDestroyedSize = destr.size;
+				destr.size = 0;
+			}
 		} catch (e) {}
 	}
 });
@@ -76,10 +88,23 @@ Events.run(Trigger.postDraw, () => {
 	if (!renderBlocks) {
 		try {
 			let bRenderer = Vars.renderer.blocks;
-			if(savedTileSize !== -1) { ArcReflect.get(bRenderer, "tileview").size = savedTileSize; savedTileSize = -1; }
-			if(savedLinkSize !== -1) { ArcReflect.get(bRenderer, "procLinks").size = savedLinkSize; savedLinkSize = -1; }
-			if(savedLightSize !== -1) { ArcReflect.get(bRenderer, "procLights").size = savedLightSize; savedLightSize = -1; }
-			if(savedDestroyedSize !== -1) { ArcReflect.get(bRenderer, "destroyed").size = savedDestroyedSize; savedDestroyedSize = -1; }
+			if (savedTileSize !== -1) {
+				ArcReflect.get(bRenderer, 'tileview').size = savedTileSize;
+				savedTileSize = -1;
+			}
+			if (savedLinkSize !== -1) {
+				ArcReflect.get(bRenderer, 'procLinks').size = savedLinkSize;
+				savedLinkSize = -1;
+			}
+			if (savedLightSize !== -1) {
+				ArcReflect.get(bRenderer, 'procLights').size = savedLightSize;
+				savedLightSize = -1;
+			}
+			if (savedDestroyedSize !== -1) {
+				ArcReflect.get(bRenderer, 'destroyed').size =
+					savedDestroyedSize;
+				savedDestroyedSize = -1;
+			}
 		} catch (e) {}
 	}
 });
@@ -125,7 +150,7 @@ interceptor.add('render', (args) => {
 		);
 	} else if (subcmd === 'block') {
 		renderBlocks = interceptor.parseToggle(renderBlocks, args[2]);
-		
+
 		notify(
 			'[lightgray]Blocks ' + (renderBlocks ? '[green]ON' : '[scarlet]OFF')
 		);

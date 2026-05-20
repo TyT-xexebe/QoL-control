@@ -258,7 +258,10 @@ function showCategory(catName) {
 													' [lightgray]online'
 											);
 										if (mapLabel)
-											mapLabel.setText('[lightgray]Map: [white]' + host.mapname);
+											mapLabel.setText(
+												'[lightgray]Map: [white]' +
+													host.mapname
+											);
 									})
 								);
 							}),
@@ -309,27 +312,34 @@ function showCategory(catName) {
 
 			// Кнопки Вверх / Вниз для перемещения серверов в списке
 			let orderTable = new Table();
-			orderTable.button(Icon.upOpen, Styles.cleari, () => {
-				if (srvIndex > 0) {
+			orderTable
+				.button(Icon.upOpen, Styles.cleari, () => {
+					if (srvIndex > 0) {
+						let currentData = loadData();
+						let temp = currentData[catName][srvIndex];
+						currentData[catName][srvIndex] =
+							currentData[catName][srvIndex - 1];
+						currentData[catName][srvIndex - 1] = temp;
+						saveData(currentData);
+						showCategory(catName);
+					}
+				})
+				.size(30, 40)
+				.row();
+			orderTable
+				.button(Icon.downOpen, Styles.cleari, () => {
 					let currentData = loadData();
-					let temp = currentData[catName][srvIndex];
-					currentData[catName][srvIndex] = currentData[catName][srvIndex - 1];
-					currentData[catName][srvIndex - 1] = temp;
-					saveData(currentData);
-					showCategory(catName);
-				}
-			}).size(30, 40).row();
-			orderTable.button(Icon.downOpen, Styles.cleari, () => {
-				let currentData = loadData();
-				if (srvIndex < currentData[catName].length - 1) {
-					let temp = currentData[catName][srvIndex];
-					currentData[catName][srvIndex] = currentData[catName][srvIndex + 1];
-					currentData[catName][srvIndex + 1] = temp;
-					saveData(currentData);
-					showCategory(catName);
-				}
-			}).size(30, 40);
-			
+					if (srvIndex < currentData[catName].length - 1) {
+						let temp = currentData[catName][srvIndex];
+						currentData[catName][srvIndex] =
+							currentData[catName][srvIndex + 1];
+						currentData[catName][srvIndex + 1] = temp;
+						saveData(currentData);
+						showCategory(catName);
+					}
+				})
+				.size(30, 40);
+
 			rowTable.add(orderTable).padLeft(5);
 
 			table.add(rowTable).padBottom(5).row();
