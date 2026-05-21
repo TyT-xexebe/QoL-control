@@ -24,10 +24,7 @@ const trace = {
 
 let rawConfig = String(Core.settings.getString('qol-trace-priority', ''));
 if (rawConfig) {
-	trace.priority = rawConfig
-		.split(',')
-		.map((s) => s.trim())
-		.filter((s) => s);
+	trace.priority = rawConfig.split(',').map((s) => s.trim()).filter((s) => s);
 } else {
 	trace.priority = defaultPriority.slice();
 	Core.settings.put('qol-trace-priority', trace.priority.join(','));
@@ -139,37 +136,46 @@ const traceHandler = (args) => {
 	} else if (sub === 'fconfig') {
 		let newConfig = args.slice(2).join(' ');
 		if (newConfig) {
-			let list = newConfig
-				.split(',')
-				.map((s) => s.trim())
-				.filter((s) => s);
-			let validList = list.filter((s) =>
-				Vars.content.getByName(ContentType.unit, s)
-			);
-
+			let list = newConfig.split(',').map((s) => s.trim()).filter((s) => s);
+			let validList = list.filter((s) => Vars.content.getByName(ContentType.unit, s));
+			
 			if (validList.length > 0) {
 				trace.priority = validList;
 				Core.settings.put('qol-trace-priority', validList.join(','));
 				if (validList.length !== list.length) {
-					notify(
-						'[orange]Saved, but some invalid units were skipped.'
-					);
+					notify('[orange]Saved, but some invalid units were skipped.');
 				}
-				notify(
-					'[lightgrey]Priority updated:\n[accent]' +
-						trace.priority.join('[lightgrey] > [accent]')
-				);
+				notify('[lightgrey]Priority updated:\n[accent]' + trace.priority.join('[lightgrey] > [accent]'));
 			} else {
-				notify(
-					'[scarlet]No valid units provided for priority configuration.'
-				);
+				notify('[scarlet]No valid units provided for priority configuration.');
 			}
 		} else {
-			notify(
-				'[lightgray]Current priority:\n[accent]' +
-					trace.priority.join('[lightgrey] > [accent]') +
-					'\n\n[lightgray]To change: !trace fconfig unit1, unit2, ...'
-			);
+			let pd = new BaseDialog('Priority list');
+			pd.addCloseButton();
+			pd.cont.add('Enter units (e.g. zenith, antumbra, eclipse):').left().padBottom(10).row();
+			let field = new Packages.arc.scene.ui.TextArea(trace.priority.join(', '));
+			field.setMaxLength(5000);
+			pd.cont.add(field).width(500).height(100).row();
+			pd.buttons.button('@ok', Icon.ok, () => {
+				let newText = field.getText();
+				if (newText) {
+					let list = String(newText).split(',').map((s) => s.trim()).filter((s) => s);
+					let validList = list.filter((s) => Vars.content.getByName(ContentType.unit, s));
+					
+					if (validList.length > 0) {
+						trace.priority = validList;
+						Core.settings.put('qol-trace-priority', validList.join(','));
+						if (validList.length !== list.length) {
+							notify('[orange]Saved, but some invalid units were skipped.');
+						}
+						notify('[lightgrey]Priority updated:\n[accent]' + trace.priority.join('[lightgrey] > [accent]'));
+					} else {
+						notify('[scarlet]No valid units provided for priority configuration.');
+					}
+				}
+				pd.hide();
+			}).size(200, 50).pad(2);
+			pd.show();
 		}
 	} else if (sub === 'status' || sub === 'st') {
 		notify(

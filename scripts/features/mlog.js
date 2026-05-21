@@ -1616,14 +1616,10 @@ Events.run(Trigger.update, () => {
 									}
 									if (idx === -1) {
 										trackedGlobalProcessors.push(tgt);
-										notify(
-											'[green]Started visually tracking processor'
-										);
+										
 									} else {
 										trackedGlobalProcessors.splice(idx, 1);
-										notify(
-											'[yellow]Stopped visually tracking processor'
-										);
+										
 									}
 								}
 							});
