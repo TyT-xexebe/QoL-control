@@ -94,36 +94,38 @@ const initUI = () => {
 			let oldSclX = font.getData().scaleX;
 			let oldSclY = font.getData().scaleY;
 
-			if (playerMode === 1) {
-				font.getData().setScale(scl * 0.6);
-			}
-
-			Groups.player.each((p) => {
-				if (p.unit() && p !== Vars.player) {
-					let px = this.x + p.x * pxScl;
-					let py = this.y + p.y * pyScl;
-
-					if (playerMode === 0) {
-						Draw.rect(
-							eye,
-							px,
-							py,
-							eye.width * eyeScl,
-							eye.height * eyeScl
-						);
-					} else {
-						font.draw(
-							p.name,
-							px,
-							py + scl * 4,
-							Packages.arc.util.Align.center
-						);
-					}
+			try {
+				if (playerMode === 1) {
+					font.getData().setScale(scl * 0.6);
 				}
-			});
 
-			if (playerMode === 1) {
-				font.getData().setScale(oldSclX, oldSclY);
+				Groups.player.each((p) => {
+					if (p.unit() && p !== Vars.player) {
+						let px = this.x + p.x * pxScl;
+						let py = this.y + p.y * pyScl;
+
+						if (playerMode === 0) {
+							Draw.rect(
+								eye,
+								px,
+								py,
+								eye.width * eyeScl,
+								eye.height * eyeScl
+							);
+						} else {
+							font.draw(
+								p.name,
+								px,
+								py + scl * 4,
+								Packages.arc.util.Align.center
+							);
+						}
+					}
+				});
+			} finally {
+				if (playerMode === 1) {
+					font.getData().setScale(oldSclX, oldSclY);
+				}
 			}
 
 			Lines.stroke(scl * 3);

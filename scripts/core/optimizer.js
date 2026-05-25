@@ -4,7 +4,10 @@ Events.on(
 		const s = Core.settings;
 		const none = Fx.none;
 		const noneSound = Sounds.none;
-		const clearReg = Core.atlas.find('clear');
+		
+		let TextureRegion = Packages.arc.graphics.g2d.TextureRegion;
+		let clearReg = Core.atlas.find("clear");
+		if(!clearReg) clearReg = new TextureRegion(Core.atlas.white());
 
 		const safeSet = (obj, prop, value) => {
 			try {
