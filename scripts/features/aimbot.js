@@ -644,11 +644,9 @@ Events.run(Trigger.update, function () {
 				if (hit) {
 					manualPriorityTarget = hit.target;
 					currentTargetType = hit.type;
-					notify('Manual target locked!');
 				} else {
 					if (manualPriorityTarget !== null) {
 						manualPriorityTarget = null;
-						notify('Target unlocked');
 					}
 				}
 			}
