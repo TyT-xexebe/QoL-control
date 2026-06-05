@@ -310,7 +310,6 @@ function showCategory(catName) {
 				})
 				.size(45, 80);
 
-			// Кнопки Вверх / Вниз для перемещения серверов в списке
 			let orderTable = new Table();
 			orderTable
 				.button(Icon.upOpen, Styles.cleari, () => {

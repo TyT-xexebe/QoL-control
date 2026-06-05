@@ -11,6 +11,7 @@ let mapSize = Core.settings.getInt('map-size', 200);
 let playerMode = Core.settings.getInt('cmap-player-mode', 0);
 let unitOutline = Core.settings.getBool('cmap-unit-outline', false);
 let unitSize = Core.settings.getFloat('cmap-unit-size', 24);
+let sortByHp = Core.settings.getBool('cmap-sort-hp', true);
 
 let unitCache = [];
 let cacheTimer = 0;
@@ -300,6 +301,17 @@ interceptor.add('cmap', () => {
 		.pad(4)
 		.row();
 
+	cont.check(
+		'Sort Units by HP (disable on low-end devices)',
+		sortByHp,
+		(b) => {
+			sortByHp = b;
+			Core.settings.put('cmap-sort-hp', new java.lang.Boolean(b));
+		}
+	)
+		.pad(4)
+		.row();
+
 	let modeBtn;
 	modeBtn = cont
 		.button(
@@ -387,6 +399,6 @@ Events.run(Trigger.update, () => {
 			});
 		});
 		unitCache.length = cacheLen;
-		unitCache.sort((a, b) => a.maxHealth - b.maxHealth);
+		if (sortByHp) unitCache.sort((a, b) => a.maxHealth - b.maxHealth);
 	}
 });

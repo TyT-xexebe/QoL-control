@@ -1,7 +1,12 @@
 const commands = {};
+const packetModifiers = [];
 
 function registerCommand(name, handler) {
 	commands[name.toLowerCase()] = handler;
+}
+
+function addPacketModifier(modifier) {
+	packetModifiers.push(modifier);
 }
 
 function handleCommand(msg) {
@@ -29,72 +34,203 @@ function handleCommand(msg) {
 	return false;
 }
 
-Events.on(EventType.ClientLoadEvent, (e) => {
+Events.on(ClientLoadEvent, (e) => {
 	try {
 		const NetProvider = Packages.mindustry.net.Net.NetProvider;
 		const providerField = Vars.net.getClass().getDeclaredField('provider');
 		providerField.setAccessible(true);
 		const originalProvider = providerField.get(Vars.net);
 
-		if (String(originalProvider).indexOf('ChatInterceptorProxy') === -1) {
-			const proxy = new JavaAdapter(NetProvider, {
-				connectClient: function (ip, port, success) {
-					originalProvider.connectClient(ip, port, success);
-				},
+		let resolvedProvider = originalProvider;
+		while (
+			resolvedProvider &&
+			(String(resolvedProvider).indexOf('ChatInterceptorProxy') !== -1 ||
+				Packages.java.lang.reflect.Proxy.isProxyClass(
+					resolvedProvider.getClass()
+				) ||
+				typeof resolvedProvider.getOriginalProvider === 'function')
+		) {
+			if (
+				Packages.java.lang.reflect.Proxy.isProxyClass(
+					resolvedProvider.getClass()
+				)
+			) {
+				let handler =
+					Packages.java.lang.reflect.Proxy.getInvocationHandler(
+						resolvedProvider
+					);
+				if (handler && handler.originalProvider) {
+					resolvedProvider = handler.originalProvider;
+					continue;
+				}
+			}
+			if (typeof resolvedProvider.getOriginalProvider === 'function') {
+				let next = resolvedProvider.getOriginalProvider();
+				if (next && next !== resolvedProvider) {
+					resolvedProvider = next;
+					continue;
+				}
+			}
+			break;
+		}
 
-				sendClient: function (object, reliable) {
+		let isRhino = false;
+		try {
+			Packages.org.mozilla.javascript.Context;
+			isRhino = true;
+		} catch (ctxErr) {}
+
+		function withContext(fn) {
+			return function () {
+				let entered = false;
+				if (isRhino) {
 					try {
-						let className = object
-							.getClass()
-							.getSimpleName()
-							.toLowerCase();
-						if (
-							className.indexOf('chat') !== -1 ||
-							className.indexOf('message') !== -1
-						) {
-							let msgField = object.getClass().getField('message');
-							let msg = msgField.get(object);
+						let current =
+							Packages.org.mozilla.javascript.Context.getCurrentContext();
+						if (!current) {
+							Packages.org.mozilla.javascript.Context.enter();
+							entered = true;
+						}
+					} catch (e) {
+						try {
+							Packages.org.mozilla.javascript.Context.enter();
+							entered = true;
+						} catch (ce) {}
+					}
+				}
+				try {
+					return fn.apply(this, arguments);
+				} finally {
+					if (entered && isRhino) {
+						try {
+							Packages.org.mozilla.javascript.Context.exit();
+						} catch (e) {}
+					}
+				}
+			};
+		}
 
-							if (msg && handleCommand(msg)) {
-								return;
+		function findSendClientMethod(clazz) {
+			let current = clazz;
+			while (current != null) {
+				let interfaces = current.getInterfaces();
+				for (let i = 0; i < interfaces.length; i++) {
+					let name = String(interfaces[i].getName());
+					if (
+						name.indexOf('NetProvider') !== -1 ||
+						name.indexOf('arc.Net') !== -1 ||
+						name.indexOf('mindustry.net') !== -1
+					) {
+						let methods = interfaces[i].getMethods();
+						for (let j = 0; j < methods.length; j++) {
+							if (
+								String(methods[j].getName()) === 'sendClient' &&
+								methods[j].getParameterTypes().length === 2
+							) {
+								return methods[j];
 							}
 						}
-					} catch (e) {}
+					}
+				}
+				current = current.getSuperclass();
+			}
+			return null;
+		}
 
-					originalProvider.sendClient(object, reliable);
-				},
+		let sendClientMethod = null;
+		try {
+			sendClientMethod = findSendClientMethod(
+				originalProvider.getClass()
+			);
+		} catch (e) {
+			Log.err('[Interceptor] Error finding sendClient: ' + e);
+		}
 
-				disconnectClient: function () {
-					originalProvider.disconnectClient();
-				},
-				discoverServers: function (callback, done) {
-					originalProvider.discoverServers(callback, done);
-				},
-				pingHost: function (address, port, valid, failed) {
-					originalProvider.pingHost(address, port, valid, failed);
-				},
-				hostServer: function (port) {
-					originalProvider.hostServer(port);
-				},
-				getConnections: function () {
-					return originalProvider.getConnections();
-				},
-				closeServer: function () {
-					originalProvider.closeServer();
-				},
-				dispose: function () {
-					originalProvider.dispose();
-				},
-				setConnectFilter: function (filter) {
-					originalProvider.setConnectFilter(filter);
-				},
-				getConnectFilter: function () {
-					return originalProvider.getConnectFilter();
-				},
+		if (
+			String(originalProvider).indexOf('ChatInterceptorProxy') === -1 ||
+			resolvedProvider !== originalProvider
+		) {
+			const proxy = extend(NetProvider, {
+				getOriginalProvider: withContext(function () {
+					return resolvedProvider;
+				}),
 
-				toString: function () {
+				connectClient: withContext(function (ip, port, success) {
+					resolvedProvider.connectClient(ip, port, success);
+				}),
+
+				sendClient: withContext(function (object, reliable) {
+					try {
+						if (object != null) {
+							let className = String(
+								object.getClass().getSimpleName()
+							).toLowerCase();
+							if (
+								className.indexOf('chat') !== -1 ||
+								className.indexOf('message') !== -1
+							) {
+								try {
+									let msgField = object
+										.getClass()
+										.getField('message');
+									let msg = msgField.get(object);
+									if (msg && handleCommand(msg)) {
+										return;
+									}
+								} catch (cmdErr) {}
+							}
+
+							for (let i = 0; i < packetModifiers.length; i++) {
+								try {
+									packetModifiers[i](object);
+								} catch (modifierErr) {}
+							}
+						}
+					} catch (procErr) {}
+
+					try {
+						if (sendClientMethod) {
+							sendClientMethod.invoke(resolvedProvider, [
+								object,
+								java.lang.Boolean.valueOf(reliable),
+							]);
+						} else {
+							resolvedProvider.sendClient(object, reliable);
+						}
+					} catch (invokeErr) {}
+				}),
+
+				disconnectClient: withContext(function () {
+					resolvedProvider.disconnectClient();
+				}),
+				discoverServers: withContext(function (callback, done) {
+					resolvedProvider.discoverServers(callback, done);
+				}),
+				pingHost: withContext(function (address, port, valid, failed) {
+					resolvedProvider.pingHost(address, port, valid, failed);
+				}),
+				hostServer: withContext(function (port) {
+					resolvedProvider.hostServer(port);
+				}),
+				getConnections: withContext(function () {
+					return resolvedProvider.getConnections();
+				}),
+				closeServer: withContext(function () {
+					resolvedProvider.closeServer();
+				}),
+				dispose: withContext(function () {
+					resolvedProvider.dispose();
+				}),
+				setConnectFilter: withContext(function (filter) {
+					resolvedProvider.setConnectFilter(filter);
+				}),
+				getConnectFilter: withContext(function () {
+					return resolvedProvider.getConnectFilter();
+				}),
+
+				toString: withContext(function () {
 					return 'ChatInterceptorProxy';
-				},
+				}),
 			});
 
 			providerField.set(Vars.net, proxy);
@@ -119,18 +255,18 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		}
 
 		if (!alreadyAdded) {
-			let filter = new JavaAdapter(ChatFilter, {
-				filter: function (player, text) {
+			let filter = extend(ChatFilter, {
+				filter: withContext(function (player, text) {
 					if (player === Vars.player && text) {
 						if (handleCommand(text)) {
 							return null;
 						}
 					}
 					return text;
-				},
-				toString: function () {
+				}),
+				toString: withContext(function () {
 					return 'HostChatInterceptor';
-				},
+				}),
 			});
 
 			Vars.netServer.admins.addChatFilter(filter);
@@ -151,4 +287,5 @@ function parseToggle(current, arg) {
 module.exports = {
 	add: registerCommand,
 	parseToggle: parseToggle,
+	addPacketModifier: addPacketModifier,
 };

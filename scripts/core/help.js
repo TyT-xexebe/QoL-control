@@ -84,13 +84,25 @@ const helpData = {
 		cmd: 'track',
 		desc: "[lightgrey]Shows cursor and RTS control of players and unit factory's set path\n\n[accent]!track <name?>[lightgrey] - all players / selected by name\n[accent]!track <rts/rec>[lightgrey] - on/off displays of player rts/recpnstructor rally",
 	},
+	'features/wave': {
+		cmd: 'wave',
+		desc: '[lightgrey]Skip waves, bypassing the waitEnemies map rule\n\n[accent]!wave <num?>[lightgrey] - skip 1 or N waves (call again to cancel)\n[accent]!wave status[lightgrey] - show wave info and current rules\n\n[lightgrey]Requires admin or host on servers.',
+	},
+	'features/aimbot': {
+		cmd: 'aim',
+		desc: '[lightgrey]Aimbot - auto aims and shoots at enemies\n\n[accent]!aim[lightgrey] - opens settings UI\n\nPer-preset options: attack units/blocks, heal blocks, predict fire, predict tiles, constant fire, disable shoot on reload, priority (Nearest/Farthest/Min-Max HP), type order (units/blocks/heal), target filter (Default/Ground/Air/etc)\n\nIgnored targets: set as CSV in the settings dialog (missiles, world processors, etc)\n\nTap a unit/block to lock it as priority target. Tap empty space to release.\n\nMay contains bugs with some units/weapons.',
+	},
+	'core/users': {
+		cmd: 'users',
+		desc: '[lightgrey]Detects other QoL Control users on the server\n\nDetection is passive and automatic, no action needed. You get a notification when a new mod user is found.\n\n[accent]!users[lightgrey] | [accent]!user[lightgrey] - list all currently detected QoL users on server',
+	},
 	'ui/core': {
 		cmd: 'core',
 		desc: '[lightgrey]Shows core resourses of any team on map\n\n[accent]!core <#team>[lightgrey] - toggles core resourses display of team #id you selected (sharded, crux, blue, malis, green also supported)',
 	},
 	'ui/map': {
 		cmd: 'cmap',
-		desc: '[lightgrey]Custom map with some features\n[accent]!cmap[lightgrey] - settings',
+		desc: '[lightgrey]Custom map with some features\n[accent]!cmap[lightgrey] - settings\n\nOptions: Enable Minimap, Unit Outlines, Sort Units by HP (disable on low-end devices), Player Display (Icon/Name), Map Size, Unit Size',
 	},
 	'core/colors': {
 		cmd: 'colors',

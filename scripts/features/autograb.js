@@ -17,7 +17,11 @@ function findTargets() {
 	let u = Vars.player.unit();
 	if (!u) return;
 	Vars.indexer.allBuildings(u.x, u.y, grab.range, (b) => {
-		if (b.team === Vars.player.team() && b.items) grab.targets.push(b);
+		if (
+			b.team === (Vars.player.team()) &&
+			b.items
+		)
+			grab.targets.push(b);
 	});
 }
 
@@ -71,7 +75,11 @@ Events.run(Trigger.update, () => {
 			grab.index = (grab.index + 1) % grab.targets.length;
 			let b = grab.targets[grab.index];
 
-			if (b && b.isValid() && b.team === Vars.player.team()) {
+			if (
+				b &&
+				b.isValid() &&
+				(b.team === Vars.player.team())
+			) {
 				if (u.dst2(b) <= r2) {
 					let has = b.items.get(grab.item);
 					if (has >= grab.min) {

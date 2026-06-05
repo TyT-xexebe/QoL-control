@@ -25,6 +25,8 @@
   "features/track": true,
   "features/plan_range": true,
   "features/multitask": true,
+  "features/aimbot": true,
+  "features/wave": true,
   "ui/render": true,
   "ui/camera": true,
   "ui/table": true,

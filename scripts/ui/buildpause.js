@@ -25,9 +25,9 @@ const buildUI = () => {
 			table.setPosition(nx, ny);
 		}
 	);
-	// Attach listener to button, but don't let attach() set position of button
+
 	btn.addListener(dragHandler.listener);
-	// Explicitly set position of table
+
 	table.setPosition(
 		Mathf.clamp(dragHandler.state.x, 25, Core.graphics.getWidth() - 25),
 		Mathf.clamp(dragHandler.state.y, 25, Core.graphics.getHeight() - 25)

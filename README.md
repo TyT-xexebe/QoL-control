@@ -256,6 +256,49 @@ Shows cursor position of all players / selected player and unit controlled by RT
 `!track <rts/rec>`
 Turns on/off displays of players rts / reconstructor rally.
 
+#### `!wave`
+Skips to the next wave immediately, bypassing the `waitEnemies` map rule that normally hides the skip button while enemy units are alive.
+
+`!wave <num?>`
+Skips 1 wave, or N waves one per second. Call again while a multi-wave skip is running to cancel it.
+
+`!wave status` | `!wave s`
+Shows current wave number, enemies alive, wave timer and the current wave-related map rules.
+
+**Note:** Requires admin or host privileges on multiplayer servers. The server enforces this — regular non-admin players cannot force wave skips regardless of the mod.
+
+
+#### `!aim`
+
+Opens the Aimbot settings UI (draggable widget).
+
+Automatically aims and shoots at the nearest enemy unit or building based on your preset config. Supports target priority, bullet prediction, healing mode and per-unit presets.
+
+Options per preset:
+- **Attack Units / Blocks** — toggle enemy unit and building targeting
+- **Heal Blocks** — target damaged friendly buildings
+- **Predict Fire** — leads moving targets based on bullet speed, ping and velocity
+- **Predict Tiles** — extra search radius beyond weapon range for prediction
+- **Constant Fire** — always shoots forward with no target needed
+- **Disable Shoot on Reload** — stops shooting while reloading
+- **Priority** — `Nearest`, `Farthest`, `Min/Max Current HP`, `Min/Max Max HP`
+- **Type Order** — priority order between `units`, `blocks`, `heal`
+- **Target Filter** — `Default`, `Ground/Air`, `Air/Ground`, `Ground Only`, `Air Only`
+
+Ignored targets (missiles, world processors, etc) can be set as CSV in the settings dialog.
+
+Tap a unit/block to manually lock it as priority target. Tap empty space to release.
+
+May contains bugs with some units/weapons.
+
+#### `!users` | `!user`
+Detects other players on the server who are also using QoL Control. Detection is passive and automatic, no action needed.
+
+When a new mod user is found you get a notification in chat.
+
+`!users` | `!user`
+Shows the list of all currently detected QoL Control users on the server.
+
 #### `!core <#team>`
 
 Displays core resourses of team #id you selected, can displays multiple.

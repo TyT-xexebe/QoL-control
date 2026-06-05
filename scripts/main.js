@@ -99,6 +99,7 @@ for (let modName in defaultSettings) {
 global.qolActiveModules = activeModules;
 
 require('qol-control/core/help');
+require('qol-control/core/users');
 
 for (let module of activeModules) {
 	try {
@@ -186,6 +187,12 @@ if (!Vars.headless) {
 						'features/mute':
 							'!mute\nLocal chat mute for specific players. Hides their messages from your chat (dont work for bubble chat).\n\n!mute list\nShows all currently muted players (both exact and partial mutes).\n\n!mute add <name>\nMutes a player by their exact name (ignoring color tags. You can write only part of a name, it will search for player on server with it and add full name in mute list).\n\n!mute addp <name>\nMutes any player whose name contains the specified <name> (partial match).\n\n!mute remove <name> | !mute rem <name>\nUnmutes a player by removing them from the mute list.',
 						'features/map': '!map\nShows current map stats.',
+						'features/wave':
+							'!wave <num?>\nSkip 1 or N waves immediately, bypassing the waitEnemies map rule that hides the skip button while enemies are alive.\n\n!wave <num?>\nSkip 1 wave, or N waves one per second. Call again while skipping to cancel.\n\nRequires admin or host on multiplayer servers.',
+						'features/aimbot':
+							'!aim\nAimbot - automatically aims and shoots at enemies based on your preset config.\n\n!aim\nOpens the settings UI (draggable widget).\n\nPer-preset options:\nAttack Units / Blocks - toggle enemy unit and building targeting\nHeal Blocks - target damaged friendly buildings\nPredict Fire - leads moving targets based on bullet speed and ping\nPredict Tiles - extra search radius beyond weapon range for prediction\nConstant Fire - always shoots forward with no target needed\nDisable Shoot on Reload - stops shooting while reloading\nPriority - Nearest / Farthest / Min-Max Current HP / Min-Max Max HP\nType Order - priority order between units, blocks, heal\nTarget Filter - Default / Ground-Air / Air-Ground / Ground Only / Air Only\n\nIgnored targets (missiles, world processors, etc) can be set as CSV in the settings dialog.\n\nTap a unit/block to lock it as priority target. Tap empty space to release.\n\nMay contains bugs with some units/weapons.',
+						'core/users':
+							'!users | !user\nDetects other players on the server who are also using QoL Control. Detection is passive and automatic, no action needed. You get a notification in chat when a new mod user is found.',
 						'features/track':
 							"!track <name?>\nShows cursor position of all players / selected player and unit controlled by RTS and unit factory's set path.\n\n!track <rts/rec>\nTurns on/off displays of players rts / reconstructor rally.",
 						'features/plan_range':
@@ -314,7 +321,7 @@ Events.on(
 		Vars.renderer.maxZoom = 10.0;
 
 		Vars.content.units().each((u) => {
-			u.rotateSpeed = 1000;
+			u.rotateSpeed = 9999;
 			u.omniMovement = true;
 		});
 	})

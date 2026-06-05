@@ -7,6 +7,27 @@ const mlogDir = qolDir.child('mlog');
 let pendingMlog = null;
 let wasShooting = false;
 
+function formatFloat(num) {
+	if (num === null || num === undefined) return '0';
+	let n = Number(num);
+	if (!isFinite(n) || isNaN(n)) return String(num);
+	let rounded = Math.round(n * 100) / 100;
+	let str = String(rounded);
+	if (str.indexOf('e') !== -1) return str;
+	let idx = str.indexOf('.');
+	if (idx === -1) {
+		return str + '.00';
+	}
+	let dec = str.substring(idx + 1);
+	if (dec.length === 1) {
+		return str + '0';
+	}
+	if (dec.length > 2) {
+		return str.substring(0, idx + 3);
+	}
+	return str;
+}
+
 function getMlogFiles() {
 	let result = [];
 	if (mlogDir.exists() && mlogDir.isDirectory()) {
@@ -1356,7 +1377,7 @@ function showVariablesWindow(target) {
 						cVal = vData.propVal();
 						dispVal =
 							typeof cVal === 'number' && Math.abs(cVal % 1) > 0
-								? cVal.toFixed(2)
+								? formatFloat(cVal)
 								: '' + cVal;
 					} else {
 						let cVar = getExecVar(target.executor, vData.name);
@@ -1387,7 +1408,7 @@ function showVariablesWindow(target) {
 							typeof cVal === 'number' &&
 							Math.abs(cVal % 1) > 0
 						) {
-							dispVal = cVal.toFixed(2);
+							dispVal = formatFloat(cVal);
 						}
 					}
 
@@ -1436,13 +1457,11 @@ function showVariablesWindow(target) {
 		}
 	};
 
-	// periodically rebuild to catch new vars
 	let rebuildTimer = 0;
 	let lastVarCount = 0;
 	contentTable.update(() => {
 		rebuildTimer += Core.graphics.getDeltaTime();
 		if (rebuildTimer > 60) {
-			// rebuild about every 1 sec
 			rebuildTimer = 0;
 			let currentLen =
 				target.executor && target.executor.vars
@@ -1616,10 +1635,8 @@ Events.run(Trigger.update, () => {
 									}
 									if (idx === -1) {
 										trackedGlobalProcessors.push(tgt);
-										
 									} else {
 										trackedGlobalProcessors.splice(idx, 1);
-										
 									}
 								}
 							});
@@ -1684,9 +1701,7 @@ Events.run(Trigger.update, () => {
 						}
 					}
 				}
-			} catch (e) {
-				// Ignore reflection errors
-			}
+			} catch (e) {}
 		}
 	}
 
