@@ -219,17 +219,19 @@ Events.run(Trigger.update, function () {
 			if (isMatch) {
 				trk.lastMatchTime = now;
 				if (moved) {
-					trk.score = Math.min(trk.score + 2, 12);
+					trk.score = Math.min(trk.score + 2, 30);
 				} else {
-					trk.score = Math.min(trk.score + 1, 12);
+					trk.score = Math.min(trk.score + 1, 30);
 				}
 			} else {
 				if (moved) {
+					trk.score = Math.max(trk.score - 4, 0);
+				} else {
 					trk.score = Math.max(trk.score - 1, 0);
 				}
 			}
 
-			if (trk.hasMoved && trk.score >= 8 && !trk.confirmed) {
+			if (trk.hasMoved && trk.score >= 20 && !trk.confirmed) {
 				trk.confirmed = true;
 				modUsers[idKey] = { name: name, lastSeen: now };
 				notify('[cyan]' + name + ' [lightgray]is using QoL Control!');
