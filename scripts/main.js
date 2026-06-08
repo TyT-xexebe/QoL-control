@@ -146,7 +146,7 @@ if (!Vars.headless) {
 
 					const moduleDescriptions = {
 						'core/optimizer':
-							'Optimizer\nThe optimizer disables some unnecessary game features to increase FPS.',
+							'Optimizer\nThe optimizer disables some unnecessary game features to increase FPS.\n\n!opt for settings',
 						'core/unlocker': 'Unlocker\nSandbox blocks unlocker.',
 						'core/bind':
 							'!bind\nYou can add keybinds for your PC to launch some commands or text in chat.',
@@ -287,6 +287,11 @@ if (!Vars.headless) {
 						.left()
 						.padBottom(6)
 						.row();
+
+					// Optimizer per-feature toggles
+					if (typeof buildOptimizerSettings === 'function') {
+						buildOptimizerSettings(table);
+					}
 				})
 			);
 

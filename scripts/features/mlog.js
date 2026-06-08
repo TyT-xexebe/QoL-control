@@ -322,7 +322,7 @@ function injectUIButtons(table, dialog, logicDialog, scrollPane) {
 	let style = Styles.flatt;
 	table.row();
 
-	if (scrollPane) scrollPane.setScrollingDisabled(true, false);
+	if (scrollPane) scrollPane.setScrollingDisabled(false, false);
 
 	table
 		.button('Copy with Labels', Icon.copy, style, () => {
@@ -649,6 +649,7 @@ function createDraggableWindow(titleText, target, winList) {
 	titleLab.setAlignment(Packages.arc.util.Align.center);
 	dragger.add(titleLab).pad(8).growX();
 
+
 	let contentTable = new Table();
 	let collapseBtn = new Packages.arc.scene.ui.ImageButton(
 		Icon.downOpen,
@@ -684,14 +685,12 @@ function createDraggableWindow(titleText, target, winList) {
 				let dyStage = event.stageY - this.dragY;
 				let nX = this.initStageX + dxStage;
 				let nY = this.initStageY + dyStage;
-				let w = trackerWindow.getWidth();
-				let h = trackerWindow.getHeight();
+				let sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+				let w = trackerWindow.getWidth(), h = trackerWindow.getHeight();
 				if (nX - w / 2 < 0) nX = w / 2;
 				if (nY - h / 2 < 0) nY = h / 2;
-				if (nX + w / 2 > Core.graphics.getWidth())
-					nX = Core.graphics.getWidth() - w / 2;
-				if (nY + h / 2 > Core.graphics.getHeight())
-					nY = Core.graphics.getHeight() - h / 2;
+				if (nX + w / 2 > sw) nX = sw - w / 2;
+				if (nY + h / 2 > sh) nY = sh - h / 2;
 				winData.stageX = nX;
 				winData.stageY = nY;
 			},
@@ -705,19 +704,13 @@ function createDraggableWindow(titleText, target, winList) {
 			if (idx !== -1) winList.splice(idx, 1);
 			return;
 		}
-		let w = trackerWindow.getWidth();
-		let h = trackerWindow.getHeight();
+		let sw = Core.graphics.getWidth(), sh = Core.graphics.getHeight();
+		let w = trackerWindow.getWidth(), h = trackerWindow.getHeight();
 		if (winData.stageX - w / 2 < 0) winData.stageX = w / 2;
 		if (winData.stageY - h / 2 < 0) winData.stageY = h / 2;
-		if (winData.stageX + w / 2 > Core.graphics.getWidth())
-			winData.stageX = Core.graphics.getWidth() - w / 2;
-		if (winData.stageY + h / 2 > Core.graphics.getHeight())
-			winData.stageY = Core.graphics.getHeight() - h / 2;
-		trackerWindow.setPosition(
-			winData.stageX,
-			winData.stageY,
-			Packages.arc.util.Align.center
-		);
+		if (winData.stageX + w / 2 > sw) winData.stageX = sw - w / 2;
+		if (winData.stageY + h / 2 > sh) winData.stageY = sh - h / 2;
+		trackerWindow.setPosition(winData.stageX, winData.stageY, Packages.arc.util.Align.center);
 	});
 
 	trackerWindow.add(dragger).growX().row();
@@ -731,50 +724,136 @@ function createDraggableWindow(titleText, target, winList) {
 	};
 }
 
-function checkCondition(val, op, targetStr, exec, procBlock, rule) {
-	let t;
-	if (targetStr.startsWith('"') && targetStr.endsWith('"')) {
-		t = targetStr.substring(1, targetStr.length - 1);
-	} else if (targetStr.startsWith("'") && targetStr.endsWith("'")) {
-		t = targetStr.substring(1, targetStr.length - 1);
-	} else {
-		let foundLink = false;
-		if (procBlock && procBlock.links) {
-			for (let j = 0; j < procBlock.links.size; j++) {
-				let link = procBlock.links.get(j);
-				if (link.name === targetStr) {
-					t = Vars.world.build(link.x, link.y);
-					foundLink = true;
-					break;
-				}
+// Resolve Mindustry mlog builtin @ variables from live game state.
+// These are NOT stored in exec.vars - they are computed on demand by the executor.
+function resolveBuiltin(name, exec, procBlock) {
+	let n = String(name);
+	try {
+		switch (n) {
+			case '@time':       return Number(Time.millis()) / 1000;
+			case '@tick':       return Number(Vars.state.tick);
+			case '@second':     return Math.floor(Number(Vars.state.tick) / 60);
+			case '@minute':     return Math.floor(Number(Vars.state.tick) / 3600);
+			case '@waveNumber':
+			case '@wave':       return Number(Vars.state.wave);
+			case '@mapw':       return Number(Vars.world.width());
+			case '@maph':       return Number(Vars.world.height());
+			case '@thisx':      return procBlock ? Number(procBlock.tileX()) : 0;
+			case '@thisy':      return procBlock ? Number(procBlock.tileY()) : 0;
+			case '@links':      return procBlock && procBlock.links ? Number(procBlock.links.size) : 0;
+			case '@counter':    return exec && exec.iptr !== undefined ? Number(exec.iptr) : 0;
+			case '@ipt':        return procBlock && procBlock.ipt !== undefined ? Number(procBlock.ipt) : 0;
+			case '@unit': {
+				// Executor stores @unit as 'unit' (no @ prefix) in exec.vars
+				let uv = getExecVar(exec, '@unit') || getExecVar(exec, 'unit');
+				return uv ? getObjectVal(uv) : null;
 			}
+			case '@this':       return procBlock || null;
+			case '@true':       return 1;
+			case '@false':      return 0;
+			case '@pi':         return Math.PI;
+			case '@e':          return Math.E;
+			case '@degToRad':   return Math.PI / 180;
+			case '@radToDeg':   return 180 / Math.PI;
 		}
-		if (!foundLink) {
-			let tv = getExecVar(exec, targetStr);
-			if (tv) {
-				t = getObjectVal(tv);
-			} else {
-				let parsed = parseFloat(targetStr);
-				t = isNaN(parsed) ? targetStr : parsed;
-			}
+	} catch (e) {}
+	return null;
+}
+
+// Resolve a condValue string to an actual value.
+// Handles: quoted strings, @builtins, exec vars, link names, plain numbers.
+function resolveCondValue(targetStr, exec, procBlock) {
+	let s = String(targetStr);
+	if ((s.startsWith('"') && s.endsWith('"')) ||
+	    (s.startsWith("'") && s.endsWith("'"))) {
+		return s.substring(1, s.length - 1);
+	}
+	// Check exec.vars first (covers @unit and user vars)
+	let tv = getExecVar(exec, s);
+	if (tv !== null) return getObjectVal(tv);
+	// Then live builtins
+	if (s.startsWith('@')) {
+		let bv = resolveBuiltin(s, exec, procBlock);
+		if (bv !== null) return bv;
+		// known null builtins (@unit dead, @false etc.)
+		let known = ['@time','@tick','@second','@minute','@wave','@waveNumber',
+		             '@mapw','@maph','@thisx','@thisy','@links','@counter','@ipt',
+		             '@unit','@this','@true','@false','@pi','@e','@degToRad','@radToDeg'];
+		if (known.indexOf(s) !== -1) return bv;
+	}
+	// Link name
+	if (procBlock && procBlock.links) {
+		for (let j = 0; j < procBlock.links.size; j++) {
+			let link = procBlock.links.get(j);
+			if (link.name === s) return Vars.world.build(link.x, link.y);
 		}
 	}
+	let parsed = parseFloat(s);
+	return isNaN(parsed) ? s : parsed;
+}
+
+// Also resolve the WATCHED variable itself if it is a builtin (e.g. watching @tick directly).
+function resolveWatchedVar(varName, exec, procBlock) {
+	let n = String(varName);
+	// Try exec.vars first — covers user vars AND @-vars stored there (like @unit)
+	let v = getExecVar(exec, n);
+	if (v !== null) return getObjectVal(v);
+	// Fall back to live builtins (@time, @tick, @wave, etc. not stored in vars)
+	if (n.startsWith('@')) {
+		let bv = resolveBuiltin(n, exec, procBlock);
+		// bv === null means builtin is null/dead (e.g. @unit with no unit bound)
+		// distinguish from "not a builtin at all" using the switch coverage
+		// Any recognised builtin key returns a value (even null), so we check
+		// whether the name is a known builtin:
+		let known = ['@time','@tick','@second','@minute','@wave','@waveNumber',
+		             '@mapw','@maph','@thisx','@thisy','@links','@counter','@ipt',
+		             '@unit','@this','@true','@false','@pi','@e','@degToRad','@radToDeg'];
+		if (known.indexOf(n) !== -1) return bv; // return null for dead @unit etc.
+	}
+	return undefined; // truly unknown variable
+}
+
+// Stable key for a Java object that survives Rhino re-wrapping.
+// Units use their numeric id, buildings use tile coords, others fall back to toString.
+function _javaObjKey(o) {
+	if (o == null) return 'null';
+	try {
+		if (o instanceof Packages.mindustry.gen.Unit)
+			return 'u' + Number(o.id);
+		if (o instanceof Packages.mindustry.gen.Building)
+			return 'b' + Number(o.tileX()) + '_' + Number(o.tileY());
+		if (typeof o.id !== 'undefined')
+			return 'e' + Number(o.id);
+	} catch(e) {}
+	return 'unknown';
+}
+
+function checkCondition(val, op, targetStr, exec, procBlock, rule) {
+	let t = resolveCondValue(targetStr, exec, procBlock);
 
 	if (op === '==' || op === '===' || op === '!=' || op === '!==') {
 		let eq = false;
 		if (val != null && typeof val === 'object') {
-			if (typeof val.equals === 'function' && val.equals(t)) {
-				eq = true;
+			if (t != null && typeof t === 'object') {
+				// Compare Java objects by stable string key to avoid Rhino wrapper identity issues
+				try { eq = _javaObjKey(val) === _javaObjKey(t) && _javaObjKey(val) !== 'unknown'; } catch(e) { eq = false; }
 			} else if (typeof t === 'string') {
 				let nameStr = t.startsWith('@') ? t.substring(1) : t;
 				if (
 					val.name === nameStr ||
 					(val.block && val.block.name === nameStr) ||
 					(val.type && val.type.name === nameStr)
-				) {
-					eq = true;
-				}
+				) { eq = true; }
+				// Also allow 'null' string to match null unit
+				else if (nameStr === 'null' || nameStr === '') { eq = false; }
+			} else if (t === null || t === 0 || t === false) {
+				eq = false; // object != null/0
+			} else {
+				try { eq = val.equals(t); } catch(e) { eq = false; }
 			}
+		} else if (t != null && typeof t === 'object') {
+			// val is primitive, t is Java object
+			eq = false;
 		} else {
 			eq = val == t;
 		}
@@ -811,11 +890,16 @@ function checkCondition(val, op, targetStr, exec, procBlock, rule) {
 	if (op === '<') return vNum < tNum;
 	if (op === '>=') return vNum >= tNum;
 	if (op === '<=') return vNum <= tNum;
+	if (op === '%==') return tNum !== 0 && (vNum % tNum) === 0;
+	if (op === '%!=') return tNum !== 0 && (vNum % tNum) !== 0;
 	return false;
 }
 
 function getObjectVal(v) {
 	if (!v) return null;
+	// objval takes priority when it holds a non-null Java object —
+	// don't trust isobj flag since it can be stale after set instructions
+	if (v.objval != null && v.objval !== 0 && v.objval !== false) return v.objval;
 	if (v.isobj !== undefined) return v.isobj ? v.objval : v.numval;
 	return v.objval != null ? v.objval : v.numval;
 }
@@ -823,17 +907,22 @@ function getObjectVal(v) {
 function getExecVar(exec, name) {
 	if (!exec || !exec.vars) return null;
 	let nStr = String(name);
+	// Mindustry executor strips @ from builtin var names when storing in vars array.
+	// So '@unit' is stored as 'unit', '@counter' as 'counter', etc.
+	// Try both the raw name and the @-stripped version.
+	let nStripped = nStr.startsWith('@') ? nStr.substring(1) : null;
 	for (let i = 0; i < exec.vars.length; i++) {
-		if (exec.vars[i] && String(exec.vars[i].name) === nStr) {
-			return exec.vars[i];
-		}
+		let v = exec.vars[i];
+		if (!v) continue;
+		let vn = String(v.name);
+		if (vn === nStr || (nStripped !== null && vn === nStripped)) return v;
 	}
 	return null;
 }
 
 function showTrackerWindow(target) {
 	let wData = createDraggableWindow(
-		'Processor Tracker',
+		'Watch \u2022 ' + target.tileX() + ',' + target.tileY(),
 		target,
 		trackerWindows
 	);
@@ -842,620 +931,608 @@ function showTrackerWindow(target) {
 	let dragger = wData.dragger;
 	let contentTable = wData.contentTable;
 
+	// header buttons
 	let pauseBtn = dragger
-		.button(Icon.pause, Styles.cleari, () => {
-			target.enabled = !target.enabled;
-		})
-		.size(32)
-		.pad(2)
-		.get();
+		.button(Icon.pause, Styles.cleari, () => { target.enabled = !target.enabled; })
+		.size(28).pad(1).get();
 	pauseBtn.update(() => {
 		pauseBtn.getStyle().imageUp = target.enabled ? Icon.pause : Icon.play;
 	});
 
-	dragger
-		.button(Icon.refresh, Styles.cleari, () => {
-			target.configure(target.config());
-		})
-		.size(32)
-		.pad(2);
+	dragger.button(Icon.refresh, Styles.cleari, () => {
+		target.configure(target.config());
+	}).size(28).pad(1);
 
-	dragger.add(wData.collapseBtn).size(32).pad(2);
+	dragger.add(wData.collapseBtn).size(28).pad(1);
 
-	dragger
-		.button(Icon.cancel, Styles.cleari, () => {
-			trackerWindow.remove();
-			let idx = trackerWindows.indexOf(winData);
-			if (idx !== -1) trackerWindows.splice(idx, 1);
-			for (let i = playerDrawLines.length - 1; i >= 0; i--) {
-				if (
-					typeof playerDrawLines[i].id === 'object' &&
-					playerDrawLines[i].id.proc === target
-				) {
-					playerDrawLines.splice(i, 1);
-				}
-			}
-			let tkIdx = -1;
-			for (let k = 0; k < trackedGlobalProcessors.length; k++) {
-				if (trackedGlobalProcessors[k].id === target.id) {
-					tkIdx = k;
-					break;
-				}
-			}
-			if (tkIdx !== -1) trackedGlobalProcessors.splice(tkIdx, 1);
-		})
-		.size(32)
-		.pad(2)
-		.right();
+	dragger.button(Icon.cancel, Styles.cleari, () => {
+		trackerWindow.remove();
+		let idx = trackerWindows.indexOf(winData);
+		if (idx !== -1) trackerWindows.splice(idx, 1);
+		for (let i = playerDrawLines.length - 1; i >= 0; i--) {
+			if (
+				typeof playerDrawLines[i].id === 'object' &&
+				playerDrawLines[i].id.proc === target
+			) playerDrawLines.splice(i, 1);
+		}
+		let tkIdx = -1;
+		for (let k = 0; k < trackedGlobalProcessors.length; k++) {
+			if (trackedGlobalProcessors[k].id === target.id) { tkIdx = k; break; }
+		}
+		if (tkIdx !== -1) trackedGlobalProcessors.splice(tkIdx, 1);
+	}).size(28).pad(1).right();
 
 	contentTable.background(Styles.black5);
 
-	let content = new Table();
-	let addRow = new Table();
+	// rules list
+	let rulesTable = new Table();
+	let rulesScroll = new ScrollPane(rulesTable);
 
 	let rebuildRules = () => {
-		content.clearChildren();
+		rulesTable.clearChildren();
 		let procRules = trackerRules.filter((r) => r.proc.id === target.id);
 
 		if (procRules.length === 0) {
-			content.add('[lightgray]No variables tracked yet[]').pad(10);
+			rulesTable.add('[gray]No watches yet[]').pad(8).row();
 			trackerWindow.pack();
 			return;
 		}
 
 		procRules.forEach((r) => {
 			let row = new Table(Styles.black3);
-			let valLabel = new Packages.arc.scene.ui.Label('...');
-			valLabel.setWrap(true);
+			row.margin(2);
 
-			let targetBtnContainer = new Table();
-			let hasObjBtn = false;
-			let lastObj = null;
+			let valLabel = new Packages.arc.scene.ui.Label('...');
+			valLabel.setWrap(false);
+
+			let eyeContainer = new Table();
+			let hasEye = false, lastEyeObj = null, lastEyeKey = '';
+
+			function objKey(o) {
+				if (o == null) return 'null';
+				try {
+					if (o instanceof Packages.mindustry.gen.Unit) return 'u' + o.id;
+					if (o instanceof Packages.mindustry.gen.Building) return 'b' + o.tileX() + '_' + o.tileY();
+				} catch(e) {}
+				return String(o);
+			}
 
 			valLabel.update(() => {
-				if (!target.isValid()) {
-					valLabel.setText(r.varName + ' = ?');
-					targetBtnContainer.clearChildren();
-					hasObjBtn = false;
-					return;
-				}
+				if (!target.isValid()) { valLabel.setText('[gray]?[]'); return; }
 				let exec = r.proc.executor;
-				let v = getExecVar(exec, r.varName);
-				if (!v) {
-					valLabel.setText(r.varName + ' = ?');
-					targetBtnContainer.clearChildren();
-					hasObjBtn = false;
-					return;
-				}
-
-				let curVal = getObjectVal(v);
-				let c = checkCondition(
-					curVal,
-					r.condType,
-					r.condValue,
-					exec,
-					r.proc,
-					r
-				);
-
-				let triggered = c && !r.lastCond;
-				r.lastCond = c;
+				let curVal = resolveWatchedVar(r.varName, exec, r.proc);
+				if (curVal === undefined) { valLabel.setText('[gray]' + r.varName + ' = ?[]'); return; }
+				let cond = checkCondition(curVal, r.condType, r.condValue, exec, r.proc, r);
+				let triggered = cond && !r.lastCond;
+				r.lastCond = cond;
 
 				if (triggered) {
 					if (r.action === 'count') {
 						r.counter++;
 					} else if (r.action === 'notify') {
-						notify(
-							'[lightgray]Proc ' +
-								target.id +
-								'[]: ' +
-								r.varName +
-								' [green]triggered[] -> ' +
-								curVal
-						);
+						notify('[lightgray]Watch [accent]' + r.varName + '[]: ' + curVal);
 					} else if (r.action === 'camera') {
-						let tx = target.x;
-						let ty = target.y;
+						let tx = target.x, ty = target.y;
 						if (r.actionArg) {
 							let parts = String(r.actionArg).split(',');
 							if (parts.length >= 2) {
 								let vx = getExecVar(exec, parts[0].trim());
 								let vy = getExecVar(exec, parts[1].trim());
-								let nx = vx
-									? getObjectVal(vx)
-									: Number(parts[0].trim());
-								let ny = vy
-									? getObjectVal(vy)
-									: Number(parts[1].trim());
-								if (!Number.isNaN(nx) && !Number.isNaN(ny)) {
-									tx = nx * 8;
-									ty = ny * 8;
-								}
+								let nx = vx ? getObjectVal(vx) : Number(parts[0].trim());
+								let ny = vy ? getObjectVal(vy) : Number(parts[1].trim());
+								if (!Number.isNaN(nx) && !Number.isNaN(ny)) { tx = nx * 8; ty = ny * 8; }
 							}
 						} else if (
 							curVal instanceof Packages.mindustry.gen.Building ||
 							curVal instanceof Packages.mindustry.gen.Unit
-						) {
-							tx = curVal.x;
-							ty = curVal.y;
-						}
+						) { tx = curVal.x; ty = curVal.y; }
 						Core.camera.position.set(tx, ty);
 					} else if (r.action === 'pause') {
 						r.proc.enabled = false;
 					}
 				}
-
 				r.lastVal = curVal;
 
-				let color =
-					c && r.action === 'highlight' ? '[green]' : '[lightgray]';
-				let objType = false;
+				let isObj = curVal != null && typeof curVal === 'object' &&
+					(curVal instanceof Packages.mindustry.gen.Building ||
+					 curVal instanceof Packages.mindustry.gen.Unit);
 
 				let dispVal = '' + curVal;
-				if (curVal != null && typeof curVal === 'object') {
-					if (
-						curVal instanceof Packages.mindustry.gen.Building ||
-						curVal instanceof Packages.mindustry.gen.Unit
-					) {
-						objType = true;
-						if (curVal instanceof Packages.mindustry.gen.Building) {
-							dispVal = 'Block(' + curVal.block.name + ')';
-						} else {
-							let un = curVal.type ? curVal.type.name : 'Unit';
-							dispVal = un + '[' + curVal.id + ']';
-						}
+				if (isObj) {
+					if (curVal instanceof Packages.mindustry.gen.Building)
+						dispVal = 'Block(' + curVal.block.name + ')';
+					else {
+						let un = curVal.type ? curVal.type.name : 'Unit';
+						dispVal = un + '[' + curVal.id + ']';
 					}
+				} else if (typeof curVal === 'number' && Math.abs(curVal % 1) > 0) {
+					dispVal = formatFloat(curVal);
 				}
 
-				let txt =
-					color +
-					r.varName +
-					' ' +
-					r.condType +
-					' ' +
-					r.condValue +
-					' -> ' +
-					dispVal +
-					'[]';
-				if (r.action === 'count') {
-					txt += ' [orange](' + r.counter + ')[]';
-				} else if (r.action !== 'none') {
-					txt +=
-						' [accent](' +
-						r.action +
-						(r.actionArg ? ' ' + r.actionArg : '') +
-						')[]';
-				}
-				valLabel.setText(txt);
+				let highlight = cond && r.action === 'highlight';
+				let nameCol = highlight ? '[lime]' : '[accent]';
+				let valCol  = highlight ? '[lime]' : '[white]';
 
-				if (objType != hasObjBtn || lastObj !== curVal) {
-					hasObjBtn = objType;
-					lastObj = curVal;
-					targetBtnContainer.clearChildren();
-					if (objType) {
-						let btn = targetBtnContainer
-							.button(Icon.eyeSmall, Styles.clearTogglei, () => {
-								togglePlayerDrawLine(lastObj, [r.varName], r);
-							})
-							.size(32)
-							.pad(2)
-							.get();
-						btn.update(() => {
-							btn.setChecked(isPlayerDrawLine(r));
+				let extra = '';
+				if (r.action === 'count') extra = ' [orange]#' + r.counter + '[]';
+				else if (r.action !== 'none' && r.action !== 'highlight')
+					extra = ' [gray](' + r.action + (r.actionArg ? ' ' + r.actionArg : '') + ')[]';
+
+				valLabel.setText(
+					nameCol + r.varName + '[] [gray]' + r.condType + ' ' + r.condValue + ':[] ' +
+					valCol + dispVal + '[]' + extra
+				);
+
+				let curKey = isObj ? objKey(curVal) : '';
+				if (isObj !== hasEye || curKey !== lastEyeKey) {
+					hasEye = isObj; lastEyeObj = curVal; lastEyeKey = curKey;
+					eyeContainer.clearChildren();
+					if (isObj) {
+						r._eyeObj = curVal;
+						let eb = eyeContainer.button(Icon.eyeSmall, Styles.clearTogglei, () => {
+							let liveObj = resolveWatchedVar(r.varName, r.proc.executor, r.proc);
+							let useObj = (liveObj != null && typeof liveObj === 'object') ? liveObj : r._eyeObj;
+							if (useObj) togglePlayerDrawLine(useObj, [r.varName], r);
+						}).size(26).get();
+						eb.update(() => {
+							eb.setChecked(isPlayerDrawLine(r));
+							if (isPlayerDrawLine(r)) {
+								let liveObj = resolveWatchedVar(r.varName, r.proc.executor, r.proc);
+								for (let _i = 0; _i < playerDrawLines.length; _i++) {
+									if (playerDrawLines[_i].id === r) { playerDrawLines[_i].obj = liveObj; break; }
+								}
+							}
 						});
 					}
 				}
 			});
 			valLabel.setAlignment(Packages.arc.util.Align.left);
 
-			row.add(valLabel).minWidth(300).growX().padLeft(8);
-			row.add(targetBtnContainer).minWidth(34).padRight(4);
+			row.add(valLabel).growX().padLeft(6).padRight(2);
+			row.add(eyeContainer).minWidth(28);
 			row.button(Icon.cancel, Styles.cleari, () => {
 				let idx = trackerRules.indexOf(r);
 				if (idx !== -1) trackerRules.splice(idx, 1);
 				removePlayerDrawLine(r);
 				row.remove();
 				trackerWindow.pack();
-			})
-				.size(32)
-				.pad(2)
-				.right();
+			}).size(26).padRight(2);
 
-			content.add(row).growX().padBottom(2).row();
+			rulesTable.add(row).growX().padBottom(1).row();
 		});
-
 		trackerWindow.pack();
 	};
 
-	let varField = new Packages.arc.scene.ui.TextField('');
-	varField.setMessageText('Var (@unit)');
+	// add-rule row
+	let ops     = ['==','!=','>','<','>=','<=','changed','typeof','contains','%==','%!='];
+	// %== means: (val % condValue) == 0  (divisible check)  |  %!= means not divisible
+	let actions = ['none','pause','highlight','count','notify','camera'];
+	let opIdx = 0, actionIdx = 0;
 
-	let opIdx = 0;
+	let varField = new Packages.arc.scene.ui.TextField('');
+	varField.setMessageText('var');
+
 	let opBtn = new Packages.arc.scene.ui.TextButton('==', Styles.cleart);
-	let ops = [
-		'==',
-		'!=',
-		'>',
-		'<',
-		'>=',
-		'<=',
-		'changed',
-		'typeof',
-		'contains',
-	];
 	opBtn.clicked(() => {
-		let t = new Table(Styles.black5);
+		let menu = new Table(Styles.black5);
 		let overlay = new Table();
 		overlay.touchable = Packages.arc.scene.event.Touchable.enabled;
-		overlay.clicked(() => {
-			t.remove();
-			overlay.remove();
-		});
+		overlay.clicked(() => { menu.remove(); overlay.remove(); });
 		overlay.fillParent = true;
 		Core.scene.add(overlay);
-
 		ops.forEach((o, i) => {
-			t.button(o, Styles.cleart, () => {
-				opIdx = i;
-				opBtn.setText(o);
-				t.remove();
-				overlay.remove();
-			})
-				.size(80, 40)
-				.row();
+			menu.button(o, Styles.cleart, () => {
+				opIdx = i; opBtn.setText(o); menu.remove(); overlay.remove();
+			}).width(80).height(32).row();
 		});
-		t.pack();
-		t.update(() => {
-			let nPos = opBtn.localToStageCoordinates(
-				new Packages.arc.math.geom.Vec2(0, 0)
-			);
-			t.setPosition(nPos.x, nPos.y, Packages.arc.util.Align.topLeft);
-			if (!trackerWindow.parent) {
-				t.remove();
-				overlay.remove();
-			}
+		menu.pack();
+		menu.update(() => {
+			let p = opBtn.localToStageCoordinates(new Packages.arc.math.geom.Vec2(0, 0));
+			menu.setPosition(p.x, p.y, Packages.arc.util.Align.topLeft);
+			if (!trackerWindow.parent) { menu.remove(); overlay.remove(); }
 		});
-		Core.scene.add(t);
+		Core.scene.add(menu);
 	});
 
 	let valField = new Packages.arc.scene.ui.TextField('0');
-	valField.setMessageText('Value');
+	valField.setMessageText('val');
 
-	let argField = new Packages.arc.scene.ui.TextField('');
-	argField.setMessageText('x,y or obj');
+	let actionBtn = new Packages.arc.scene.ui.TextButton('none', Styles.cleart);
+	let argField  = new Packages.arc.scene.ui.TextField('');
+	argField.setMessageText('x,y');
 
-	let rebuildAddRow;
-
-	let actionBtn = new Packages.arc.scene.ui.TextButton(
-		'Action: None',
-		Styles.cleart
-	);
-	let actions = ['none', 'pause', 'highlight', 'count', 'notify', 'camera'];
-	let actionIdx = 0;
-	actionBtn.clicked(() => {
-		let actMenu = new Table(Styles.black5);
-		let actOverlay = new Table();
-		actOverlay.touchable = Packages.arc.scene.event.Touchable.enabled;
-		actOverlay.clicked(() => {
-			actMenu.remove();
-			actOverlay.remove();
-		});
-		actOverlay.fillParent = true;
-		Core.scene.add(actOverlay);
-
-		actions.forEach((a, i) => {
-			actMenu
-				.button(
-					a.charAt(0).toUpperCase() + a.slice(1),
-					Styles.cleart,
-					() => {
-						actionIdx = i;
-						actionBtn.setText('Action: ' + actions[actionIdx]);
-						actMenu.remove();
-						actOverlay.remove();
-						rebuildAddRow();
-					}
-				)
-				.size(150, 40)
-				.row();
-		});
-		actMenu.pack();
-		actMenu.update(() => {
-			let nPos = actionBtn.localToStageCoordinates(
-				new Packages.arc.math.geom.Vec2(0, 0)
-			);
-			actMenu.setPosition(
-				nPos.x,
-				nPos.y,
-				Packages.arc.util.Align.topLeft
-			);
-			if (!trackerWindow.parent) {
-				actMenu.remove();
-				actOverlay.remove();
-			}
-		});
-		Core.scene.add(actMenu);
-	});
-
-	rebuildAddRow = () => {
-		addRow.clearChildren();
-
+	let addInputRow = new Table();
+	let rebuildAddRow = () => {
+		addInputRow.clearChildren();
 		let isCam = actions[actionIdx] === 'camera';
-
-		addRow
-			.add(varField)
-			.width(isCam ? 80 : 110)
-			.height(40)
-			.pad(2);
-		addRow
-			.add(opBtn)
-			.width(isCam ? 60 : 80)
-			.height(40)
-			.pad(2);
-		addRow
-			.add(valField)
-			.width(isCam ? 60 : 75)
-			.height(40)
-			.pad(2);
-		addRow
-			.add(actionBtn)
-			.width(isCam ? 80 : 110)
-			.height(40)
-			.pad(2);
-
-		if (isCam) {
-			addRow.add(argField).width(75).height(40).pad(2);
-		}
-
-		addRow
-			.button(Icon.add, Styles.cleari, () => {
-				let vText = varField.getText();
-				if (vText && vText.length > 0) {
-					trackerRules.push({
-						proc: target,
-						varName: vText,
-						condType: ops[opIdx],
-						condValue: valField.getText(),
-						action: actions[actionIdx],
-						actionArg:
-							actions[actionIdx] === 'camera'
-								? argField.getText()
-								: undefined,
-						counter: 0,
-						lastVal: null,
-						lastCond: false,
-					});
-					rebuildRules();
-					trackerWindow.pack();
-				}
-			})
-			.size(40)
-			.pad(2);
+		addInputRow.add(varField).width(80).height(30).pad(1);
+		addInputRow.add(opBtn).width(62).height(30).pad(1);
+		addInputRow.add(valField).width(isCam ? 50 : 68).height(30).pad(1);
+		addInputRow.add(actionBtn).width(isCam ? 62 : 80).height(30).pad(1);
+		if (isCam) addInputRow.add(argField).width(58).height(30).pad(1);
+		addInputRow.button(Icon.add, Styles.cleari, () => {
+			let vt = varField.getText();
+			if (!vt || !vt.length) return;
+			trackerRules.push({
+				proc: target,
+				varName: vt,
+				condType: ops[opIdx],
+				condValue: valField.getText(),
+				action: actions[actionIdx],
+				actionArg: actions[actionIdx] === 'camera' ? argField.getText() : undefined,
+				counter: 0, lastVal: null, lastCond: false,
+			});
+			rebuildRules();
+			trackerWindow.pack();
+		}).size(30).pad(1);
 	};
 
-	rebuildAddRow();
+	actionBtn.clicked(() => {
+		let menu = new Table(Styles.black5);
+		let overlay = new Table();
+		overlay.touchable = Packages.arc.scene.event.Touchable.enabled;
+		overlay.clicked(() => { menu.remove(); overlay.remove(); });
+		overlay.fillParent = true;
+		Core.scene.add(overlay);
+		actions.forEach((a, i) => {
+			menu.button(a, Styles.cleart, () => {
+				actionIdx = i; actionBtn.setText(a);
+				menu.remove(); overlay.remove(); rebuildAddRow();
+			}).width(100).height(32).row();
+		});
+		menu.pack();
+		menu.update(() => {
+			let p = actionBtn.localToStageCoordinates(new Packages.arc.math.geom.Vec2(0, 0));
+			menu.setPosition(p.x, p.y, Packages.arc.util.Align.topLeft);
+			if (!trackerWindow.parent) { menu.remove(); overlay.remove(); }
+		});
+		Core.scene.add(menu);
+	});
 
+	rebuildAddRow();
 	rebuildRules();
-	contentTable.add(content).growX().pad(4).row();
-	contentTable.add(addRow).growX().padTop(4).padBottom(4).row();
+
+	contentTable.add(rulesScroll).growX().maxHeight(200).width(370).padTop(2).padBottom(1).row();
+
+	let div = new Table(Styles.black8);
+	contentTable.add(div).growX().height(1).padBottom(1).row();
+
+	contentTable.add(addInputRow).growX().padBottom(3).padLeft(2).row();
 
 	trackerWindow.add(contentTable).growX().row();
-
 	trackerWindow.pack();
-	trackerWindow.setPosition(
-		winData.stageX,
-		winData.stageY,
-		Packages.arc.util.Align.center
-	);
-	Core.scene.add(trackerWindow);
+	trackerWindow.setPosition(winData.stageX, winData.stageY, Packages.arc.util.Align.center);
+	Vars.ui.hudGroup.addChild(trackerWindow);
 }
 
+// Per-processor var history: varHistories[procId][varName] = [{disp, tick}, ...]
+let varHistories = {};
+
 function showVariablesWindow(target) {
-	let wData = createDraggableWindow('Variables', target, varsWindows);
+	let wData = createDraggableWindow(
+		'Vars \u2022 ' + target.tileX() + ',' + target.tileY(),
+		target,
+		varsWindows
+	);
 	let trackerWindow = wData.winWindow;
 	let winData = wData.winData;
 	let dragger = wData.dragger;
 	let contentTable = wData.contentTable;
 
+	// header buttons
 	let pauseBtn = dragger
-		.button(Icon.pause, Styles.cleari, () => {
-			target.enabled = !target.enabled;
-		})
-		.size(32)
-		.pad(2)
-		.get();
+		.button(Icon.pause, Styles.cleari, () => { target.enabled = !target.enabled; })
+		.size(28).pad(1).get();
 	pauseBtn.update(() => {
 		pauseBtn.getStyle().imageUp = target.enabled ? Icon.pause : Icon.play;
 	});
 
-	dragger
-		.button(Icon.refresh, Styles.cleari, () => {
-			target.configure(target.config());
-		})
-		.size(32)
-		.pad(2);
+	dragger.button(Icon.refresh, Styles.cleari, () => {
+		target.configure(target.config());
+	}).size(28).pad(1);
 
-	dragger.add(wData.collapseBtn).size(32).pad(2);
+	dragger.add(wData.collapseBtn).size(28).pad(1);
 
-	dragger
-		.button(Icon.cancel, Styles.cleari, () => {
-			trackerWindow.remove();
-			let idx = varsWindows.indexOf(winData);
-			if (idx !== -1) varsWindows.splice(idx, 1);
-			for (let i = playerDrawLines.length - 1; i >= 0; i--) {
-				if (
-					typeof playerDrawLines[i].id === 'string' &&
-					playerDrawLines[i].id.startsWith('var_' + target.id + '_')
-				) {
-					playerDrawLines.splice(i, 1);
-				}
-			}
-			let tkIdx = -1;
-			for (let k = 0; k < trackedGlobalProcessors.length; k++) {
-				if (trackedGlobalProcessors[k].id === target.id) {
-					tkIdx = k;
-					break;
-				}
-			}
-			if (tkIdx !== -1) trackedGlobalProcessors.splice(tkIdx, 1);
-		})
-		.size(32)
-		.pad(2)
-		.right();
+	dragger.button(Icon.cancel, Styles.cleari, () => {
+		trackerWindow.remove();
+		let idx = varsWindows.indexOf(winData);
+		if (idx !== -1) varsWindows.splice(idx, 1);
+		for (let i = playerDrawLines.length - 1; i >= 0; i--) {
+			if (
+				typeof playerDrawLines[i].id === 'string' &&
+				playerDrawLines[i].id.startsWith('var_' + target.id + '_')
+			) playerDrawLines.splice(i, 1);
+		}
+		let tkIdx = -1;
+		for (let k = 0; k < trackedGlobalProcessors.length; k++) {
+			if (trackedGlobalProcessors[k].id === target.id) { tkIdx = k; break; }
+		}
+		if (tkIdx !== -1) trackedGlobalProcessors.splice(tkIdx, 1);
+	}).size(28).pad(1).right();
 
 	contentTable.background(Styles.black5);
+
+	// search bar
+	let searchField = new Packages.arc.scene.ui.TextField('');
+	searchField.setMessageText('search...');
 
 	let content = new Table();
 	let scrollPane = new ScrollPane(content);
 
+	let filterText = '';
+
 	let rebuildVars = () => {
 		content.clearChildren();
-		if (!target.isValid() || !target.executor || !target.executor.vars)
-			return;
+		if (!target.isValid() || !target.executor || !target.executor.vars) return;
 
 		let execVars = [];
-		if (target.executor && target.executor.vars) {
-			for (let i = 0; i < target.executor.vars.length; i++) {
-				let v = target.executor.vars[i];
-				if (v)
-					execVars.push({ name: v.name, isBuffer: false, vRef: v });
-			}
+		for (let i = 0; i < target.executor.vars.length; i++) {
+			let v = target.executor.vars[i];
+			if (v && !String(v.name).startsWith('___'))
+				execVars.push({ name: String(v.name), isBuffer: false, vRef: v });
 		}
-		if (target.executor && target.executor.textBuffer !== undefined) {
+		if (target.executor && target.executor.textBuffer !== undefined)
 			execVars.push({ name: '@buffer', isBuffer: true });
-		}
-		execVars.push({
-			name: '@thisx',
-			isProp: true,
-			propVal: () => target.x / 8,
-		});
-		execVars.push({
-			name: '@thisy',
-			isProp: true,
-			propVal: () => target.y / 8,
-		});
+		execVars.push({ name: '@thisx', isProp: true, propVal: () => target.x / 8 });
+		execVars.push({ name: '@thisy', isProp: true, propVal: () => target.y / 8 });
 		if (target.links != null)
-			execVars.push({
-				name: '@links',
-				isProp: true,
-				propVal: () => target.links.size,
-			});
+			execVars.push({ name: '@links', isProp: true, propVal: () => target.links.size });
 		if (target.executor && target.executor.iptr !== undefined)
-			execVars.push({
-				name: '@counter',
-				isProp: true,
-				propVal: () => target.executor.iptr,
-			});
+			execVars.push({ name: '@counter', isProp: true, propVal: () => target.executor.iptr });
 
-		if (execVars.length === 0) {
-			content.add('[lightgray]No variables[]').pad(10);
-		} else {
-			for (let i = 0; i < execVars.length; i++) {
-				let vData = execVars[i];
+		let filter = filterText.toLowerCase();
+		let shown = filter ? execVars.filter((v) => v.name.toLowerCase().indexOf(filter) !== -1) : execVars;
 
-				let row = new Table(Styles.black3);
-				let valLabel = new Packages.arc.scene.ui.Label('...');
-				valLabel.setWrap(true);
+		if (shown.length === 0) {
+			content.add('[gray]No variables[]').pad(8).row();
+			return;
+		}
 
-				let targetBtnContainer = new Table();
-				let hasObjBtn = false;
-				let lastObj = null;
+		for (let i = 0; i < shown.length; i++) {
+			let vData = shown[i];
 
-				valLabel.update(() => {
-					if (!target.isValid() || !target.executor) return;
+			// Per-var history ring buffer: {disp, tick}[], max 20 entries
+			let procKey = String(target.id);
+			if (!varHistories[procKey]) varHistories[procKey] = {};
+			let history = varHistories[procKey][vData.name] || (varHistories[procKey][vData.name] = []);
+			let lastHistVal = undefined;
 
-					let cVal = null;
-					let objType = false;
-					let dispVal = '';
+			let row = new Table();
+			row.margin(0);
 
-					if (vData.isBuffer) {
-						cVal = String(
-							target.executor.textBuffer.toString() || ''
-						);
-						dispVal = cVal;
-					} else if (vData.isProp) {
-						cVal = vData.propVal();
-						dispVal =
-							typeof cVal === 'number' && Math.abs(cVal % 1) > 0
-								? formatFloat(cVal)
-								: '' + cVal;
+			let valLabel = new Packages.arc.scene.ui.Label('...');
+			valLabel.setWrap(false);
+
+			// Inline edit field + confirm — shown only when editing
+			let editField = new Packages.arc.scene.ui.TextField('');
+			let editContainer = new Table();
+			let isEditing = false;
+
+			// Can this var be written to?
+			let isWritable = !vData.isBuffer && !vData.isProp &&
+			                 !vData.name.startsWith('@');
+			// @counter is a special writable prop
+			let isCounter = vData.name === '@counter';
+			if (isCounter) isWritable = true;
+
+			let applyEdit = () => {
+				let raw = editField.getText().trim();
+				if (!raw.length) { isEditing = false; return; }
+				let num = parseFloat(raw);
+				try {
+					if (isCounter) {
+						if (!isNaN(num) && target.executor) {
+							let v = Math.max(0, Math.floor(num));
+							let written = false;
+							let fnames = ['iptr','counter','instructionPointer','pc'];
+							for (let fi = 0; fi < fnames.length && !written; fi++) {
+								try {
+									let f = target.executor.getClass().getDeclaredField(fnames[fi]);
+									f.setAccessible(true);
+									f.setInt(target.executor, v);
+									written = true;
+								} catch(e2) {}
+							}
+							if (!written) {
+								let cv = getExecVar(target.executor, '@counter');
+								if (cv) { cv.numval = v; if (cv.isobj !== undefined) cv.isobj = false; }
+							}
+						}
 					} else {
 						let cVar = getExecVar(target.executor, vData.name);
-						if (!cVar) return;
-						cVal = getObjectVal(cVar);
-						dispVal = '' + cVal;
-
-						if (cVal != null && typeof cVal === 'object') {
-							if (
-								cVal instanceof
-									Packages.mindustry.gen.Building ||
-								cVal instanceof Packages.mindustry.gen.Unit
-							) {
-								objType = true;
-								if (
-									cVal instanceof
-									Packages.mindustry.gen.Building
-								) {
-									dispVal = 'Block(' + cVal.block.name + ')';
-								} else {
-									let un = cVal.type
-										? cVal.type.name
-										: 'Unit';
-									dispVal = un + '[' + cVal.id + ']';
-								}
+						if (cVar) {
+							if (!isNaN(num)) {
+								cVar.numval = num;
+								cVar.objval = null;
+								if (cVar.isobj !== undefined) cVar.isobj = false;
+							} else {
+								// String value
+								cVar.objval = raw;
+								cVar.numval = 0;
+								if (cVar.isobj !== undefined) cVar.isobj = true;
 							}
-						} else if (
-							typeof cVal === 'number' &&
-							Math.abs(cVal % 1) > 0
-						) {
-							dispVal = formatFloat(cVal);
 						}
 					}
+				} catch(e) {}
+				isEditing = false;
+				Core.scene.setKeyboardFocus(null);
+			};
 
-					valLabel.setText(
-						'[lightgray]' + vData.name + '[]: ' + dispVal
-					);
-
-					if (
-						!vData.isBuffer &&
-						!vData.isProp &&
-						(objType != hasObjBtn || lastObj !== cVal)
-					) {
-						hasObjBtn = objType;
-						lastObj = cVal;
-						targetBtnContainer.clearChildren();
-						if (objType) {
-							let btnId = 'var_' + target.id + '_' + vData.name;
-							let btn = targetBtnContainer
-								.button(
-									Icon.eyeSmall,
-									Styles.clearTogglei,
-									() => {
-										togglePlayerDrawLine(
-											lastObj,
-											[vData.name],
-											btnId
-										);
-									}
-								)
-								.size(30)
-								.pad(2)
-								.get();
-							btn.update(() => {
-								btn.setChecked(isPlayerDrawLine(btnId));
-							});
-						}
+			editField.addListener(extend(Packages.arc.scene.event.InputListener, {
+				keyDown: function(event, keyCode) {
+					if (keyCode === Packages.arc.input.KeyCode.enter) {
+						applyEdit();
+						Core.scene.setKeyboardFocus(null);
+						return true;
 					}
+					if (keyCode === Packages.arc.input.KeyCode.escape) {
+						isEditing = false;
+						Core.scene.setKeyboardFocus(null);
+						return true;
+					}
+					return false;
+				}
+			}));
+
+			let eyeContainer = new Table();
+			let hasEye = false, lastEyeObj = null;
+
+			valLabel.update(() => {
+				if (isEditing) return; // don't update label while editing
+				if (!target.isValid() || !target.executor) return;
+
+				let cVal = null, dispVal = '', isObj = false;
+
+				if (vData.isBuffer) {
+					cVal = String(target.executor.textBuffer.toString() || '');
+					dispVal = cVal.length > 40 ? cVal.substring(0, 38) + '..' : cVal;
+				} else if (vData.isProp) {
+					cVal = vData.propVal();
+					dispVal = (typeof cVal === 'number' && Math.abs(cVal % 1) > 0)
+						? formatFloat(cVal) : '' + cVal;
+				} else {
+					let cVar = getExecVar(target.executor, vData.name);
+					if (!cVar) return;
+					cVal = getObjectVal(cVar);
+					dispVal = '' + cVal;
+
+					if (cVal != null && typeof cVal === 'object') {
+						if (cVal instanceof Packages.mindustry.gen.Building ||
+							cVal instanceof Packages.mindustry.gen.Unit) {
+							isObj = true;
+							if (cVal instanceof Packages.mindustry.gen.Building)
+								dispVal = cVal.block.name;
+							else {
+								let un = cVal.type ? cVal.type.name : 'Unit';
+								dispVal = un + '#' + cVal.id;
+							}
+						}
+					} else if (typeof cVal === 'number' && Math.abs(cVal % 1) > 0) {
+						dispVal = formatFloat(cVal);
+					}
+				}
+
+				// History tracking: record on change
+				if (dispVal !== lastHistVal && lastHistVal !== undefined) {
+					history.push({ disp: dispVal, tick: Vars.state.tick });
+					if (history.length > 20) history.shift();
+				}
+				lastHistVal = dispVal;
+
+				let nameCol = vData.isProp ? '[gray]' : (isWritable || isCounter) ? '[accent]' : '[gray]';
+				let valCol  = isObj ? '[cyan]' : '[white]';
+				valLabel.setText(nameCol + vData.name + '[] ' + valCol + dispVal + '[]');
+
+				if (!vData.isBuffer && !vData.isProp && (isObj !== hasEye || lastEyeObj !== cVal)) {
+					hasEye = isObj; lastEyeObj = cVal;
+					eyeContainer.clearChildren();
+					if (isObj) {
+						let btnId = 'var_' + target.id + '_' + vData.name;
+						let eb = eyeContainer.button(Icon.eyeSmall, Styles.clearTogglei, () => {
+							togglePlayerDrawLine(lastEyeObj, [vData.name], btnId);
+						}).size(26).get();
+						eb.update(() => { eb.setChecked(isPlayerDrawLine(btnId)); });
+					}
+				}
+			});
+			valLabel.setAlignment(Packages.arc.util.Align.left);
+
+
+
+			// History popup button (always shown for non-prop, non-buffer vars)
+			let histBtn = null;
+			if (!vData.isProp && !vData.isBuffer) {
+				histBtn = new Packages.arc.scene.ui.TextButton('~', Styles.cleart);
+				histBtn.clicked(() => {
+					if (history.length === 0) {
+						notify('[gray]No changes recorded yet for ' + vData.name);
+						return;
+					}
+					let popup = new Table(Styles.black5);
+					popup.margin(4);
+					let overlay = new Table();
+					overlay.touchable = Packages.arc.scene.event.Touchable.enabled;
+					overlay.fillParent = true;
+					overlay.clicked(() => { popup.remove(); overlay.remove(); });
+					Core.scene.add(overlay);
+					// Title
+					popup.add('[accent]' + vData.name + ' [gray]history[]').padBottom(4).row();
+					let divH = new Table(Styles.black8);
+					popup.add(divH).growX().height(1).padBottom(4).row();
+					// Entries newest-first
+					for (let hi = history.length - 1; hi >= 0; hi--) {
+						let entry = history[hi];
+						popup.add('[white]' + entry.disp + '[]').left().padLeft(4).padBottom(2).row();
+					}
+					popup.pack();
+					// Position near the button
+					popup.update(() => {
+						let p = histBtn.localToStageCoordinates(
+							new Packages.arc.math.geom.Vec2(0, 0));
+						let px = p.x - popup.getWidth();
+						let py = p.y;
+						if (px < 0) px = p.x + histBtn.getWidth();
+						popup.setPosition(px, py, Packages.arc.util.Align.topLeft);
+						if (!histBtn.parent) { popup.remove(); overlay.remove(); }
+					});
+					Core.scene.add(popup);
 				});
-				valLabel.setAlignment(Packages.arc.util.Align.left);
-
-				row.add(valLabel).minWidth(260).growX().padLeft(8);
-				row.add(targetBtnContainer).minWidth(34).padRight(4);
-
-				content.add(row).growX().padBottom(2).row();
 			}
+
+			// Left cell: swaps between label and edit field
+			let leftCell = new Table();
+			leftCell.add(valLabel).growX().padLeft(4);
+
+			// Right cell: fixed buttons, always present — edit pencil + history list
+			let rightCell = new Table();
+			if (isWritable || isCounter) {
+				let editBtn = rightCell.button(Icon.pencilSmall, Styles.clearTogglei, () => {
+					if (isEditing) return;
+					let cVar = isCounter ? null : getExecVar(target.executor, vData.name);
+					let curRaw = isCounter
+						? (target.executor && target.executor.iptr !== undefined
+							? String(Number(target.executor.iptr)) : '0')
+						: (cVar ? String(getObjectVal(cVar)) : '');
+					editField.setText(curRaw);
+					Core.scene.setKeyboardFocus(editField);
+					isEditing = true;
+					leftCell.clearChildren();
+					editContainer.clearChildren();
+					editContainer.add(editField).width(120).height(26).padLeft(2);
+					editContainer.button(Icon.ok, Styles.cleari, () => {
+						applyEdit(); Core.scene.setKeyboardFocus(null);
+					}).size(26);
+					leftCell.add(editContainer).growX().padLeft(4);
+				}).size(24).padRight(1).get();
+				editBtn.update(() => editBtn.setChecked(isEditing));
+			}
+			if (histBtn) rightCell.add(histBtn).size(24).padRight(2);
+			rightCell.add(eyeContainer).minWidth(24);
+
+			// When edit finishes, restore the label
+			let prevEditing = false;
+			row.update(() => {
+				if (prevEditing && !isEditing) {
+					prevEditing = false;
+					leftCell.clearChildren();
+					leftCell.add(valLabel).growX().padLeft(4);
+				} else if (!prevEditing && isEditing) {
+					prevEditing = true;
+				}
+			});
+
+			row.add(leftCell).growX().padLeft(2);
+			row.add(rightCell);
+
+			content.add(row).growX().padBottom(1).row();
 		}
 	};
+
+	// search field listener
+	searchField.changed(() => {
+		filterText = searchField.getText();
+		rebuildVars();
+	});
 
 	let rebuildTimer = 0;
 	let lastVarCount = 0;
@@ -1463,40 +1540,38 @@ function showVariablesWindow(target) {
 		rebuildTimer += Core.graphics.getDeltaTime();
 		if (rebuildTimer > 60) {
 			rebuildTimer = 0;
-			let currentLen =
-				target.executor && target.executor.vars
-					? target.executor.vars.length
-					: 0;
+			let currentLen = target.executor && target.executor.vars
+				? target.executor.vars.length : 0;
 			if (lastVarCount !== currentLen) {
 				lastVarCount = currentLen;
 				rebuildVars();
 			}
 		}
+
 	});
 
 	rebuildVars();
-	lastVarCount =
-		target.executor && target.executor.vars
-			? target.executor.vars.length
-			: 0;
+	lastVarCount = target.executor && target.executor.vars
+		? target.executor.vars.length : 0;
 
-	contentTable
-		.add(scrollPane)
-		.growX()
-		.growY()
-		.width(340)
-		.maxHeight(400)
-		.row();
-	trackerWindow.add(contentTable).growX().row();
+	// search row
+	let searchRow = new Table();
+	searchRow.add(searchField).growX().height(28).padLeft(4).padRight(4);
 
+	contentTable.add(searchRow).growX().padTop(3).padBottom(1).row();
+
+	let div = new Table(Styles.black8);
+	contentTable.add(div).growX().height(1).padBottom(1).row();
+
+	scrollPane.setScrollingDisabled(false, false);
+	contentTable.add(scrollPane).width(340).maxHeight(320).row();
+
+	trackerWindow.add(contentTable).row();
 	trackerWindow.pack();
-	trackerWindow.setPosition(
-		winData.stageX,
-		winData.stageY,
-		Packages.arc.util.Align.center
-	);
-	Core.scene.add(trackerWindow);
+	trackerWindow.setPosition(winData.stageX, winData.stageY, Packages.arc.util.Align.center);
+	Vars.ui.hudGroup.addChild(trackerWindow);
 }
+
 
 Events.on(ClientLoadEvent, () => initFiles());
 

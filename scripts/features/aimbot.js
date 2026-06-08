@@ -770,33 +770,69 @@ Events.run(Trigger.update, function () {
 		let mounts = u.mounts;
 
 		if (mounts && mounts.length > 0) {
-			let bestDmg = -1;
+			// Pick the best offensive weapon, ignoring:
+			//  - repair/heal beams (Cyerce, Vela, Retusa repair turrets)
+			//  - point-defense / interceptor weapons (Cleroi segments)
+			//  - any weapon whose bullet cannot hit enemies
+			function isUtilityWeapon(w) {
+				if (!w || !w.bullet) return true;
+				let b = w.bullet;
+				let bClass = String(b.getClass().getSimpleName());
+				// Explicit class name check
+				if (bClass.indexOf('RepairBeam') !== -1) return true;
+				if (bClass.indexOf('HealBullet') !== -1) return true;
+				if (bClass.indexOf('PointDefense') !== -1) return true;
+				if (bClass.indexOf('Interceptor') !== -1) return true;
+				// Weapon name check — catches "segment", "repair", "mend" etc.
+				let wName = String(w.name || '').toLowerCase();
+				if (wName.indexOf('repair') !== -1) return true;
+				if (wName.indexOf('heal') !== -1) return true;
+				if (wName.indexOf('mend') !== -1) return true;
+				if (wName.indexOf('segment') !== -1) return true;
+				if (wName.indexOf('point') !== -1 && wName.indexOf('defense') !== -1) return true;
+				// Bullet cannot hit any enemy — pure utility/interceptor
+				try {
+					let hitsAir    = b.collidesAir    !== undefined ? b.collidesAir    : true;
+					let hitsGround = b.collidesGround !== undefined ? b.collidesGround : true;
+					let hitsTeam   = b.collidesTeam   !== undefined ? b.collidesTeam   : false;
+					// If it hits neither air nor ground enemies, skip it
+					if (!hitsAir && !hitsGround) return true;
+					// If it only hits own team (heal/repair), skip it
+					if (hitsTeam && b.damage !== undefined && b.damage <= 0) return true;
+				} catch(e) {}
+				// Speed = 0 with no lifetime usually means beam/repair
+				try {
+					if (b.speed <= 0 && (b.lifetime === undefined || b.lifetime <= 0)) return true;
+				} catch(e) {}
+				return false;
+			}
+
+			// Score a weapon: prefer higher DPS (damage * speed proxy), then splash
+			function weaponScore(w) {
+				let b = w.bullet;
+				let dmg = b.damage !== undefined ? b.damage : 0;
+				let splash = b.splashDamage !== undefined ? b.splashDamage * 0.5 : 0;
+				let spd = b.speed !== undefined && b.speed > 0 ? b.speed : 999;
+				// Faster bullet = better prediction accuracy, slight tie-break bonus
+				return dmg + splash + spd * 0.001;
+			}
+
+			let bestScore = -1;
 			let fallbackWeapon = null;
 			for (let i = 0; i < mounts.length; i++) {
 				let m = mounts[i];
-				if (!m || !m.weapon) continue;
+				if (!m || !m.weapon || !m.weapon.bullet) continue;
 				let w = m.weapon;
-				if (!w.bullet) continue;
-
-				let bClass = String(w.bullet.getClass().getSimpleName());
-				if (
-					bClass.indexOf('RepairBeam') !== -1 ||
-					bClass.indexOf('Heal') !== -1 ||
-					bClass.indexOf('Repair') !== -1
-				) {
-					continue;
-				}
-
-				let dmg = w.bullet.damage !== undefined ? w.bullet.damage : 0;
+				if (isUtilityWeapon(w)) continue;
 				if (fallbackWeapon === null) fallbackWeapon = w;
-				if (dmg > bestDmg) {
-					bestDmg = dmg;
+				let score = weaponScore(w);
+				if (score > bestScore) {
+					bestScore = score;
 					weapon = w;
 				}
 			}
 
 			if (!weapon) weapon = fallbackWeapon;
-
 			if (!weapon && mounts[0]) weapon = mounts[0].weapon;
 		}
 

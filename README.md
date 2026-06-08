@@ -426,6 +426,7 @@ All logs from `!log save` saving in `/qol/`, it also always have default log `/q
 ## Optimization
 
 The mod has been fully refactored and restructured to be lightweight, with reusable UI components and minimal performance footprint. It runs smoothly even when multiple modules are enabled!
+`!opt` for open optimizer settings.
 
 ## Issues
 
