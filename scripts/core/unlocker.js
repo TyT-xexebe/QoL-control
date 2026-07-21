@@ -1,6 +1,6 @@
-Events.on(ClientLoadEvent, () => {
+function applyUnlockerAndCheats() {
 	Vars.content.units().each((u) => {
-		u.rotateSpeed = 1000;
+		u.rotateSpeed = 9999;
 		u.omniMovement = true;
 	});
 
@@ -39,4 +39,12 @@ Events.on(ClientLoadEvent, () => {
 			}
 		})
 	);
+}
+
+Events.on(ClientLoadEvent, () => {
+	applyUnlockerAndCheats();
+});
+
+Events.on(WorldLoadEvent, () => {
+	applyUnlockerAndCheats();
 });

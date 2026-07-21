@@ -572,6 +572,7 @@ let trackedGlobalProcessors = [];
 let trackerWindows = [];
 let trackerRules = [];
 let varsWindows = [];
+let memWindows = [];
 let playerDrawLines = [];
 
 Events.on(Packages.mindustry.game.EventType.WorldLoadEvent, () => {
@@ -581,6 +582,8 @@ Events.on(Packages.mindustry.game.EventType.WorldLoadEvent, () => {
 	trackerWindows = [];
 	varsWindows.forEach((w) => w.table.remove());
 	varsWindows = [];
+	memWindows.forEach((w) => w.table.remove());
+	memWindows = [];
 	playerDrawLines = [];
 });
 
@@ -1577,6 +1580,117 @@ Events.on(ClientLoadEvent, () => initFiles());
 
 let configTableField = null;
 
+// ── Memory Cell Viewer ───────────────────────────────────────────────────────
+const MEM_NAMES = { 'memory-cell':1, 'memory-bank':1, 'world-cell':1 };
+let _memTb=null, _memTbId=-1, _memTbTime=-1e9;
+
+function memGetArr(b){
+	try{let m=b.memory;if(m!=null)return m;}catch(e){}
+	try{let clz=b.getClass();while(clz!=null){try{let f=clz.getDeclaredField('memory');f.setAccessible(true);return f.get(b);}catch(e){}clz=clz.getSuperclass();}}catch(e){}
+	return null;
+}
+function memFmt(v){let n=Number(v);if(!isFinite(n))return String(n);if(n!==0&&(Math.abs(n)>=1e6||Math.abs(n)<0.001))return n.toExponential(3);return parseFloat(n.toFixed(6)).toString();}
+function memCopyAll(b){let a=memGetArr(b);if(!a){notify('[scarlet]Cannot read memory');return;}let p=[];for(let i=0;i<Number(a.length);i++)p.push(String(Number(a[i])));Core.app.setClipboardText('['+p.join(',')+']');Vars.ui.showInfoFade('Copied '+Number(a.length)+' slots');}
+function memPasteAll(b,cb){let text=Core.app.getClipboardText();if(!text||!text.trim()){notify('[scarlet]Clipboard empty');return;}try{let parsed=JSON.parse(text.trim());if(!Array.isArray(parsed)){notify('[scarlet]Need JSON array');return;}let a=memGetArr(b);if(!a){notify('[scarlet]Cannot access memory');return;}let n=Math.min(parsed.length,Number(a.length));for(let i=0;i<n;i++){let v=Number(parsed[i]);a[i]=isNaN(v)?0:v;}notify('[green]Pasted '+n+' values');if(cb)cb();}catch(e){notify('[scarlet]Parse error: '+e);}}
+
+function memOpenGrid(build){
+	let arr=memGetArr(build),size=arr?Number(arr.length):0;
+	let wData=createDraggableWindow('Mem \u2022 '+build.tileX()+','+build.tileY(),build,memWindows);
+	let win=wData.winWindow,winData=wData.winData,dragger=wData.dragger,ct=wData.contentTable;
+	dragger.button(Icon.copy,Styles.cleari,function(){memCopyAll(build);}).size(28).pad(1);
+	dragger.button(Icon.paste,Styles.cleari,function(){memPasteAll(build,refreshLabels);}).size(28).pad(1);
+	dragger.add(wData.collapseBtn).size(28).pad(1);
+	dragger.button(Icon.cancel,Styles.cleari,function(){win.remove();let i=memWindows.indexOf(winData);if(i!==-1)memWindows.splice(i,1);}).size(28).pad(1).right();
+	ct.background(Styles.black5);
+	let COLS=8,CW=62,CH=42,PAGE=64,nPages=Math.max(1,Math.ceil(size/PAGE)),curPage=0,labels=[];
+	function refreshLabels(){let a=memGetArr(build);if(!a)return;let base=curPage*PAGE;for(let i=0;i<labels.length;i++){let v=Number(a[base+i]);labels[i].setText(memFmt(v));labels[i].setColor(v===0?Packages.arc.graphics.Color.gray:Packages.arc.graphics.Color.white);}}
+	let grid=new Table();
+	function buildGrid(page){
+		grid.clearChildren();labels=[];
+		let a=memGetArr(build),base=page*PAGE,end=Math.min(base+PAGE,size);
+		for(let i=base;i<end;i++){
+			let slot=i,v=a?Number(a[i]):0;
+			let nl=new Packages.arc.scene.ui.Label('[gray]'+i+'[]');nl.setFontScale(0.65);nl.setAlignment(Packages.arc.util.Align.center);
+			let vl=new Packages.arc.scene.ui.Label(memFmt(v));vl.setAlignment(Packages.arc.util.Align.center);vl.setColor(v===0?Packages.arc.graphics.Color.gray:Packages.arc.graphics.Color.white);
+			labels.push(vl);
+			let cell=new Table(Styles.black3);cell.margin(1);cell.add(nl).center().padTop(2).row();cell.add(vl).center().padBottom(2).row();
+			cell.clicked(function(){
+				let a2=memGetArr(build);let ed=new BaseDialog('Slot '+slot);let tf=ed.cont.field(a2?memFmt(Number(a2[slot])):'0',null).width(220).get();
+				ed.buttons.defaults().size(130,52).pad(2);
+				ed.buttons.button('[gray]Cancel[]',function(){ed.hide();});
+				ed.buttons.button('[accent]OK[]',function(){let num=parseFloat(tf.getText().trim());if(!isNaN(num)){let a3=memGetArr(build);if(a3){try{a3[slot]=num;}catch(e){try{java.lang.reflect.Array.setDouble(a3,slot,num);}catch(e2){}}}}ed.hide();refreshLabels();});
+				Core.app.post(function(){Core.scene.setKeyboardFocus(tf);});ed.show();
+			});
+			grid.add(cell).width(CW).height(CH).pad(1);
+			if((i-base+1)%COLS===0)grid.row();
+		}
+		grid.pack();win.pack();
+	}
+	if(nPages>1){let pr=new Table(),pgLbl=new Packages.arc.scene.ui.Label('1/'+nPages);pr.button('[accent]<[]',Styles.cleart,function(){if(curPage>0){curPage--;buildGrid(curPage);pgLbl.setText((curPage+1)+'/'+nPages);}}).size(44,30);pr.add(pgLbl).width(64).center();pr.button('[accent]>[]',Styles.cleart,function(){if(curPage<nPages-1){curPage++;buildGrid(curPage);pgLbl.setText((curPage+1)+'/'+nPages);}}).size(44,30);ct.add(pr).padTop(4).row();}
+	let sc=new ScrollPane(grid);sc.setScrollingDisabled(true,false);ct.add(sc).maxWidth(COLS*(CW+2)+20).maxHeight(320).row();
+	let _dt=0;ct.update(function(){_dt+=Core.graphics.getDeltaTime();if(_dt>=1){_dt=0;refreshLabels();}});
+	buildGrid(0);win.add(ct).row();win.pack();win.setPosition(winData.stageX,winData.stageY,Packages.arc.util.Align.center);Vars.ui.hudGroup.addChild(win);
+}
+
+function memShowToolbar(build, tapSX, tapSY){
+	if(_memTb&&_memTbId===build.id){_memTb.remove();_memTb=null;_memTbId=-1;_memTbTime=Time.millis();return;}
+	if(_memTb){_memTb.remove();_memTb=null;}
+	let tbl=new Table();tbl.background(Styles.black5);tbl.margin(4);
+	function closeTb(){if(_memTb){_memTb.remove();_memTb=null;_memTbId=-1;_memTbTime=Time.millis();}}
+	tbl.button(Icon.menu, Styles.cleari,function(){closeTb();memOpenGrid(build);}).size(40);
+	tbl.button(Icon.copy, Styles.cleari,function(){closeTb();memCopyAll(build);}).size(40);
+	tbl.button(Icon.paste,Styles.cleari,function(){closeTb();memPasteAll(build,null);}).size(40);
+	Vars.ui.hudGroup.addChild(tbl);
+	let _tx = tapSX, _ty = tapSY;
+	Core.app.post(function(){
+		tbl.pack();
+		let sw=Core.scene.getWidth(), sh=Core.scene.getHeight();
+		let W=tbl.getWidth()>4?tbl.getWidth():128, H=tbl.getHeight()>4?tbl.getHeight():48;
+		let x=Math.max(4,Math.min(_tx-W*0.5,sw-W-4));
+		let y=_ty-H-20; if(y<4) y=_ty+20;
+		tbl.setPosition(x,y);
+	});
+	_memTb=tbl;_memTbId=build.id;
+}
+
+function _memCheckTap(){
+	if(!Core.input.justTouched())return;
+	try{
+		let stagePos = new Packages.arc.math.geom.Vec2(Core.input.mouseX(), Core.input.mouseY());
+		Core.scene.screenToStageCoordinates(stagePos);
+		let sx = stagePos.x;
+		let sy = stagePos.y;
+		if(_memTb){
+			if(_memTb.getWidth()<=0)_memTb.pack();
+			if(sx>=_memTb.x&&sx<=_memTb.x+_memTb.getWidth()&&sy>=_memTb.y&&sy<=_memTb.y+_memTb.getHeight())return;
+			_memTb.remove();_memTb=null;_memTbId=-1;_memTbTime=Time.millis();
+		}
+		if(Core.scene.hasMouse())return;
+		if(Time.millis()-_memTbTime<400)return;
+		let cf=Vars.control.input.config;if(cf&&cf.isShown())return;
+		let tile=Vars.world.tileWorld(Core.input.mouseWorldX(),Core.input.mouseWorldY());
+		let b=tile?tile.build:null;if(!b)return;
+		if(!MEM_NAMES[String(b.block.name)])return;
+		memShowToolbar(b, sx, sy);
+	}catch(e){}
+}
+
+// ── Processor undo/redo (per-processor history) ──────────────────────────────
+let _procHist   = {};  // { id: {undo:[], redo:[]} }
+let _undoStack  = [], _redoStack = [], _lastCode = null;
+let _ldWasShown = false, _curProcId = 'default';
+Events.on(WorldLoadEvent,()=>{_procHist={};_undoStack=[];_redoStack=[];_lastCode=null;_curProcId='default';});
+
+function _switchProc(id){
+	_procHist[_curProcId]={undo:_undoStack.slice(),redo:_redoStack.slice()};
+	_curProcId=id;
+	if(!_procHist[id])_procHist[id]={undo:[],redo:[]};
+	_undoStack=_procHist[id].undo;_redoStack=_procHist[id].redo;
+}
+function _undoProc(ld){if(!_undoStack.length){notify('[lightgray]Nothing to undo');return;}let cur=ld.canvas?ld.canvas.save():null;if(cur)_redoStack.push(cur);let prev=_undoStack.pop();if(ld.canvas)ld.canvas.load(prev);_lastCode=prev;notify('[lightgray]Undo ('+_undoStack.length+' left)');}
+function _redoProc(ld){if(!_redoStack.length){notify('[lightgray]Nothing to redo');return;}let cur=ld.canvas?ld.canvas.save():null;if(cur)_undoStack.push(cur);let next=_redoStack.pop();if(ld.canvas)ld.canvas.load(next);_lastCode=next;notify('[lightgray]Redo ('+_redoStack.length+' left)');}
+
+
 Events.run(Trigger.update, () => {
 	let logicDialog = Vars.ui.logic;
 	if (logicDialog && logicDialog.isShown()) {
@@ -1778,6 +1892,96 @@ Events.run(Trigger.update, () => {
 				}
 			} catch (e) {}
 		}
+	}
+
+	_memCheckTap();
+
+	// Logic dialog: undo/redo tracking + button inject
+	if (logicDialog && logicDialog.isShown()) {
+		// Detect fresh open → switch to this processor's history
+		if (!_ldWasShown) {
+			let _newId = 'default';
+			try { let _sel = Vars.control.input.config.getSelected(); if (_sel) _newId = String(_sel.id); } catch(e) {}
+			_switchProc(_newId);
+			if (logicDialog.canvas) {
+				_lastCode = logicDialog.canvas.save();
+				if (!_undoStack.length || _undoStack[_undoStack.length-1] !== _lastCode) _undoStack.push(_lastCode);
+			}
+		}
+		_ldWasShown = true;
+
+		// Snapshot on every change
+		if (logicDialog.canvas) {
+			try {
+				let _cur = logicDialog.canvas.save();
+				if (_cur !== _lastCode) {
+					if (_lastCode != null) { _undoStack.push(_lastCode); if (_undoStack.length > 100) _undoStack.shift(); }
+					_redoStack = []; _lastCode = _cur;
+				}
+			} catch(e) {}
+		}
+
+		// Inject ←/→/⚙ once (ONLY if not already present)
+		if (logicDialog.buttons && logicDialog.buttons.find('qol_tools_btn') === null) {
+			try {
+				let ld = logicDialog;
+				// Capture native actors + their cell sizes
+				let _na = [], _ns = null;
+				let _bch = logicDialog.buttons.getChildren();
+				let _bcells = logicDialog.buttons.getCells();
+				for (let _i = 0; _i < _bch.size; _i++) {
+					let _a = _bch.get(_i), _cw = 0, _ch = 0;
+					try { let _cc = _bcells.get(_i); _cw = _cc.maxWidth; _ch = _cc.maxHeight; } catch(e2) {}
+					_na.push({ a: _a, w: _cw, h: _ch });
+					if (!_ns && _a instanceof Packages.arc.scene.ui.TextButton) _ns = _a.getStyle();
+				}
+				let _bs = _ns || Styles.flatt;
+
+				let undoB = new Packages.arc.scene.ui.TextButton('', _bs);
+				try { undoB.image(Icon.left); } catch(e) {}
+				undoB.clicked(function() { _undoProc(ld); });
+				undoB.name = 'qol_undo_btn';
+
+				let redoB = new Packages.arc.scene.ui.TextButton('', _bs);
+				try { redoB.image(Icon.right); } catch(e) {}
+				redoB.clicked(function() { _redoProc(ld); });
+				redoB.name = 'qol_redo_btn';
+
+				let toolsB = new Packages.arc.scene.ui.TextButton('', _bs);
+				try { toolsB.image(Icon.settings); } catch(e) {}
+				toolsB.name = 'qol_tools_btn';
+				toolsB.clicked(function() {
+					let d2=new BaseDialog('[accent]QoL Processor Tools[]');d2.addCloseButton();
+					let st2=Styles.flatt,t2=d2.cont;t2.defaults().size(280,56).left().marginLeft(8).pad(2);
+					t2.button('Copy with Labels',Icon.copy,st2,function(){d2.hide();let cv=convertJumpsToLabels(ld.canvas.save(),'label');Core.app.setClipboardText(cv.code);Vars.ui.showInfoFade('Copied!');}).row();
+					t2.button('Save to QoL',Icon.save,st2,function(){d2.hide();Vars.ui.showTextInput('Save','Name:','',function(nm){if(nm){mlogDir.child(nm+'.txt').writeString(ld.canvas.save());Vars.ui.showInfoFade('Saved: '+nm);}});}).row();
+					t2.button('Save Range',Icon.save,st2,function(){d2.hide();Vars.ui.showTextInput('Start','(0-indexed):','',function(s0){let rs=parseInt(s0);if(isNaN(rs))return;Vars.ui.showTextInput('End','(0-indexed):','',function(s1){let re2=parseInt(s1);if(isNaN(re2))return;let rc=convertRangeJumpsToLabels(ld.canvas.save(),rs,re2,'lbl_');let c2=new BaseDialog('Save Range');c2.addCloseButton();c2.cont.defaults().size(260,52).pad(4);c2.cont.button('Save to file',Icon.save,st2,function(){c2.hide();Vars.ui.showTextInput('Name:','','',function(n2){if(n2){mlogDir.child(n2+'.txt').writeString(rc);Vars.ui.showInfoFade('Saved: '+n2);}});}).row();c2.cont.button('Copy clipboard',Icon.copy,st2,function(){c2.hide();Core.app.setClipboardText(rc);Vars.ui.showInfoFade('Copied!');}).row();c2.show();});});}).row();
+					t2.button('Load from QoL',Icon.download,st2,function(){d2.hide();let fd=new BaseDialog('Load');fd.addCloseButton();let lt=new Table();getMlogFiles().forEach(function(file){let r2=new Table();r2.button(file.nameWithoutExtension(),function(){try{ld.canvas.load(file.readString());fd.hide();}catch(err){notify('[scarlet]'+err);}}).size(300,50);r2.button(Icon.trash,function(){Vars.ui.showConfirm('Delete','Delete '+file.name()+'?',function(){file.delete();fd.hide();});}).size(50,50);lt.add(r2).padBottom(5).row();});fd.cont.add(new ScrollPane(lt)).width(400).height(400);fd.show();}).row();
+					t2.button('Insert Code',Icon.add,st2,function(){d2.hide();Vars.ui.showTextInput('Insert After Line','(-1=start):','',function(ls){let ia=parseInt(ls);if(isNaN(ia))return;let id2=new BaseDialog('Source');id2.addCloseButton();let it=new Table();it.button('From Clipboard',Icon.paste,st2,function(){id2.hide();performInsert(ld,ia,Core.app.getClipboardText());}).size(280,60).row();it.button('From QoL File',Icon.folder,st2,function(){id2.hide();let ifd=new BaseDialog('File');ifd.addCloseButton();let ift=new Table();getMlogFiles().forEach(function(f){ift.button(f.nameWithoutExtension(),function(){ifd.hide();performInsert(ld,ia,f.readString());}).size(300,50).row();});ifd.cont.add(new ScrollPane(ift)).width(400).height(400);ifd.show();}).size(280,60).row();id2.cont.add(it);id2.show();});}).row();
+					t2.button('Replace Code',Icon.edit,st2,function(){d2.hide();let rd=new BaseDialog('Replace');rd.addCloseButton();let rt=new Table();rt.add('Find:').left().row();let fa=new Packages.arc.scene.ui.TextArea('');rt.add(fa).width(600).height(100).row();rt.add('Replace with:').left().padTop(8).row();let ra=new Packages.arc.scene.ui.TextArea('');rt.add(ra).width(600).height(100).row();rt.button('Replace',function(){performReplace(ld,fa.getText(),ra.getText());rd.hide();}).size(200,50).row();rd.cont.add(new ScrollPane(rt)).width(640).height(400);rd.show();}).row();
+					d2.show();
+				});
+
+				// Rebuild in order: [←][→][natives with orig sizes][⚙]
+				logicDialog.buttons.clearChildren();
+				logicDialog.buttons.add(undoB).size(38, 40).pad(1);
+				logicDialog.buttons.add(redoB).size(38, 40).pad(1);
+				for (let _ri = 0; _ri < _na.length; _ri++) {
+					let _e = _na[_ri];
+					let _rc = logicDialog.buttons.add(_e.a);
+					if (_e.w > 0 && _e.h > 0) {
+						let w = _e.w;
+						if (w > 110) w = 110;
+						_rc.size(w, _e.h);
+					}
+				}
+				logicDialog.buttons.add(toolsB).size(38, 40).pad(1);
+				logicDialog.buttons.pack();
+			} catch(e) {}
+		}
+	} else {
+		if (_ldWasShown) _switchProc('default'); // save history on close
+		_ldWasShown = false;
 	}
 
 	if (pendingMlog != null) {

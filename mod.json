@@ -3,7 +3,7 @@
   "displayName": "QoL Control",
   "author": "TyTxexebe",
   "repo": "TyT-xexebe/QoL-control",
-  "version": "6.1",
+  "version": "6.2",
   "minGameVersion": "154",
   "description": "A lot of useful & QoL features\ntype !qol <cmd?> in chat to get more info\n\nyou can add your mlog codes in Mindustry directory /files/qol/mlog/ to use them with !mlog\n\nyou can add your regex in Mindustry directory /files/qol/mlog/regex.json to use it in !detector\n\nmore detailed mod info on github page, please give me a star :>\n\ndiscord: @tytxexebe",
   "hidden": true,

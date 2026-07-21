@@ -220,6 +220,12 @@ _optInterceptor.add('opt', function(args) {
 let _wpTarget   = null;
 let _wpGuardEnd = 0;
 let _wpShowM    = null;
+let _wpCfgFld   = null;
+function _resolveConfigFld(frag){
+	if(_wpCfgFld)return _wpCfgFld;
+	try{let clz=frag.getClass();while(clz){try{_wpCfgFld=clz.getDeclaredField('table');_wpCfgFld.setAccessible(true);return _wpCfgFld;}catch(e){}clz=clz.getSuperclass();}}catch(e){}
+	return null;
+}
 
 function _getShowConfigM(frag) {
 	if (_wpShowM) return _wpShowM;
@@ -262,6 +268,7 @@ Events.run(Trigger.update, () => {
 	}
 
 	if (!Core.input.justTouched()) return;
+	try{let _f=Vars.control.input.config;if(_f&&_f.isShown()){let _fl=_resolveConfigFld(_f);if(_fl){let _t=_fl.get(_f);if(_t){let _sx=Core.input.mouseX(),_sy=Core.graphics.getHeight()-Core.input.mouseY();if(_sx>=_t.x-20&&_sx<=_t.x+_t.getWidth()+20&&_sy>=_t.y-20&&_sy<=_t.y+_t.getHeight()+20)return;}}return;}}catch(_e){}
 	let t = Vars.world.tileWorld(Core.input.mouseWorldX(), Core.input.mouseWorldY());
 	let c = t ? t.build : null;
 	if (!c || c.block != Blocks.worldProcessor) return;

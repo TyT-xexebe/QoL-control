@@ -234,96 +234,237 @@ const updLog = () => {
 
 const showLogs = (fName) => {
 	flushAll();
-	let d = new BaseDialog('Logs');
+
+	let selId   = null;   // currently selected player ID
+	let selName = fName || null; // player name (used for drawName filter)
+	let selTeam = null;   // team name filter
+
+	let d = new BaseDialog('[accent]Logger[]');
 	d.addCloseButton();
-	let t = new Table();
-	let arr = ['>', '^', '<', 'v'];
-	for (let id in logs) {
-		let lgs = logs[id];
-		if (
-			!lgs.length ||
-			(fName &&
-				Strings.stripColors(lgs[0].n)
-					.toLowerCase()
-					.indexOf(fName.toLowerCase()) === -1)
-		)
-			continue;
-		t.add(
-			'[accent]' +
-				lgs[0].n +
-				(pids[id] && pids[id] !== '?' ? ' [accent]#' + pids[id] : '') +
-				' [lightgrey](' +
-				lgs[0].t +
-				')'
-		)
-			.left()
-			.row();
-		lgs.forEach((l) => {
-			let col =
-				l.act === 'build'
-					? '[green]'
-					: l.act === 'destroy'
-						? '[red]'
-						: l.act === 'lost'
-							? '[magenta]'
-							: '[accent]';
-			let cStr =
-				l.coords[0].x +
-				',' +
-				l.coords[0].y +
-				(l.count > 1
-					? ' ... ' +
-						l.coords[l.coords.length - 1].x +
-						',' +
-						l.coords[l.coords.length - 1].y
-					: '');
-			let rot = Number(l.r) % 4;
-			let rStr =
-				l.b &&
-				l.b.rotate !== false &&
-				(l.act === 'build' ||
-					l.act === 'destroy' ||
-					l.act === 'changed')
-					? ' | [lightgrey]' +
-						(arr[rot] !== undefined ? arr[rot] : l.r)
-					: '';
-			if (l.act === 'rotated' || l.act === 'lost') rStr = '';
-			if (l.act === 'rotated') rStr = ' | [lightgrey]' + l.cStr;
-			let displayConf =
-				l.act === 'rotated' || l.act === 'lost'
-					? ''
-					: ' | [lightgrey]' + l.cStr;
-			t.add(
-				'[lightgrey]' +
-					fTime(l.start) +
-					' | ' +
-					col +
-					l.act +
-					'[] | ' +
-					(l.b ? l.b.emoji() : '') +
-					rStr +
-					displayConf +
-					' | [white]' +
-					cStr +
-					' | [accent]x' +
-					l.count
-			)
-				.left()
-				.row();
-		});
-		t.add('').padBottom(10).row();
+
+	// ── Outer layout: left panel (players) + right panel (log entries) ──────
+	let outer = d.cont;
+	outer.defaults().pad(0);
+
+	let leftTable  = new Table(Styles.black3);
+	let rightTable = new Table();
+
+	// ── Right panel builder ──────────────────────────────────────────────────
+	function buildRight() {
+		rightTable.clearChildren();
+		rightTable.top().left();
+
+		// Title
+		let titleStr = selId !== null
+			? ('[accent]' + (selName || selId) + '[]')
+			: (selTeam ? '[accent]Team: ' + selTeam + '[]' : '[accent]All players[]');
+		rightTable.add(titleStr).left().padLeft(6).padTop(4).row();
+		rightTable.add(new Table(Styles.black8)).growX().height(1).pad(2).row();
+
+		let logTable = new Table();
+		logTable.top().left();
+		let arr = ['>', '^', '<', 'v'];
+		let hasAny = false;
+
+		for (let id in logs) {
+			let lgs = logs[id];
+			if (!lgs.length) continue;
+			if (selId !== null && id !== selId) continue;
+			if (selTeam && lgs[0].t !== selTeam) continue;
+			hasAny = true;
+
+			if (selId === null) {
+				// Show player header when viewing all
+				logTable.add('[accent]' + lgs[0].n + '[lightgrey] (' + lgs[0].t + ')').left().padTop(6).row();
+			}
+
+			lgs.forEach((l) => {
+				let col = l.act === 'build' ? '[green]' : l.act === 'destroy' ? '[red]' : l.act === 'lost' ? '[magenta]' : '[accent]';
+				let cStr = l.coords[0].x + ',' + l.coords[0].y +
+					(l.count > 1 ? ' … ' + l.coords[l.coords.length-1].x + ',' + l.coords[l.coords.length-1].y : '');
+				let rot = Number(l.r) % 4;
+				let rStr = (l.b && l.b.rotate !== false && (l.act === 'build' || l.act === 'destroy' || l.act === 'changed'))
+					? ' [lightgrey]' + (arr[rot] !== undefined ? arr[rot] : l.r) + '[]' : '';
+				if (l.act === 'rotated') rStr = ' [lightgrey]' + l.cStr + '[]';
+				if (l.act === 'lost') rStr = '';
+				let confStr = (l.act === 'rotated' || l.act === 'lost') ? '' : ' [gray]' + l.cStr + '[]';
+
+				let row = new Table();
+				row.left();
+				row.add('[lightgrey]' + fTime(l.start) + ' ' + col + l.act + '[] ' +
+					(l.b ? (l.b.emoji ? l.b.emoji() : l.b.name) : '?') +
+					rStr + confStr + ' [white]' + cStr + ' [accent]×' + l.count
+				).left().padLeft(4).padRight(4).growX();
+				logTable.add(row).growX().padBottom(1).row();
+			});
+		}
+
+		if (!hasAny) logTable.add('[gray]No logs' + (selId || selTeam ? ' for selection' : '') + '.').padLeft(4).row();
+
+		let scrollH = Math.max(200, Core.graphics.getHeight() * 0.6);
+		let scrollW = Math.max(300, Core.graphics.getWidth() * 0.6);
+		rightTable.add(new ScrollPane(logTable)).width(scrollW).height(scrollH).top().left().row();
+
+		// ── Action buttons ─────────────────────────────────────────────────
+		let actRow = new Table();
+		actRow.defaults().pad(3);
+
+		// Revert (only when a specific player is selected)
+		if (selId !== null) {
+			actRow.button('[accent]⟲ Revert[]', Styles.cleart, function() {
+				let u = Vars.player.unit(), cnt = 0;
+				if (!u || !u.canBuild()) { notify('[scarlet]Cannot build right now.'); return; }
+				let lgs = logs[selId];
+				if (!lgs) return;
+				lgs.forEach((l) => {
+					if (!l.reverted && l.b && l.b.name !== 'air') {
+						if (l.act === 'destroy') {
+							// Rebuild destroyed blocks
+							l.coords.forEach((c) => {
+								u.addBuild(new Packages.mindustry.entities.units.BuildPlan(c.x, c.y, l.r, l.b, l.cObj));
+								cnt++;
+							});
+							l.reverted = true;
+						} else if (l.act === 'changed' && l.cObj !== null && l.cObj !== undefined) {
+							// Revert config change: re-apply OLD config to existing tile
+							l.coords.forEach((c) => {
+								try {
+									let tile = Vars.world.tile(c.x, c.y);
+									if (tile && tile.build && String(tile.build.block.name) === String(l.b.name)) {
+										tile.build.configure(l.cObj);
+										cnt++;
+									}
+								} catch(e) {}
+							});
+							l.reverted = true;
+						}
+					}
+				});
+				notify('[green]Reverted [accent]' + cnt + '[green] actions.');
+			}).size(180, 40);
+		}
+
+		// Show on map toggle
+		// drawName must be player NAME (used by updateCachedDraws to filter logs[id][0].n)
+		let mapTarget = selName || '';
+		actRow.button(
+			drawName === mapTarget ? '[scarlet]Hide map[]' : '[accent]Show on map[]',
+			Styles.cleart,
+			function() {
+				if (drawName !== null && drawName === mapTarget) {
+					drawName = null;
+					notify('[lightgrey]Map drawing [scarlet]OFF');
+				} else {
+					drawName = mapTarget;
+					notify('[lightgrey]Drawing ' + (selName || 'all players') + ' on map');
+				}
+				buildRight();
+			}
+		).size(160, 40);
+
+		// Save
+		actRow.button('[lightgrey]Save log[]', Styles.cleart, function() {
+			flushAll();
+			let hasLogs = false;
+			for (let id in logs) if (logs[id].length) { hasLogs = true; break; }
+			if (!hasLogs) { notify('[scarlet]No logs to save.'); return; }
+			let dt = new Date();
+			let fn = 'log_' + dt.getFullYear() + '-' + (dt.getMonth()+1) + '-' + dt.getDate() +
+				'_' + dt.getHours() + '-' + dt.getMinutes() + '-' + dt.getSeconds() + '.txt';
+			let dir = Core.settings.getDataDirectory().child('qol');
+			if (!dir.exists()) dir.mkdirs();
+			let f = dir.child(fn);
+			wLog(f);
+			notify('[lightgrey]Saved to ' + f.absolutePath());
+		}).size(120, 40);
+
+		rightTable.add(actRow).left().padTop(4).row();
 	}
 
-	let scrollHeight = Math.max(200, Core.graphics.getHeight() - 250);
-	d.cont
-		.add(new ScrollPane(t))
-		.width(Core.graphics.getWidth() * 0.8)
-		.height(scrollHeight)
-		.padTop(250)
-		.padBottom(250);
+	// ── Left panel builder ───────────────────────────────────────────────────
+	function buildLeft() {
+		leftTable.clearChildren();
+		leftTable.top().left();
+		leftTable.defaults().left();
+
+		// Logger ON/OFF toggle
+		leftTable.button(
+			enabled ? '[green]Logger ON[]' : '[scarlet]Logger OFF[]',
+			Styles.cleart,
+			function() {
+				enabled = !enabled;
+				if (enabled) {
+					failTraces = {}; knownPlayers = {};
+					Groups.player.each((p) => {
+						knownPlayers[p.id] = p.name;
+						if (p !== Vars.player) {
+							try { reqTraces[p.id] = Date.now(); Call.adminRequest(p, Packages.mindustry.net.Packets.AdminAction.trace, null); }
+							catch(err) { failTraces[p.id] = true; }
+						}
+					});
+				} else { drawName = null; }
+				notify('[lightgrey]Logger ' + (enabled ? '[green]ON' : '[scarlet]OFF'));
+				buildLeft();
+			}
+		).growX().height(38).row();
+
+		leftTable.add(new Table(Styles.black8)).growX().height(1).pad(3).row();
+
+		// "All" button
+		let allBtn = leftTable.button('[white]All players[]', Styles.cleart, function() {
+			selId = null; selName = null; selTeam = null; buildRight();
+		}).growX().height(36).get();
+		allBtn.getLabel().setAlignment(Packages.arc.util.Align.left);
+		leftTable.row();
+
+		// Group by team
+		let teams = {};
+		for (let id in logs) {
+			let lgs = logs[id];
+			if (!lgs.length) continue;
+			let t = lgs[0].t;
+			if (!teams[t]) teams[t] = [];
+			teams[t].push({ id: id, n: lgs[0].n });
+		}
+
+		for (let team in teams) {
+			// Team header
+			let teamBtn = leftTable.button('[lightgrey]⬡ ' + team + '[]', Styles.cleart, function() {
+				selId = null; selTeam = team; buildRight();
+			}).growX().height(32).get();
+			teamBtn.getLabel().setAlignment(Packages.arc.util.Align.left);
+			leftTable.row();
+
+			// Players in team
+			teams[team].forEach(function(p) {
+				let pBtn = leftTable.button('  ' + p.n, Styles.cleart, function() {
+					selId = p.id; selName = Strings.stripColors(p.n); selTeam = null; buildRight();
+				}).growX().height(32).get();
+				pBtn.getLabel().setAlignment(Packages.arc.util.Align.left);
+				leftTable.row();
+			});
+		}
+
+		if (Object.keys(teams).length === 0) {
+			leftTable.add('[gray]No data yet').padLeft(8).row();
+		}
+
+		// Chat logs button
+		leftTable.add(new Table(Styles.black8)).growX().height(1).pad(3).row();
+		leftTable.button('[lightgrey]Chat logs[]', Styles.cleart, function() { showChatLogs(); }).growX().height(36).row();
+	}
+
+	buildLeft();
+	buildRight();
+
+	let leftScroll = new ScrollPane(leftTable);
+	leftScroll.setScrollingDisabled(true, false);
+	let panelH = Math.max(300, Core.graphics.getHeight() * 0.7);
+	outer.add(leftScroll).width(180).height(panelH).top();
+	outer.add(rightTable).top().left().padLeft(8);
+
 	d.show();
 };
-
 const showChatLogs = () => {
 	let d = new BaseDialog('Chat Logs');
 	d.addCloseButton();
@@ -427,7 +568,8 @@ Events.on(ConfigEvent, (e) => {
 	let b = e.tile.block,
 		k = e.tile.tile.x + ',' + e.tile.tile.y,
 		s = shadowMap[k];
-	let oStr = s ? fConf(s.c, b) : 'unknown',
+	let oldC = s ? s.c : null;  // capture OLD config before overwriting
+	let oStr = s ? fConf(oldC, b) : 'unknown',
 		nStr = fConf(e.value, b);
 	let r = s ? s.r : e.tile.rotation;
 	if (s) s.c = e.value;
@@ -439,7 +581,7 @@ Events.on(ConfigEvent, (e) => {
 		'changed',
 		b,
 		oStr === nStr ? nStr : oStr + ' -> ' + nStr,
-		e.value,
+		oldC,   // store OLD config so revert can apply it
 		r,
 		e.tile.tile.x,
 		e.tile.tile.y
