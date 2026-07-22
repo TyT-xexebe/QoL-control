@@ -100,6 +100,7 @@ global.qolActiveModules = activeModules;
 
 require('qol-control/core/help');
 require('qol-control/core/users');
+require('qol-control/core/welcome');
 
 for (let module of activeModules) {
 	try {

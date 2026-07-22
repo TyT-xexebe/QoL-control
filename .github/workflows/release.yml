@@ -1,0 +1,74 @@
+name: Auto Release Mod
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read Version from mod.json
+        id: get_version
+        run: |
+          if [ ! -f "mod.json" ]; then
+            echo "Error: mod.json not found!"
+            exit 1
+          fi
+          VERSION=$(jq -r '.version' mod.json)
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "Error: Could not extract version from mod.json!"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if Release Already Exists
+        id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.get_version.outputs.tag }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Skipping release creation."
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Release $TAG does not exist. Creating new release."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Zip Archive
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          zip -r qol-control.zip . -x "*.git*" "*.github*" "node_modules/*" "package*.json" "tsconfig.json" "vite.config.*" "src/*"
+
+      - name: Push Git Tag and Create GitHub Release
+        if: steps.check_release.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.get_version.outputs.tag }}"
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Set up git user
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Create and push git tag
+          git tag "$TAG"
+          git push origin "$TAG"
+          
+          # Create GitHub Release with the zipped mod attached
+          gh release create "$TAG" qol-control.zip \
+            --title "Release $TAG" \
+            --notes "Automated release for version $VERSION."
