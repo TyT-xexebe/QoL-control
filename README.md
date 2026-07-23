@@ -249,6 +249,16 @@ Shows current map stats.
 
 You can add keybinds for your PC to launch some commands or text in chat.
 
+#### `!cbinds` | `!cbind`
+
+Create draggable on-screen buttons with custom sizes, icons, and commands.
+
+`!cbinds` | `!cbind`
+Opens the settings UI to create, edit, delete, and manage custom buttons.
+
+`!cbinds lock <1/0?>` | `!cbind lock <1/0?>`
+Locks or unlocks custom button positions on your screen to prevent accidental dragging.
+
 #### `!track <name?>`
 
 Shows cursor position of all players / selected player and unit controlled by RTS and unit factory's set path. 

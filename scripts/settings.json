@@ -34,5 +34,6 @@
   "ui/binfo": true,
   "ui/core": true,
   "ui/quickchat": true,
-  "ui/map": true
+  "ui/map": true,
+  "ui/cbinds": true
 }

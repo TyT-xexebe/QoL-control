@@ -104,6 +104,10 @@ const helpData = {
 		cmd: 'cmap',
 		desc: '[lightgrey]Custom map with some features\n[accent]!cmap[lightgrey] - settings\n\nOptions: Enable Minimap, Unit Outlines, Sort Units by HP (disable on low-end devices), Player Display (Icon/Name), Map Size, Unit Size',
 	},
+	'ui/cbinds': {
+		cmd: 'cbinds',
+		desc: '[lightgrey]Custom Screen Binds\nCreate draggable on-screen buttons with custom sizes, icons, and commands.\n\n[accent]!cbinds[lightgrey] - opens settings UI to create/edit custom buttons\n[accent]!cbinds lock <1/0?>[lightgrey] - lock or unlock custom button positions to prevent accidental dragging\n\n[accent]Shortcuts:[lightgrey] !cbind | !cbind lock',
+	},
 	'core/colors': {
 		cmd: 'colors',
 		desc: '[accent]!colors [lightgrey] - customise your mindustry colors from Pal.java',

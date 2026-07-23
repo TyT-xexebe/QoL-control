@@ -5,6 +5,6 @@
   "githubButton": "GitHub ⭐",
   "githubUrl": "https://github.com/TyT-xexebe/qol-control/",
   "updateTitle": "QoL Control Updated",
-  "updateText": "[accent]Mod  updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]=== ADDITIONS ===[]\n- Added welcoming and syntax instructions guide on first launch.\n- Added automatic update notification and changelog display.\n- Added external JSON text configuration support for easy editing.",
+  "updateText": "[accent]Mod updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]=== NEW FEATURE: CUSTOM SCREEN BINDS ===[]\n- [accent]!cbinds[] / [accent]!cbind[]: Create draggable custom buttons on your screen with custom sizes, icons, and commands!\n- Type [orange]!cbinds lock[] or use the checkbox in settings to lock button positions.",
   "updateButton": "Got It"
 }

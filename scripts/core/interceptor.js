@@ -27,7 +27,9 @@ function handleCommand(msg) {
 	if (commands.hasOwnProperty(cmd)) {
 		try {
 			commands[cmd](args, cleanMsg);
-		} catch (e) {}
+		} catch (e) {
+			Log.err('[QoL Exception] Command ' + cmd + ' failed: ' + e + '\n' + (e.stack || ''));
+		}
 
 		return true;
 	}

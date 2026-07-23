@@ -215,6 +215,8 @@ if (!Vars.headless) {
 							'Quick chat button.\nYou can add your own quick text buttons to send them in chat.\nYou can send multiple messages with a single just write them on separate lines.\nLong texts that exceed the games 150 character limit are automatically split into several messages.\nIncludes a default Auto Execute button that automatically sends your text or commands every time you join server/world. It has crash protection that disables it if the game crashes during execution.',
 						'ui/map':
 							'Custom map\nAdds a draggable real time minimap that displays terrain, better units, other players (eye icons / nicknames), and your current camera viewport.\nUse !cmap to setting it.\nLeft-click / Tap: Opens the standard full-screen map.\nLeft-drag / Tap & drag: Moves the minimap widget around the screen.\nRight-click / Long-press (0.4s): Instantly teleports your camera to the selected location.\nRight-drag / Long-press & drag: Smoothly pans your camera across the map.',
+						'ui/cbinds':
+							'Custom Screen Binds\nCreate draggable on-screen buttons with custom sizes, icons, and commands.\n\n!cbinds to open settings\n!cbinds lock <1/0?> to lock/unlock button positions.',
 					};
 
 					for (let modName in defaultSettings) {
