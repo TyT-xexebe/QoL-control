@@ -11,6 +11,7 @@ let enabled = false,
 	traceAdded = false,
 	lastUpdate = 0,
 	drawName = null;
+let traceStore = {};  // { playerId: { uuid, raw, lines, time } }
 let cachedDraws = [],
 	lastDrawCount = 0,
 	lastDrawName = null;
@@ -159,6 +160,11 @@ const wLog = (f) => {
 			' (' +
 			lgs[0].t +
 			')\n';
+		// Append full trace info if available
+		if (traceStore[id] && traceStore[id].lines) {
+			out += '  [Trace] ';
+			out += traceStore[id].lines.join(' | ') + '\n';
+		}
 		lgs.forEach((l) => {
 			let cStr =
 				l.coords[0].x +
@@ -278,8 +284,23 @@ const showLogs = (fName) => {
 				logTable.add('[accent]' + lgs[0].n + '[lightgrey] (' + lgs[0].t + ')').left().padTop(6).row();
 			}
 
+			// ── Trace info as first item in the log scroll ──────────────────
+			if (traceStore[id]) {
+				let ts = traceStore[id];
+				let tAge = Math.floor((Date.now() - ts.time) / 1000);
+				let ageStr = tAge < 60 ? tAge + 's ago' : Math.floor(tAge / 60) + 'm ago';
+				let traceRow = new Table(Styles.black3);
+				traceRow.margin(2).left();
+				traceRow.add('[accent]⬡ Trace [gray](' + ageStr + ')[]').left().padLeft(4).padTop(2).row();
+				ts.lines.forEach(function(line) {
+					if (line.length > 0) traceRow.add('[lightgrey]  ' + line + '[]').left().padLeft(8).row();
+				});
+				logTable.add(traceRow).growX().padBottom(3).row();
+				logTable.add(new Table(Styles.black8)).growX().height(1).padBottom(3).row();
+			}
+
 			lgs.forEach((l) => {
-				let col = l.act === 'build' ? '[green]' : l.act === 'destroy' ? '[red]' : l.act === 'lost' ? '[magenta]' : '[accent]';
+				let col = l.act === 'build' ? '[green]' : l.act === 'destroy' ? '[red]' : l.act === 'lost' ? '[magenta]' : l.act === 'deposit' ? '[cyan]' : l.act === 'withdraw' ? '[orange]' : '[accent]';
 				let cStr = l.coords[0].x + ',' + l.coords[0].y +
 					(l.count > 1 ? ' … ' + l.coords[l.coords.length-1].x + ',' + l.coords[l.coords.length-1].y : '');
 				let rot = Number(l.r) % 4;
@@ -657,6 +678,28 @@ Events.on(PayloadDropEvent, (e) => {
 	);
 });
 
+Events.on(DepositEvent, (e) => {
+	if (!enabled || !e.player || !e.tile) return;
+	let p = getP(e.player);
+	if (!p) return;
+	let b = e.tile.block,
+		tx = e.tile.tile.x,
+		ty = e.tile.tile.y;
+	let cStr = e.item.emoji() + ' x' + e.amount;
+	addLog(p.id, p.n, p.t, 'deposit', b, cStr, e.item, 0, tx, ty);
+});
+
+Events.on(WithdrawEvent, (e) => {
+	if (!enabled || !e.player || !e.tile) return;
+	let p = getP(e.player);
+	if (!p) return;
+	let b = e.tile.block,
+		tx = e.tile.tile.x,
+		ty = e.tile.tile.y;
+	let cStr = e.item.emoji() + ' x' + e.amount;
+	addLog(p.id, p.n, p.t, 'withdraw', b, cStr, e.item, 0, tx, ty);
+});
+
 Events.on(EventType.UnitControlEvent, (e) => {
 	if (!enabled || !e.player || !e.unit) return;
 	let p = getP(e.player);
@@ -733,6 +776,7 @@ Events.on(WorldLoadEvent, () => {
 	pids = {};
 	reqTraces = {};
 	failTraces = {};
+	traceStore = {};
 	drawName = null;
 	cachedDraws = [];
 	lastDrawCount = 0;
@@ -927,7 +971,11 @@ Events.run(Trigger.draw, () => {
 					? Color.red
 					: d.act === 'lost'
 						? Color.magenta
-						: Pal.accent;
+						: d.act === 'deposit'
+							? Color.cyan
+							: d.act === 'withdraw'
+								? Color.orange
+								: Pal.accent;
 
 		let wx, wy, drawSize;
 
@@ -1004,8 +1052,8 @@ const setupTrace = () => {
 				nP = Strings.stripColors(
 					Core.bundle.get('trace.playername').split('{0}')[0]
 				).trim();
-			txts.forEach((t) => {
-				let s = Strings.stripColors(t).trim();
+			let traceLines = txts.map((t) => Strings.stripColors(t).trim()).filter((s) => s.length > 0);
+			traceLines.forEach((s) => {
 				if (s.indexOf(idP) === 0) pid = s.substring(idP.length).trim();
 				else if (s.indexOf(nP) === 0) n = s.substring(nP.length).trim();
 			});
@@ -1025,6 +1073,12 @@ const setupTrace = () => {
 				if (pid !== '?') {
 					pids[fp.id] = pid;
 					delete failTraces[fp.id];
+					// Store full trace dump for this player
+					traceStore[fp.id] = {
+						uuid: pid,
+						lines: traceLines.slice(),  // all label texts
+						time: Date.now(),
+					};
 				} else failTraces[fp.id] = true;
 				if (reqTraces[fp.id]) {
 					delete reqTraces[fp.id];
