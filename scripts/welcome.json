@@ -5,6 +5,6 @@
   "githubButton": "GitHub ⭐",
   "githubUrl": "https://github.com/TyT-xexebe/qol-control/",
   "updateTitle": "QoL Control Updated",
-  "updateText": "[accent]Mod updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]=== CHANGES ===[]\n- Fixed logger trace packets, now displaying all player info in !log",
+  "updateText": "[accent]Mod updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]=== CHANGES ===[]\n- Minor fixes",
   "updateButton": "Got It"
 }
