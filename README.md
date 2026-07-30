@@ -134,7 +134,7 @@ Toggles the display of HP and shield for the unit you are currently shooting at.
 Tracks a specific player's HP and draws a line to them.
 
 #### `!log`
-Logs block placements, destructions and changed by players in your team. (may cause FPS drops and longer load in world)
+Logs block placements, destructions and changed by all players. (may cause FPS drops and longer load in world)
 
 `!log toggle <1/0?>` | `!log t <1/0?>`
 Toggles the logger on/off.
@@ -312,7 +312,8 @@ Shows the list of all currently detected QoL Control users on the server.
 #### `!core <#team>`
 
 Displays core resourses of team #id you selected, can displays multiple.
-Supports `sharded, crux, malis, green, blue` also.`!core` will show core resourses of your team.
+Also supports `sharded, crux, malis, green, blue`.
+`!core` will show core resourses of your team.
 
 #### `!colors`
 
@@ -407,7 +408,7 @@ The `camera` action allows dynamic tracking of block/unit coordinates, or explic
 
 The mod is made to be as lightweight as possible so it doesn't heavily load your device.
 
-However, some features may cause FPS drops in certain situations (`log`, `ai`, `trange`).
+However, some features may cause FPS drops in certain situations (`log`, `ai`, `trange`, `urange`).
 
 There is also a optimizer that disables some unnecessary game features to increase FPS.
 
@@ -415,7 +416,7 @@ There is also a optimizer that disables some unnecessary game features to increa
 
 All features can be fully disabled ingame settings meny.
 
-By default everything is enabled, but you can disable anything if you want.
+By default everything is diaabled, but you can enable anything if you want.
 
 
 For `!mlog` you can add your own mlog codes in:
