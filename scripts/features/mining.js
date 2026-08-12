@@ -321,7 +321,9 @@ Events.on(WorldLoadEvent, () => {
 });
 
 const miningHandler = (args) => {
-	if (args[1] === 'stop') {
+	let arg1 = args[1] ? String(args[1]).toLowerCase().trim() : '';
+
+	if (arg1 === 'stop') {
 		if (miningTask) {
 			miningTask.cancel();
 			miningTask = null;
@@ -331,16 +333,27 @@ const miningHandler = (args) => {
 		return;
 	}
 
-	if (args[1] === 'save') {
-		Core.settings.put('qol-mining-units', JSON.stringify(state.units));
-		Core.settings.put('qol-mining-items', JSON.stringify(state.items));
-		Core.settings.put('qol-mining-ignored', JSON.stringify(state.ignored));
-		Core.settings.put('qol-mining-free', state.freePercent);
-		notify('[green]Mining settings saved');
+	if (arg1 === 'save') {
+		try {
+			Core.settings.put('qol-mining-units', String(JSON.stringify(state.units)));
+			Core.settings.put('qol-mining-items', String(JSON.stringify(state.items)));
+			Core.settings.put('qol-mining-ignored', String(JSON.stringify(state.ignored)));
+			try {
+				Core.settings.put('qol-mining-free', new java.lang.Integer(state.freePercent));
+			} catch (e) {
+				Core.settings.put('qol-mining-free', state.freePercent);
+			}
+			if (typeof Core.settings.forceSave === 'function') {
+				Core.settings.forceSave();
+			}
+			notify('[green]Mining settings saved');
+		} catch (err) {
+			notify('[scarlet]Save error: ' + err);
+		}
 		return;
 	}
 
-	if (args[1] === 'free' || args[1] === 'f') {
+	if (arg1 === 'free' || arg1 === 'f') {
 		let pct = parseInt(args[2]);
 		if (isNaN(pct) || pct < 0 || pct > 100)
 			return notify('[lightgrey]!mining free <0-100>');
@@ -349,7 +362,7 @@ const miningHandler = (args) => {
 		return;
 	}
 
-	if (args[1] === 'set' || args[1] === 's') {
+	if (arg1 === 'set' || arg1 === 's') {
 		let time = parseFloat(args[2]);
 		if (isNaN(time) || time < 0)
 			return notify('[lightgrey]!mining set <sec>');
@@ -379,15 +392,16 @@ const miningHandler = (args) => {
 		return;
 	}
 
-	if (args[1] === 'ignore' || args[1] === 'ig') {
+	if (arg1 === 'ignore' || arg1 === 'ig') {
 		if (args.length < 4)
 			return notify('[lightgrey]!mining ignore <unit> <items.../clear>');
 
-		let uName = args[2];
+		let uName = args[2] ? String(args[2]).toLowerCase().trim() : '';
 		if (!state.units.hasOwnProperty(uName))
 			return notify('[scarlet]Unknown unit: ' + uName);
 
-		if (args[3] === 'clear') {
+		let arg3 = args[3] ? String(args[3]).toLowerCase().trim() : '';
+		if (arg3 === 'clear') {
 			delete state.ignored[uName];
 			return notify('[green]Cleared ignores for ' + uName);
 		}
@@ -395,7 +409,7 @@ const miningHandler = (args) => {
 		if (!state.ignored[uName]) state.ignored[uName] = {};
 
 		let changed = [];
-		let lastArg = args[args.length - 1];
+		let lastArg = args[args.length - 1] ? String(args[args.length - 1]).toLowerCase().trim() : '';
 		let explicitState = null;
 
 		if (lastArg === '1' || lastArg === 'true' || lastArg === 'on')
@@ -406,7 +420,7 @@ const miningHandler = (args) => {
 		let limit = explicitState !== null ? args.length - 1 : args.length;
 
 		for (let i = 3; i < limit; i++) {
-			let iName = args[i];
+			let iName = args[i] ? String(args[i]).toLowerCase().trim() : '';
 			if (state.items.hasOwnProperty(iName)) {
 				let currentState = state.ignored[uName][iName] || false;
 				let newState =
@@ -429,7 +443,7 @@ const miningHandler = (args) => {
 		return;
 	}
 
-	if (args[1] === 'status' || args[1] === 'st') {
+	if (arg1 === 'status' || arg1 === 'st') {
 		let uStr = '',
 			iStr = '';
 		for (let k in state.units)
@@ -492,7 +506,7 @@ const miningHandler = (args) => {
 
 	if (args.length > 1) {
 		let changed = [];
-		let lastArg = args[args.length - 1];
+		let lastArg = args[args.length - 1] ? String(args[args.length - 1]).toLowerCase().trim() : '';
 		let explicitState = null;
 
 		if (lastArg === '1' || lastArg === 'true' || lastArg === 'on')
@@ -503,7 +517,7 @@ const miningHandler = (args) => {
 		let limit = explicitState !== null ? args.length - 1 : args.length;
 
 		for (let i = 1; i < limit; i++) {
-			let key = args[i];
+			let key = args[i] ? String(args[i]).toLowerCase().trim() : '';
 			if (state.units.hasOwnProperty(key)) {
 				state.units[key] =
 					explicitState !== null ? explicitState : !state.units[key];

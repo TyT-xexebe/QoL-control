@@ -148,6 +148,71 @@ const addLog = (id, n, t, act, b, cStr, cObj, r, x, y) => {
 	}
 };
 
+const resolvePath = (p) => {
+	if (!p) return p;
+	let path = String(p);
+	if (path.indexOf('~') === 0) {
+		let home = '';
+		try {
+			let isAndroid = false;
+			try {
+				isAndroid = !!Packages.android.os.Environment;
+			} catch (ae) {}
+
+			if (isAndroid) {
+				home = String(Packages.android.os.Environment.getExternalStorageDirectory().getAbsolutePath());
+			} else {
+				home = String(java.lang.System.getProperty("user.home"));
+			}
+		} catch (e) {
+			try {
+				home = String(java.lang.System.getProperty("user.home"));
+			} catch (e2) {}
+		}
+		if (home) {
+			if (path === '~') {
+				path = home;
+			} else if (path.indexOf('~/') === 0) {
+				path = home + path.substring(1);
+			} else if (path.indexOf('~\\') === 0) {
+				path = home + path.substring(1);
+			}
+		}
+	}
+	return path;
+};
+
+const getSaveInfo = (customPathInput, defaultFilename) => {
+	let customPath = customPathInput || Core.settings.getString('qol-logger-custom-save-path', '');
+	let d = null;
+	let f = null;
+
+	if (customPath) {
+		try {
+			let resolved = resolvePath(customPath);
+			let tempFi = new Packages.arc.files.Fi(resolved);
+			if (tempFi.exists() && !tempFi.isDirectory()) {
+				f = tempFi;
+				d = tempFi.parent();
+			} else if (resolved.toLowerCase().endsWith('.txt')) {
+				f = tempFi;
+				d = tempFi.parent();
+			} else {
+				d = tempFi;
+				f = d.child(defaultFilename);
+			}
+		} catch (err) {
+			d = Core.settings.getDataDirectory().child('qol');
+			f = d.child(defaultFilename);
+		}
+	} else {
+		d = Core.settings.getDataDirectory().child('qol');
+		f = d.child(defaultFilename);
+	}
+
+	return { dir: d, file: f };
+};
+
 const wLog = (f) => {
 	let out = '';
 	let arr = ['>', '^', '<', 'v'];
@@ -233,9 +298,11 @@ const updLog = () => {
 		}
 	}
 	if (!hasLogs && chatLogs.length === 0) return;
-	let d = Core.settings.getDataDirectory().child('qol');
-	if (!d.exists()) d.mkdirs();
-	wLog(d.child('main_log.txt'));
+	try {
+		let d = Core.settings.getDataDirectory().child('qol');
+		if (!d.exists()) d.mkdirs();
+		wLog(d.child('main_log.txt'));
+	} catch (e) {}
 };
 
 const showLogs = (fName) => {
@@ -392,12 +459,63 @@ const showLogs = (fName) => {
 			let dt = new Date();
 			let fn = 'log_' + dt.getFullYear() + '-' + (dt.getMonth()+1) + '-' + dt.getDate() +
 				'_' + dt.getHours() + '-' + dt.getMinutes() + '-' + dt.getSeconds() + '.txt';
-			let dir = Core.settings.getDataDirectory().child('qol');
-			if (!dir.exists()) dir.mkdirs();
-			let f = dir.child(fn);
-			wLog(f);
-			notify('[lightgrey]Saved to ' + f.absolutePath());
+			let saveInfo = getSaveInfo(null, fn);
+			let d = saveInfo.dir;
+			let f = saveInfo.file;
+			if (!d.exists()) {
+				try {
+					d.mkdirs();
+				} catch (e) {
+					notify('[scarlet]Failed to create directory: ' + e.message);
+					return;
+				}
+			}
+			try {
+				wLog(f);
+				notify('[lightgrey]Saved to ' + f.absolutePath());
+				if (Vars.platform) {
+					try {
+						Vars.platform.exportFile(f);
+					} catch (pe) {}
+				}
+			} catch (e) {
+				notify('[scarlet]Failed to write file: ' + e.message);
+			}
 		}).size(120, 40);
+
+		actRow.button('[accent]Path[]', Styles.cleart, function() {
+			let currentPath = Core.settings.getString('qol-logger-custom-save-path', '');
+			if (!currentPath) {
+				currentPath = Core.settings.getDataDirectory().child('qol').absolutePath();
+			}
+			Vars.ui.showTextInput('Log Save Path', 'Enter folder path:', currentPath, (text) => {
+				if (text !== null) {
+					let trimText = String(text).trim();
+					if (trimText === '') {
+						Core.settings.remove('qol-logger-custom-save-path');
+						Core.settings.forceSave();
+						notify('[green]Save path reset to default QoL directory.');
+					} else {
+						try {
+							let resolved = resolvePath(trimText);
+							let testDir = new Packages.arc.files.Fi(resolved);
+							if (!testDir.exists()) {
+								testDir.mkdirs();
+							}
+							if (testDir.exists() && testDir.isDirectory()) {
+								Core.settings.put('qol-logger-custom-save-path', trimText);
+								Core.settings.forceSave();
+								notify('[green]Save path set to: [white]' + trimText);
+							} else {
+								notify('[scarlet]Invalid folder path or cannot create directory.');
+							}
+						} catch (err) {
+							notify('[scarlet]Error: ' + err.message);
+						}
+					}
+				}
+			});
+		}).size(80, 40);
 
 		rightTable.add(actRow).left().padTop(4).row();
 	}
@@ -785,8 +903,10 @@ Events.on(WorldLoadEvent, () => {
 	knownPlayers = {};
 	unitCommanders = {};
 	initShadowMap();
-	let f = Core.settings.getDataDirectory().child('qol').child('main_log.txt');
-	if (f.exists()) f.writeString('');
+	try {
+		let f = Core.settings.getDataDirectory().child('qol').child('main_log.txt');
+		if (f.exists()) f.writeString('');
+	} catch (e) {}
 	enabled = false;
 });
 
@@ -1202,8 +1322,6 @@ interceptor.add('log', (args) => {
 		}
 		if (!hasLogs && chatLogs.length === 0)
 			return notify('[scarlet]No logs to save.');
-		let d = Core.settings.getDataDirectory().child('qol');
-		if (!d.exists()) d.mkdirs();
 		let dt = new Date(),
 			fn =
 				'log_' +
@@ -1218,13 +1336,64 @@ interceptor.add('log', (args) => {
 				dt.getMinutes() +
 				'-' +
 				dt.getSeconds() +
-				'.txt',
-			f = d.child(fn);
-		wLog(f);
-		notify('[lightgrey]Saved to ' + f.absolutePath());
+				'.txt';
+		let pathArg = args.slice(2).join(' ').trim();
+		let saveInfo = getSaveInfo(pathArg !== '' ? pathArg : null, fn);
+		let d = saveInfo.dir;
+		let f = saveInfo.file;
+		if (!d.exists()) {
+			try {
+				d.mkdirs();
+			} catch (e) {
+				return notify('[scarlet]Failed to create directory: ' + e.message);
+			}
+		}
+		try {
+			wLog(f);
+			notify('[lightgrey]Saved to ' + f.absolutePath());
+			if (Vars.platform) {
+				try {
+					Vars.platform.exportFile(f);
+				} catch (pe) {}
+			}
+		} catch (e) {
+			notify('[scarlet]Failed to save logs: ' + e.message);
+		}
+	} else if (sub === 'path' || sub === 'savepath') {
+		let pathArg = args.slice(2).join(' ').trim();
+		if (pathArg === '') {
+			let currentPath = Core.settings.getString('qol-logger-custom-save-path', '');
+			if (currentPath) {
+				notify('[lightgrey]Current save path: [accent]' + currentPath);
+			} else {
+				let defPath = Core.settings.getDataDirectory().child('qol').absolutePath();
+				notify('[lightgrey]Current save path: [accent]' + defPath + ' [gray](default)');
+			}
+		} else if (pathArg.toLowerCase() === 'reset' || pathArg.toLowerCase() === 'clear') {
+			Core.settings.remove('qol-logger-custom-save-path');
+			Core.settings.forceSave();
+			notify('[green]Save path reset to default QoL directory.');
+		} else {
+			try {
+				let resolved = resolvePath(pathArg);
+				let testDir = new Packages.arc.files.Fi(resolved);
+				if (!testDir.exists()) {
+					testDir.mkdirs();
+				}
+				if (testDir.exists() && testDir.isDirectory()) {
+					Core.settings.put('qol-logger-custom-save-path', pathArg);
+					Core.settings.forceSave();
+					notify('[green]Save path set to: [white]' + pathArg);
+				} else {
+					notify('[scarlet]Invalid path or directory cannot be created.');
+				}
+			} catch (err) {
+				notify('[scarlet]Error: ' + err.message);
+			}
+		}
 	} else if (sub === 'help') {
 		notify(
-			'[lightgrey]!log toggle <1/0?>\n!log status\n!log chat\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save'
+			'[lightgrey]!log toggle <1/0?>\n!log status\n!log chat\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save [path?]\n!log path [path/reset?]'
 		);
 	} else {
 		showLogs(f !== '' ? f : null);

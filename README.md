@@ -51,6 +51,22 @@ Supports entering multiple items at once:
 `!mining save` | `!m save`
 Saves the current enabled/disabled settings for units, resources, and the % of free units as default settings.
 
+#### `!mine`
+Automated player unit copper and lead mining with dynamic auto-balancing when core resources are low.
+
+`!mine <1/0?>`
+Toggles the player unit auto-mine feature on/off.
+
+`!mine s` | `!mine settings`
+Opens the settings dialog to configure the minimum threshold to start mining and maximum threshold to stop.
+
+#### `!select`
+Enables RTS control and selects all specified unit types on the map belonging to your team.
+
+`!select <units...>`
+Selects all units of the specified types on your team and activates RTS command mode.
+_Example:_ `!select poly mega` selects all poly and mega units on your team.
+
 #### `!assist` | `!as`
 Units around you within an `n` tile radius will help you build, even if they are currently mining.
 
@@ -134,7 +150,7 @@ Toggles the display of HP and shield for the unit you are currently shooting at.
 Tracks a specific player's HP and draws a line to them.
 
 #### `!log`
-Logs block placements, destructions and changed by all players. (may cause FPS drops and longer load in world)
+Logs block placements, destructions and changed by players. (may cause FPS drops and longer load in world)
 
 `!log toggle <1/0?>` | `!log t <1/0?>`
 Toggles the logger on/off.
@@ -154,8 +170,11 @@ Reverts all block destructions made by a specific player.
 `!log chat`
 Show chat loga (join/leave/ingame name change also).
 
-`!log save`
-Saves the logs to a file in Mindustry directory (/qol/).
+`!log save [path?]`
+Saves the logs to a file in Mindustry directory (`/qol/` by default, or the specified custom folder/file path).
+
+`!log path [path/reset?]`
+Views or sets the custom folder/file path for log saving. Use `reset` or `clear` to return to default.
 
 #### `!lookat` | `!la`
 `!lookat <x> <y>` | `!la <x> <y>`
@@ -264,7 +283,10 @@ Locks or unlocks custom button positions on your screen to prevent accidental dr
 Shows cursor position of all players / selected player and unit controlled by RTS and unit factory's set path. 
 
 `!track <rts/rec>`
-Turns on/off displays of players rts / reconstructor rally.
+Turns on/off visual displays of players RTS and reconstructor rally lines on-screen.
+
+`!track <notify/n> <1/0?>`
+Toggles chat notifications/alerts for players' RTS movements and reconstructor rally point changes. Features smart anti-spam coordinate and rate-limit filtering.
 
 #### `!wave`
 Skips to the next wave immediately, bypassing the `waitEnemies` map rule that normally hides the skip button while enemy units are alive.
@@ -312,14 +334,17 @@ Shows the list of all currently detected QoL Control users on the server.
 #### `!core <#team>`
 
 Displays core resourses of team #id you selected, can displays multiple.
-Also supports `sharded, crux, malis, green, blue`.
-`!core` will show core resourses of your team.
+Supports `sharded, crux, malis, green, blue` also.`!core` will show core resourses of your team.
 
 #### `!colors`
 
 You can customise all your mindustry colors from Pal.java.
 
 ## Features
+
+#### Player Auto-Mine
+
+Automatically pauses building and starts mining the nearest required resource when core copper or lead stocks fall below the minimum configured limit. It dynamically balances mining by targeting whichever resource has the lower amount in the core, continuing until the core stocks reach the maximum limit. It automatically resumes building/deconstructing when the thresholds are met or if the unit flies away from the ore.
 
 #### Plan Range & Block Highlight
 
@@ -416,7 +441,7 @@ There is also a optimizer that disables some unnecessary game features to increa
 
 All features can be fully disabled ingame settings meny.
 
-By default everything is diaabled, but you can enable anything if you want.
+By default everything is disabled, but you can disable anything if you want.
 
 
 For `!mlog` you can add your own mlog codes in:
@@ -432,7 +457,7 @@ For `!detector` you can add your own regex in:
 
 By default it contains `attem` and `wpx`.
 
-All logs from `!log save` saving in `/qol/`, it also always have default log `/qol/main_log.txt` from your last game if `!log toggle` was enabled.
+All logs from `!log save` are saved in `/qol/` (or your custom defined path), and it also always has a default log `/qol/main_log.txt` from your last game if `!log toggle` was enabled.
 
 ## Optimization
 

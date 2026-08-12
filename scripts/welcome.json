@@ -5,6 +5,6 @@
   "githubButton": "GitHub ⭐",
   "githubUrl": "https://github.com/TyT-xexebe/qol-control/",
   "updateTitle": "QoL Control Updated",
-  "updateText": "[accent]Mod updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]=== CHANGES ===[]\n- Minor fixes",
+  "updateText": "[accent]Mod updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]=== NEW FEATURES | IMPROVEMENTS ===[]\n\n[accent]PLAYER AUTO-MINE (!mine)[]\n- Toggle automated player copper/lead mining when core stocks are low.\n- Pauses active build plans to mine, then automatically resumes them once thresholds are satisfied.\n\n[accent]SELECT UNITS (!select)[]\n- Selects all friendly units of specified types across the map and activates RTS control mode. Example: [accent]!select poly mega[].\n\n[accent]3. RTS & RECONSTRUCTOR TRACKING (!track)[]\n- Tracks player RTS destinations and reconstructor rally points.\n- [accent]!track notify[] / [accent]!track n[]: Toggle chat notifications on/off.\n\n Fixed !mining save and some other bugs",
   "updateButton": "Got It"
 }

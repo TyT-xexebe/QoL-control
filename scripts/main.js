@@ -99,7 +99,6 @@ for (let modName in defaultSettings) {
 global.qolActiveModules = activeModules;
 
 require('qol-control/core/help');
-require('qol-control/core/users');
 require('qol-control/core/welcome');
 
 for (let module of activeModules) {
@@ -171,6 +170,10 @@ if (!Vars.headless) {
 							'!trace | !tr\nAutomatically possesses a specific unit type when it becomes available.\n\n!trace toggle <1/0?> | !tr t <1/0?>\nToggles trace mode on/off.\n\n!trace set <unit> | !tr s <unit>\nSets a specific unit type to automatically possess.\n\n!trace find | !tr f\nAutomatically possesses the best available unit based on a priority list.\n\n!trace status | !tr st\nShows the current trace status and priority list.',
 						'features/mining':
 							"!mining | !m\nTakes all free units on the map (that are enabled in your settings) and distributes them to mine the enabled resources.\n\n!mining set <sec> | !m s <sec>\nStarts the unit distribution algorithm and updates it every <sec> seconds. The best option is to set it to 4-10 seconds. Type 0 in <sec> to run the distribution only once.\n\n!mining stop | !m stop\nStops the distribution algorithm.\n\n!mining <units/items?> <1/0?> | !m <units/items?> <1/0?>\nToggles the setting of a unit or resource to the opposite of what it currently is (or explicitly sets it). Supports entering multiple at once: !mining scrap poly beryllium or !mining scrap poly 1\n\n!mining status | !m st\nShows the status of the algorithm, enabled/disabled units and resources, and the current unit distribution.\n\n!mining free <%> | !m f <%>\nSets the % (0-100) of free units. Any player can take <%> of the units from the miner, and it won't take them back. To give the units back to the miner, you must give them a rts task to mine, or the units must not move for 5 seconds (within a 2-tile radius).\n\n!mining ignore <unit> <items.../clear> <1/0?> | !m ig <unit? <items.../clear> <1/0?>\nToggles the setting of a unit which items it will ignore to mine\nSupports entering multiple items at once:\n!m ig poly scrap lead\n!!! settings of !m <items?> >>> then !m ig !!!\n\n!mining save | !m save\nSaves the current enabled/disabled settings for units, resources, and the % of free units as default settings.",
+						'features/playermine':
+							"!mine <1/0?>\nToggles player unit auto-mine on/off.\n\n!mine s | !mine settings\nOpens player unit auto-mine threshold and resource settings dialog.",
+						'features/select':
+							"Select Units\nEnables RTS control and adds all specified units on the map (for your team) to your RTS selection.\n\n!select <units...>\nExample: !select poly mega",
 						'features/autograb':
 							'!grab | !gr\nAutomatically grabs a specific item from any blocks in your radius.\n\n!grab <item> | !gr <item>\nSets the item to grab and enables it.\n\n!grab toggle <1/0?> | !gr t <1/0?>\nToggles autograb on/off.\n\n!grab min <val> | !gr min <val>\nSets the minimum amount of item in block to grab it.\n\n!grab status | !gr s\nShows the current grab status.\n\n!grab effects | !gr e\nToggles blocks effect display.',
 						'features/ai':
@@ -200,6 +203,8 @@ if (!Vars.headless) {
 							'Plan Range & Block Highlight\nHighlights the range of planned blocks, as well as currently selected overdrive projectors (and domes) and mass drivers.',
 						'features/multitask':
 							'Multitask (Shoot while Building/Mining)\nAllows you to shoot enemies without interrupting your mining or building processes. Your unit will automatically rotate its weapons to shoot at your cursor or the nearest enemy while still finishing the current build/mine task.',
+						'features/omnirot':
+							'Omni Rotation & Speed\nSets unit rotate speed to maximum and enables omnidirectional movement on all units.',
 						'ui/render':
 							'!render <bullet/unit/block/layer> <1/0?>\nToggles render of <?> (may have some issues on PC, or with using other mods, layers cursed af).',
 						'ui/camera':
@@ -327,20 +332,5 @@ Events.on(
 		Vars.maxSchematicSize = 512;
 		Vars.renderer.minZoom = 0.1;
 		Vars.renderer.maxZoom = 10.0;
-
-		Vars.content.units().each((u) => {
-			u.rotateSpeed = 9999;
-			u.omniMovement = true;
-		});
-	})
-);
-
-Events.on(
-	WorldLoadEvent,
-	cons((e) => {
-		Vars.content.units().each((u) => {
-			u.rotateSpeed = 9999;
-			u.omniMovement = true;
-		});
 	})
 );

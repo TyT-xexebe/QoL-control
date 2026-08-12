@@ -14,6 +14,14 @@ const helpData = {
 		cmd: 'mining',
 		desc: '[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]!mining\n<units/items> <1/0?>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm\n[accent]save[lightgrey] - saves current settings as default\n[accent]free <val%>[lightgrey] - sets % of units that can be taken from mining by rts by any player\n[accent]ignore <unit> <items.../clear> <1/0?>[lightgrey] - toggle items for specific unit type\n\n[accent]Shortcuts:[lightgrey] !m <units/items?> <1/0?> | !m s <sec> | !m stop | !m save | !m s | !m f <val%> | !m ig <unit> <items.../clear>',
 	},
+	'features/playermine': {
+		cmd: 'mine',
+		desc: '[lightgrey]Player Auto-Mine (automated player copper/lead mining with dynamic balance when core resources are low)\n\n[accent]!mine <1/0?>[lightgrey] - toggle player auto-mine\n[accent]!mine <s/settings>[lightgrey] - open auto-mine threshold configuration UI',
+	},
+	'features/select': {
+		cmd: 'select',
+		desc: '[lightgrey]Select Units\n\n[accent]!select <units...>[lightgrey] - Enables RTS control and selects all specified units on the map belonging to your team\nExample: !select poly mega',
+	},
 	'features/assist': {
 		cmd: 'assist',
 		desc: '[lightgrey]Builder mode (units will only build your blueprints)\n\n[accent]!assist\ntoggle <1/0?>[lightgrey] - on/off\n[accent]toggle <unit> <1/0?>[lightgrey] - toggle specific unit\n[accent]max <unit> <val>[lightgrey] - set max units to use\n[accent]range <val>[lightgrey] - set search radius (in blocks)\n[accent]status[lightgrey] - show settings\n[accent]save[lightgrey] - saves current settings as default\n\n[accent]Shortcuts:[lightgrey] !as t <1/0?> | !as t <unit> <1/0?> | !as m <unit> <val> | !as r <val> | !as s | !as save',
@@ -64,7 +72,7 @@ const helpData = {
 	},
 	'features/logger': {
 		cmd: 'log',
-		desc: "Logs all player (in your team) actions in the UI & .txt\n\n[accent]!log\n[lightgrey]toggle <1/0?> - on/off\n[accent]<name?>[lightgrey] - shows all players' actions (or by name)\n[accent]show <name?>[lightgrey] - shows all logs on the map (or of one player), may cause FPS drops\n[accent]revert <name>[lightgrey] - adds all destroyed buildings (by <name>) to your build plan\n[accent]status[lightgrey] - logger status\n[accent]chat[lightgrey] - chat logs (join/leave/ingame name change)\n[accent]save[lightgrey] - saves logs as a separate .txt file",
+		desc: "Logs all player (in your team) actions in the UI & .txt\n\n[accent]!log\n[lightgrey]toggle <1/0?> - on/off\n[accent]<name?>[lightgrey] - shows all players' actions (or by name)\n[accent]show <name?>[lightgrey] - shows all logs on the map (or of one player), may cause FPS drops\n[accent]revert <name>[lightgrey] - adds all destroyed buildings (by <name>) to your build plan\n[accent]status[lightgrey] - logger status\n[accent]chat[lightgrey] - chat logs (join/leave/ingame name change)\n[accent]save [path?][lightgrey] - saves logs as a separate .txt file (optional custom path)\n[accent]path [path/reset?][lightgrey] - view or set custom directory/file path for saves",
 	},
 	'features/here': {
 		cmd: 'here',
@@ -82,7 +90,7 @@ const helpData = {
 	'core/bind': { cmd: 'bind', desc: '[lightgrey]Keybinding for PC users' },
 	'features/track': {
 		cmd: 'track',
-		desc: "[lightgrey]Shows cursor and RTS control of players and unit factory's set path\n\n[accent]!track <name?>[lightgrey] - all players / selected by name\n[accent]!track <rts/rec>[lightgrey] - on/off displays of player rts/recpnstructor rally",
+		desc: "[lightgrey]Shows cursor and RTS control of players and unit factory's set path\n\n[accent]!track <name?>[lightgrey] - all players / selected by name\n[accent]!track <rts/rec>[lightgrey] - on/off displays of player rts/reconstructor rally\n[accent]!track <notify/n> <1/0?>[lightgrey] - toggle chat alerts for RTS and Rally moves",
 	},
 	'features/wave': {
 		cmd: 'wave',
@@ -91,6 +99,10 @@ const helpData = {
 	'features/aimbot': {
 		cmd: 'aim',
 		desc: '[lightgrey]Aimbot - auto aims and shoots at enemies\n\n[accent]!aim[lightgrey] - opens settings UI\n\nPer-preset options: attack units/blocks, heal blocks, predict fire, predict tiles, constant fire, disable shoot on reload, priority (Nearest/Farthest/Min-Max HP), type order (units/blocks/heal), target filter (Default/Ground/Air/etc)\n\nIgnored targets: set as CSV in the settings dialog (missiles, world processors, etc)\n\nTap a unit/block to lock it as priority target. Tap empty space to release.\n\nMay contains bugs with some units/weapons.',
+	},
+	'features/omnirot': {
+		cmd: 'omnirot',
+		desc: '[lightgrey]Fast rotation and omni-directional movement for all units',
 	},
 	'core/users': {
 		cmd: 'users',
@@ -120,7 +132,7 @@ interceptor.add('qol', (args) => {
 
 	if (subcmd === 'features') {
 		notify(
-			"[lightgrey]Fast rotation & omni-movement for all units\nCamera lock button\nbuild pause button\nquick chat button\nHeavy optimisation\nno Zoom limit\nAuto-leaves onho's units [FISH Servers]"
+			"[lightgrey]Camera lock button\nbuild pause button\nquick chat button\nHeavy optimisation\nno Zoom limit"
 		);
 		return;
 	}
