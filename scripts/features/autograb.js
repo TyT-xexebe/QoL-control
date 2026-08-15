@@ -1,9 +1,9 @@
 const notify = require('qol-control/core/logger').notify;
 
 const grab = {
-	active: false,
+	active: Core.settings.getBool('qol-grab-active', false),
 	item: null,
-	min: 10,
+	min: Core.settings.getInt('qol-grab-min', 10),
 	targets: [],
 	index: 0,
 	lastGrab: 0,
@@ -11,6 +11,13 @@ const grab = {
 	range: 216,
 	effects: Core.settings.getBool('qol-grab-effects', true),
 };
+
+try {
+	let itemName = Core.settings.getString('qol-grab-item', '');
+	if (itemName) {
+		grab.item = Vars.content.getByName(ContentType.item, itemName);
+	}
+} catch (e) {}
 
 function findTargets() {
 	grab.targets = [];
@@ -22,8 +29,6 @@ function findTargets() {
 }
 
 Events.on(WorldLoadEvent, () => {
-	grab.active = false;
-	grab.item = null;
 	grab.targets = [];
 });
 
@@ -97,14 +102,9 @@ Events.run(Trigger.update, () => {
 const interceptor = require('qol-control/core/interceptor');
 
 const grabHandler = (args) => {
-	if (args[1] === 'toggle' || args[1] === 't') {
-		grab.active = interceptor.parseToggle(grab.active, args[2]);
-		return notify(
-			'[lightgrey]Grab ' + (grab.active ? '[green]ON' : '[scarlet]OFF')
-		);
-	}
+	let sub = args[1] ? args[1].toLowerCase() : '';
 
-	if (args[1] === 'effects' || args[1] === 'e') {
+	if (sub === 'effects' || sub === 'e') {
 		grab.effects = interceptor.parseToggle(grab.effects, args[2]);
 		Core.settings.put('qol-grab-effects', grab.effects);
 		return notify(
@@ -113,14 +113,15 @@ const grabHandler = (args) => {
 		);
 	}
 
-	if (args[1] === 'min' && args[2]) {
+	if (sub === 'min' && args[2]) {
 		let val = parseInt(args[2]);
 		if (isNaN(val) || val < 1) return notify('[scarlet]<min> invalid');
 		grab.min = val;
+		Core.settings.put('qol-grab-min', new java.lang.Integer(grab.min));
 		return notify('[lightgrey]Grab <min> [accent]' + val);
 	}
 
-	if (args[1] === 'status' || args[1] === 's') {
+	if (sub === 'status' || sub === 's') {
 		return notify(
 			'[lightgrey]State ' +
 				(grab.active ? '[green]ON' : '[scarlet]OFF') +
@@ -133,23 +134,30 @@ const grabHandler = (args) => {
 		);
 	}
 
-	if (args[1]) {
-		let found = Vars.content.getByName(ContentType.item, args[1]);
-		if (found) {
-			grab.item = found;
-			grab.active = true;
-			return notify(
-				'[lightgrey]Grab [green]ON [lightgrey]([accent]' +
-					found.name +
-					'[lightgrey])'
-			);
-		} else {
-			return notify('[scarlet]Item ' + args[1] + ' not found');
-		}
+	let found = sub ? Vars.content.getByName(ContentType.item, sub) : null;
+	if (found) {
+		grab.item = found;
+		grab.active = true;
+		Core.settings.put('qol-grab-item', found.name);
+		Core.settings.put('qol-grab-active', grab.active);
+		return notify(
+			'[lightgrey]Grab [green]ON [lightgrey]([accent]' +
+				found.name +
+				'[lightgrey])'
+		);
 	}
 
-	notify(
-		'[lightgray]!grab <item>\n!grab toggle <1/0?>\n!grab min <val>\n!grab effects <1/0?>\n!grab status\n\n!gr <item>\n!gr t <1/0?>\n!gr min <val>\n!gr e <1/0?>\n!gr s'
+	let toggleArg = args[1];
+	if (sub && !interceptor.isBooleanArg(sub)) {
+		return notify(
+			'[lightgray]Usage: !grab <item> or !grab <1/0?> or !grab min <val> or !grab effects <1/0?>'
+		);
+	}
+
+	grab.active = interceptor.parseToggle(grab.active, toggleArg);
+	Core.settings.put('qol-grab-active', grab.active);
+	return notify(
+		'[lightgrey]Grab ' + (grab.active ? '[green]ON' : '[scarlet]OFF')
 	);
 };
 

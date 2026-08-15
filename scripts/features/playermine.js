@@ -243,6 +243,11 @@ interceptor.add('mine', (args) => {
 		return;
 	}
 
+	if (args[1] && !interceptor.isBooleanArg(args[1])) {
+		notify('[lightgray]Usage: !mine <1/0?> or !mine set/settings');
+		return;
+	}
+
 	state.enabled = interceptor.parseToggle(state.enabled, args[1]);
 	Core.settings.put('qol-playermine-enabled', new java.lang.Boolean(state.enabled));
 

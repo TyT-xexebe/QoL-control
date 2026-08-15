@@ -302,7 +302,7 @@ interceptor.add('track', (args) => {
 		return;
 	}
 
-	if (arg1 && !['toggle','1','0','true','false','on','off'].includes(arg1)) {
+	if (arg1 && !interceptor.isBooleanArg(arg1)) {
 		let found = null;
 		Groups.player.each((p) => {
 			if (Strings.stripColors(p.name).toLowerCase().includes(arg1)) found = p;
@@ -314,7 +314,7 @@ interceptor.add('track', (args) => {
 			notify('[scarlet]Player [white]' + args[1] + ' [scarlet]not found');
 		}
 	} else {
-		trackEnabled = interceptor.parseToggle(trackEnabled, arg1 === 'toggle' ? args[2] : arg1);
+		trackEnabled = interceptor.parseToggle(trackEnabled, arg1);
 		Core.settings.put('qol-track-enabled', trackEnabled);
 		if (!trackEnabled) {
 			trackedPlayer = null;

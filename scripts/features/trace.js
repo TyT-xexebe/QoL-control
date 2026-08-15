@@ -117,12 +117,15 @@ Events.on(WorldLoadEvent, () => {
 
 const traceHandler = (args) => {
 	let sub = args[1] ? args[1].toLowerCase() : '';
-	if (sub === 'toggle' || sub === 't') {
-		trace.enabled = interceptor.parseToggle(trace.enabled, args[2]);
+	if (!sub || interceptor.isBooleanArg(sub)) {
+		trace.enabled = interceptor.parseToggle(trace.enabled, args[1]);
 		notify(
 			'[lightgrey]Trace ' + (trace.enabled ? '[green]ON' : '[scarlet]OFF')
 		);
-	} else if ((sub === 'set' && args[2]) || (sub === 's' && args[2])) {
+		return;
+	}
+
+	if ((sub === 'set' && args[2]) || (sub === 's' && args[2])) {
 		let found = Vars.content.getByName(ContentType.unit, args[2]);
 		if (found) {
 			trace.mode = 'set';
@@ -231,7 +234,7 @@ const traceHandler = (args) => {
 		);
 	} else {
 		notify(
-			'[lightgray]!trace toggle <1/0?>\n!trace set <unit>\n!trace find\n!trace fconfig [units...]\n!trace status\n\n!tr t <1/0?>\n!tr s <unit>\n!tr f\n!tr st'
+			'[lightgray]!trace <1/0?>\n!trace set <unit>\n!trace find\n!trace fconfig [units...]\n!trace status\n\n!tr <1/0?>\n!tr s <unit>\n!tr f\n!tr st'
 		);
 	}
 };

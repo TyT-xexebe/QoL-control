@@ -100,6 +100,7 @@ global.qolActiveModules = activeModules;
 
 require('qol-control/core/help');
 require('qol-control/core/welcome');
+// require('qol-control/core/lags');
 
 for (let module of activeModules) {
 	try {
@@ -110,6 +111,30 @@ for (let module of activeModules) {
 		logger.err(e);
 	}
 }
+
+const toggleableFeatures = [
+	{ key: 'qol-assist-enabled', def: false, msg: '[lightgrey]Assist [green]ON' },
+	{ key: 'qol-track-enabled', def: false, msg: '[lightgray]Tracking [green]ON' },
+	{ key: 'qol-logger-enabled', def: false, msg: '[lightgrey]Logger [green]ON' },
+	{ key: 'qol-playermine-enabled', def: false, msg: '[lightgray]Player Auto-Mine:[] [green]ON[]' },
+	{ key: 'qol-autofill-enabled', def: false, msg: '[lightgrey]Autofill [green]ON' },
+	{ key: 'qol-grab-active', def: false, msg: '[lightgrey]Grab [green]ON' },
+	{ key: 'qol-aim-active', def: false, msg: '[lightgrey]Aimbot [green]ON' },
+	{ key: 'qol-trange-enabled', def: false, msg: '[lightgrey]Turret Ranges [green]ON' },
+	{ key: 'qol-urange-enabled', def: false, msg: '[lightgrey]Enemy Unit Ranges [green]ON' },
+	{ key: 'qol-hp-enabled', def: true, msg: '[lightgrey]HP Display [green]ON' }
+];
+
+Events.on(WorldLoadEvent, cons((e) => {
+	Time.run(60, run(() => {
+		if (!Vars.state.isGame()) return;
+		toggleableFeatures.forEach((t) => {
+			if (Core.settings.getBool(t.key, t.def)) {
+				logger.notify(t.msg);
+			}
+		});
+	}));
+}));
 
 if (!Vars.headless) {
 	let hasChanged = false;
@@ -167,25 +192,25 @@ if (!Vars.headless) {
 						'features/cghost':
 							'!cghost | !cg\nClears all your ghost blocks (destroyed blocks waiting to be rebuilt) if they in enemy turrets range.',
 						'features/trace':
-							'!trace | !tr\nAutomatically possesses a specific unit type when it becomes available.\n\n!trace toggle <1/0?> | !tr t <1/0?>\nToggles trace mode on/off.\n\n!trace set <unit> | !tr s <unit>\nSets a specific unit type to automatically possess.\n\n!trace find | !tr f\nAutomatically possesses the best available unit based on a priority list.\n\n!trace status | !tr st\nShows the current trace status and priority list.',
+							'!trace | !tr\nAutomatically possesses a specific unit type when it becomes available.\n\n!trace <1/0?> | !tr <1/0?>\nToggles trace mode on/off.\n\n!trace set <unit> | !tr s <unit>\nSets a specific unit type to automatically possess.\n\n!trace find | !tr f\nAutomatically possesses the best available unit based on a priority list.\n\n!trace status | !tr st\nShows the current trace status and priority list.',
 						'features/mining':
-							"!mining | !m\nTakes all free units on the map (that are enabled in your settings) and distributes them to mine the enabled resources.\n\n!mining set <sec> | !m s <sec>\nStarts the unit distribution algorithm and updates it every <sec> seconds. The best option is to set it to 4-10 seconds. Type 0 in <sec> to run the distribution only once.\n\n!mining stop | !m stop\nStops the distribution algorithm.\n\n!mining <units/items?> <1/0?> | !m <units/items?> <1/0?>\nToggles the setting of a unit or resource to the opposite of what it currently is (or explicitly sets it). Supports entering multiple at once: !mining scrap poly beryllium or !mining scrap poly 1\n\n!mining status | !m st\nShows the status of the algorithm, enabled/disabled units and resources, and the current unit distribution.\n\n!mining free <%> | !m f <%>\nSets the % (0-100) of free units. Any player can take <%> of the units from the miner, and it won't take them back. To give the units back to the miner, you must give them a rts task to mine, or the units must not move for 5 seconds (within a 2-tile radius).\n\n!mining ignore <unit> <items.../clear> <1/0?> | !m ig <unit? <items.../clear> <1/0?>\nToggles the setting of a unit which items it will ignore to mine\nSupports entering multiple items at once:\n!m ig poly scrap lead\n!!! settings of !m <items?> >>> then !m ig !!!\n\n!mining save | !m save\nSaves the current enabled/disabled settings for units, resources, and the % of free units as default settings.",
+							"!mining | !m\nTakes all free units on the map (that are enabled in your settings) and distributes them to mine the enabled resources.\n\n!mining ui | !m ui\nOpens the comprehensive, beautifully designed visual settings UI. In this menu you can configure the active units, target resources, specific unit type resource ignore rules, and the algorithm update interval in real-time.\n\n!mining set <sec> | !m s <sec>\nStarts the unit distribution algorithm and updates it every <sec> seconds. The best option is to set it to 4-10 seconds. Type 0 in <sec> to run the distribution only once.\n\n!mining stop | !m stop\nStops the distribution algorithm.\n\n!mining <units/items?> <1/0?> | !m <units/items?> <1/0?>\nToggles the setting of a unit or resource to the opposite of what it currently is (or explicitly sets it).\n\n!mining status | !m st\nShows the status of the algorithm, enabled/disabled units and resources, and the current unit distribution.\n\n!mining free <%> | !m f <%>\nSets the % (0-100) of free units. Any player can take <%> of the units from the miner, and it won't take them back. To give the units back to the miner, you must give them a rts task to mine, or the units must not move for 5 seconds (within a 2-tile radius).\n\n!mining ignore <unit> <items.../clear> <1/0?> | !m ig <unit? <items.../clear> <1/0?>\nToggles the setting of a unit which items it will ignore to mine.\n\n!mining save | !m save\nSaves the current enabled/disabled settings for units, resources, and the % of free units as default settings.",
 						'features/playermine':
 							"!mine <1/0?>\nToggles player unit auto-mine on/off.\n\n!mine s | !mine settings\nOpens player unit auto-mine threshold and resource settings dialog.",
 						'features/select':
 							"Select Units\nEnables RTS control and adds all specified units on the map (for your team) to your RTS selection.\n\n!select <units...>\nExample: !select poly mega",
 						'features/autograb':
-							'!grab | !gr\nAutomatically grabs a specific item from any blocks in your radius.\n\n!grab <item> | !gr <item>\nSets the item to grab and enables it.\n\n!grab toggle <1/0?> | !gr t <1/0?>\nToggles autograb on/off.\n\n!grab min <val> | !gr min <val>\nSets the minimum amount of item in block to grab it.\n\n!grab status | !gr s\nShows the current grab status.\n\n!grab effects | !gr e\nToggles blocks effect display.',
+							'!grab | !gr\nAutomatically grabs a specific item from any blocks in your radius.\n\n!grab <item> | !gr <item>\nSets the item to grab and enables it.\n\n!grab <1/0?> | !gr <1/0?>\nToggles autograb on/off.\n\n!grab min <val> | !gr min <val>\nSets the minimum amount of item in block to grab it.\n\n!grab status | !gr s\nShows the current grab status.\n\n!grab effects | !gr e\nToggles blocks effect display.',
 						'features/ai':
 							'!ai\nAI for automatic mining, building help and unit lock.\n\n!ai mining <item?> <1/0?> | !ai m <item?> <1/0?>\nToggles automatic mining  (can toggle specific items to mine).\n\n!ai build <name? | -1> <1/0?> | !ai b <name? | -1> <1/0?>\nToggles automatic building to help another playere to build. If a player name is provided, your unit will follow and help them build. Use -1 for AUTO mode.\n\n!ai lock <1/0?> | !ai l <1/0?>\nToggles lock mode, will fix your unit coordinates and mining coords.\n\n!ai status | !ai s\nShows the current AI status.',
 						'features/mlog':
 							"!mlog\nInjects mlog code from the /qol/mlog/ folder (in Mindustry directory) into processors.\n\n!mlog list\nLists all available .txt files in the mlog/ folder.\n\n!mlog <filename>\nInjects the code from the specified file into the first empty processor found on your team.\n\n!mlog <filename> set\nPrepares the code to be injected into a processor you shoot at.\n\n!mlog <filename> set\nDeletes .txt file\n\nMlog Editor Extensions\nRequires 'Features mlog' enabled in settings. This feature is experimental and lightly tested; bugs may occur. Always backup your processor code before merging.\nAvailable at the processors Edit menu:\n- Copy with Labels: Converts absolute line numbers in jump commands into text labels, and copies the result to the clipboard.\n- Save/Load to QoL: Saves the current processor code to the Mindustry/qol/mlog/ folder (survives mod updates), or opens a menu to load/delete existing one.\n- Save Range to QoL: Saves a specific chunk of code by defining start and end lines (0-indexed). (Jumps within the range are converted to labels, jumps pointing outside the range are set to -1)\n- Insert Code: Injects code from the clipboard or a saved file after a specified line (use -1 to insert at the very beginning). Automatically assigns unique label prefixes to both the existing and inserted code to prevent jump conflicts.\n- Replace Code: Finds and replaces specific lines or multi-line blocks of code throughout all processor. Automatically protects and updates all jump targets using labels, ensuring that replacing code blocks of different lengths wont break your existing jumps.\n\nProcessor Tracker & Variables\nProvides real-time visualization and debugging for logic processors.\n- Visual Connections: Tracks processor variables, drawing target lines from the processor to the blocks/units.\n- Variables Window: View live variable values, pause the processor execution, refresh config, and search through variables.\n- Tracker Window: Add track rules to variables. Set conditions (==, !=, >, <, >=, <=, changed, typeof, contains) and actions (none, pause, highlight, count, notify, camera) to trigger when variable changes. The camera action can track block/unit coordinates or custom x,y.",
 						'features/assist':
-							'!assist | !as\nUnits around you within an n tile radius will help you build, even if they are currently mining.\n\n!assist toggle <1/0?> | !as t <1/0?>\nToggles assist mode on/off.\n\n!assist toggle <unit> <1/0?> | !as t <unit> <1/0?>\nToggles assist mode for a specific unit type.\n\n!assist max <unit> <val> | !as m <unit> <val>\nSets the maximum number of a specific unit type that can assist you.\n\n!assist range <val> | !as r <val>\nSets the assist radius in blocks.\n\n!assist status | !as s\nShows the current assist settings and status.\n\n!assist save | !as save\nSaves the current assist settings as default.',
+							'!assist | !as\nUnits around you within an n tile radius will help you build, even if they are currently mining.\n\n!assist <1/0?> | !as <1/0?>\nToggles assist mode on/off.\n\n!assist <unit> <1/0?> | !as <unit> <1/0?>\nToggles assist mode for a specific unit type.\n\n!assist max <unit> <val> | !as m <unit> <val>\nSets the maximum number of a specific unit type that can assist you.\n\n!assist range <val> | !as r <val>\nSets the assist radius in blocks.\n\n!assist status | !as s\nShows the current assist settings and status.\n\n!assist save | !as save\nSaves the current assist settings as default.',
 						'features/autofill':
 							'!autofill <1/0?> | !af <1/0?>\nToggles autofilling of turrets with resources from the core / your inventory.',
 						'features/logger':
-							'!log\nLogs block placements, destructions and changed by players in your team. (may cause FPS drops and longer load in world)\n\n!log toggle <1/0?> | !log t <1/0?>\nToggles the logger on/off.\n\n!log status\nShows the current logger status.\n\n!log <name?>\nShows the logs, optionally filtered by player name.\n\n!log show <name?>\nDraws the logged actions on the map, optionally filtered by player name.\n\n!log revert <name>\nReverts all block destructions made by a specific player.\n\n!log chat\nShow chat loga (join/leave/ingame name change also).\n\n!log save\nSaves the logs to a file in Mindustry directory (/qol/).',
+							'!log\nLogs block placements, destructions and changed by players in your team. (may cause FPS drops and longer load in world)\n\n!log <1/0?>\nToggles the logger on/off.\n\n!log status\nShows the current logger status.\n\n!log <name?>\nShows the logs, optionally filtered by player name.\n\n!log show <name?>\nDraws the logged actions on the map, optionally filtered by player name.\n\n!log revert <name>\nReverts all block destructions made by a specific player.\n\n!log chat\nShow chat loga (join/leave/ingame name change also).\n\n!log save\nSaves the logs to a file in Mindustry directory (/qol/).',
 						'features/server':
 							'!server\nFast join to servers which you added to it.',
 						'features/mute':
@@ -210,12 +235,12 @@ if (!Vars.headless) {
 						'ui/camera':
 							'Camera lock button\nLocks your unit, while you can move your camera anywhere.',
 						'ui/table':
-							'!table\nTable of schematics which can be changed and moved.\n\n!table rows/cols <val>\nSets rows / columns of table.\n\n!table size <val>\nSets button size.\n\n!table reset\nResets table.\n\n!table toggle <1/0?>\nToggles On / Off table display.',
+							'!table\nTable of schematics which can be changed and moved.\n\n!table rows/cols <val>\nSets rows / columns of table.\n\n!table size <val>\nSets button size.\n\n!table reset\nResets table.\n\n!table <1/0?>\nToggles On / Off table display.',
 						'ui/buildpause': 'Build pause button\nPauses building.',
 						'ui/binfo':
 							'Build info\nShows build info (name, team, hp, itmes, liquids, power, battery) when hover/tap on it',
 						'ui/core':
-							'!core <#team>\nDisplays core resourses of team #id you selected, can displays multiple.\nSupports sharded, crux, malis, green, blue also.!core will show core resourses of your team.',
+							'!core <#team/all?>\nDisplays core resources of team #id or name you selected. !core all enables resource panels for ALL teams with active cores on the map.',
 						'ui/quickchat':
 							'Quick chat button.\nYou can add your own quick text buttons to send them in chat.\nYou can send multiple messages with a single just write them on separate lines.\nLong texts that exceed the games 150 character limit are automatically split into several messages.\nIncludes a default Auto Execute button that automatically sends your text or commands every time you join server/world. It has crash protection that disables it if the game crashes during execution.',
 						'ui/map':

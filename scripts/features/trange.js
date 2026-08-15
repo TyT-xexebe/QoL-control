@@ -1,7 +1,7 @@
 const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
 
-let trangeEnabled = false;
+let trangeEnabled = Core.settings.getBool('qol-trange-enabled', false);
 let trangeUpdateTimer = 0;
 let cachedTurrets = [];
 
@@ -10,7 +10,12 @@ Events.on(WorldLoadEvent, () => {
 });
 
 interceptor.add('trange', (args) => {
+	if (args[1] && !interceptor.isBooleanArg(args[1])) {
+		notify('[lightgray]Usage: !trange <1/0?>');
+		return;
+	}
 	trangeEnabled = interceptor.parseToggle(trangeEnabled, args[1]);
+	Core.settings.put('qol-trange-enabled', trangeEnabled);
 	if (!trangeEnabled) cachedTurrets = [];
 	notify(
 		'[lightgrey]Turret Ranges ' +

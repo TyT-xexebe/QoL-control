@@ -1,7 +1,7 @@
 const { notify } = require('qol-control/core/logger');
 const interceptor = require('qol-control/core/interceptor');
 
-let enabled = false,
+let enabled = Core.settings.getBool('qol-logger-enabled', false),
 	logs = {},
 	buffers = {},
 	shadowMap = {},
@@ -20,6 +20,11 @@ let knownPlayers = {};
 let playerCheckTimer = 0;
 let unitScanTimer = 0;
 let unitCommanders = {};
+
+function saveSettings() {
+	Core.settings.put('qol-logger-enabled', new java.lang.Boolean(enabled));
+	Core.settings.forceSave();
+}
 
 const setShadow = (t, b, c, r) => {
 	if (!t) return;
@@ -532,6 +537,7 @@ const showLogs = (fName) => {
 			Styles.cleart,
 			function() {
 				enabled = !enabled;
+				saveSettings();
 				if (enabled) {
 					failTraces = {}; knownPlayers = {};
 					Groups.player.each((p) => {
@@ -907,7 +913,7 @@ Events.on(WorldLoadEvent, () => {
 		let f = Core.settings.getDataDirectory().child('qol').child('main_log.txt');
 		if (f.exists()) f.writeString('');
 	} catch (e) {}
-	enabled = false;
+	enabled = Core.settings.getBool('qol-logger-enabled', false);
 });
 
 if (Vars.world && Vars.world.tiles) initShadowMap();
@@ -1216,8 +1222,9 @@ if (Vars.ui && Vars.ui.traces) setupTrace();
 interceptor.add('log', (args) => {
 	let sub = args[1],
 		f = sub || '';
-	if (sub === 'toggle' || sub === 't') {
-		enabled = interceptor.parseToggle(enabled, args[2]);
+	if (sub && interceptor.isBooleanArg(sub)) {
+		enabled = interceptor.parseToggle(enabled, sub);
+		saveSettings();
 		if (enabled) {
 			failTraces = {};
 			knownPlayers = {};
@@ -1393,7 +1400,7 @@ interceptor.add('log', (args) => {
 		}
 	} else if (sub === 'help') {
 		notify(
-			'[lightgrey]!log toggle <1/0?>\n!log status\n!log chat\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save [path?]\n!log path [path/reset?]'
+			'[lightgrey]!log <1/0?>\n!log status\n!log chat\n!log <name?>\n!log show <name?>\n!log revert <name>\n!log save [path?]\n!log path [path/reset?]'
 		);
 	} else {
 		showLogs(f !== '' ? f : null);

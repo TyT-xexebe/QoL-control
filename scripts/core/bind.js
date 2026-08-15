@@ -3,19 +3,117 @@ const SETTINGS_KEY = 'qol-binds';
 
 const allKeys = KeyCode.values();
 let dialog = null;
-let bindsCache = {};
+let bindsCache = [];
 let listeningCallback = null;
 let listeningDialog = null;
 
 function loadData() {
 	try {
-		let data = JSON.parse(Core.settings.getString(SETTINGS_KEY, '{}'));
+		let dataStr = Core.settings.getString(SETTINGS_KEY, '[]');
+		let data;
+		try {
+			data = JSON.parse(dataStr);
+		} catch (e) {
+			data = [];
+		}
+
+		if (data && typeof data === 'object' && !Array.isArray(data)) {
+			let migrated = [];
+			for (let key in data) {
+				let oldObj = data[key];
+				if (typeof oldObj === 'string') {
+					oldObj = {
+						cmd: oldObj,
+						enabled: true,
+						ips: ''
+					};
+				}
+				let newObj = {
+					key: key,
+					cmd: oldObj.cmd || '',
+					enabled: oldObj.enabled !== false,
+					ips: oldObj.ips || ''
+				};
+				migrated.push(newObj);
+			}
+			data = migrated;
+			saveData(data);
+		} else if (!Array.isArray(data)) {
+			data = [];
+		}
+
+		data.forEach(item => {
+			if (!item.key) item.key = '';
+			if (item.enabled === undefined) item.enabled = true;
+			if (item.ips === undefined) item.ips = '';
+			if (item.cmd === undefined) item.cmd = '';
+		});
+
 		bindsCache = data;
 		return data;
 	} catch (e) {
-		bindsCache = {};
-		return {};
+		bindsCache = [];
+		return [];
 	}
+}
+
+function isAllowedOnServer(ipsStr) {
+	if (!ipsStr) return true;
+	
+	let currentIpOnly = null;
+	let currentIpAndPort = null;
+	
+	try {
+		if (Vars.net.active() && Vars.net.client()) {
+			let hostField = Vars.netClient.getClass().getDeclaredField('host');
+			hostField.setAccessible(true);
+			let currentHost = hostField.get(Vars.netClient);
+			if (currentHost) {
+				let address = String(currentHost.address);
+				if (address.startsWith('/')) address = address.substring(1);
+				if (address.indexOf(':') !== -1) {
+					address = address.split(':')[0];
+				}
+				currentIpOnly = address;
+				currentIpAndPort = address + ":" + String(currentHost.port);
+			}
+		}
+	} catch (e) {}
+	
+	if (!currentIpOnly) {
+		let lastIp = String(Core.settings.getString('qol-last-ip', ''));
+		if (lastIp) {
+			if (lastIp.startsWith('/')) lastIp = lastIp.substring(1);
+			currentIpOnly = lastIp;
+			currentIpAndPort = lastIp;
+		}
+	}
+	if (!currentIpOnly) {
+		let ipSetting = String(Core.settings.getString('ip', ''));
+		if (ipSetting) {
+			if (ipSetting.startsWith('/')) ipSetting = ipSetting.substring(1);
+			currentIpOnly = ipSetting;
+			currentIpAndPort = ipSetting;
+		}
+	}
+	
+	if (!currentIpOnly) return false;
+	
+	let ips = ipsStr.split(',').map(s => String(s).trim().toLowerCase());
+	
+	for (let i = 0; i < ips.length; i++) {
+		let pattern = ips[i];
+		if (pattern.indexOf(':') !== -1) {
+			if (currentIpAndPort && currentIpAndPort.toLowerCase() === pattern) {
+				return true;
+			}
+		} else {
+			if (currentIpOnly && currentIpOnly.toLowerCase() === pattern) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 function saveData(data) {
@@ -55,22 +153,31 @@ function showMainMenu() {
 	let table = new Table();
 	table.top().left();
 
-	let keys = Object.keys(data);
-	if (keys.length === 0) {
+	if (data.length === 0) {
 		table.add('[lightgray]No keybinds found. Create one!').pad(10).row();
 	} else {
-		keys.forEach((key) => {
-			let cmd = data[key];
-			let displayCmd = cmd.replace(/\n/g, ' | ');
+		data.forEach((bindObj, index) => {
+			let key = bindObj.key;
+			let displayCmd = (bindObj.cmd || '').replace(/\n/g, ' | ');
 			let rowTable = new Table();
+
+			rowTable.check("", bindObj.enabled !== false, b => {
+				let currentData = loadData();
+				if (currentData[index]) {
+					currentData[index].enabled = b;
+					saveData(currentData);
+				}
+			}).padRight(5);
 
 			let btnCell = rowTable.button(
 				cons((b) => {
 					b.left();
 					b.add('[accent]' + key)
-						.width(140)
+						.width(100)
 						.left()
-						.padRight(10);
+						.padRight(10)
+						.get()
+						.setEllipsis(true);
 
 					let infoCell = b
 						.add('[white]' + displayCmd)
@@ -80,16 +187,16 @@ function showMainMenu() {
 					infoCell.get().setEllipsis(true);
 				}),
 				() => {
-					showEditBindDialog(key, cmd);
+					showEditBindDialog(index, bindObj);
 				}
 			);
 
-			btnCell.size(300, 60).left().padRight(10);
+			btnCell.size(260, 60).left().padRight(10);
 			btnCell.get().setStyle(Styles.cleart);
 
 			rowTable
 				.button(Icon.edit, Styles.cleari, () => {
-					showEditBindDialog(key, cmd);
+					showEditBindDialog(index, bindObj);
 				})
 				.size(45, 60);
 
@@ -97,12 +204,10 @@ function showMainMenu() {
 				.button(Icon.trash, Styles.cleari, () => {
 					Vars.ui.showConfirm(
 						'Delete Bind',
-						"Are you sure you want to delete the bind for '" +
-							key +
-							"'?",
+						"Are you sure you want to delete this bind?",
 						() => {
 							let currentData = loadData();
-							delete currentData[key];
+							currentData.splice(index, 1);
 							saveData(currentData);
 							showMainMenu();
 						}
@@ -118,7 +223,7 @@ function showMainMenu() {
 
 	dialog.cont
 		.button('Add Bind', Icon.add, () => {
-			showEditBindDialog('', '');
+			showEditBindDialog(-1, null);
 		})
 		.size(440, 50)
 		.padTop(10);
@@ -142,12 +247,14 @@ function showListeningDialog(callback) {
 	};
 }
 
-function showEditBindDialog(existingKey, existingCmd) {
-	let isNew = existingKey === '';
+function showEditBindDialog(index, existingBind) {
+	let isNew = index === -1;
 	let d = new BaseDialog(isNew ? 'Add Bind' : 'Edit Bind');
 
-	let key = existingKey;
-	let cmd = existingCmd;
+	let key = existingBind ? (existingBind.key || '') : '';
+	let cmd = existingBind ? (existingBind.cmd || '') : '';
+	let ips = existingBind ? (existingBind.ips || '') : '';
+	let enabled = existingBind ? (existingBind.enabled !== false) : true;
 
 	let t = new Table();
 
@@ -162,9 +269,13 @@ function showEditBindDialog(existingKey, existingCmd) {
 		.size(250, 50);
 	t.row();
 
+	t.add('Server IPs (comma separated): ').colspan(2).padTop(10).left().row();
+	let ipField = t.field(ips, (txt) => (ips = txt)).size(400, 45).colspan(2).get();
+	t.row();
+
 	t.add('Command: ').colspan(2).padTop(10).left().row();
 	t.area(cmd, (txt) => (cmd = txt))
-		.size(400, 200)
+		.size(400, 150)
 		.colspan(2)
 		.padTop(5)
 		.row();
@@ -180,10 +291,17 @@ function showEditBindDialog(existingKey, existingCmd) {
 			}
 
 			let data = loadData();
-			if (!isNew && existingKey !== key) {
-				delete data[existingKey];
+			let newBind = {
+				key: key,
+				cmd: cmd,
+				enabled: enabled,
+				ips: ips
+			};
+			if (isNew) {
+				data.push(newBind);
+			} else {
+				data[index] = newBind;
 			}
-			data[key] = cmd;
 			saveData(data);
 
 			d.hide();
@@ -244,7 +362,12 @@ Events.run(Trigger.update, () => {
 	if (!Vars.state.isGame() || Vars.state.isMenu()) return;
 	if (Core.scene.hasKeyboard() || Vars.ui.chatfrag.shown()) return;
 
-	for (let bindStr in bindsCache) {
+	for (let i = 0; i < bindsCache.length; i++) {
+		let bindObj = bindsCache[i];
+		if (!bindObj || bindObj.enabled === false) continue;
+		let bindStr = bindObj.key;
+		if (!bindStr) continue;
+
 		let parts = bindStr.split('+');
 		let baseKeyStr = parts.pop();
 		let needsCtrl = parts.indexOf('ctrl') !== -1;
@@ -274,8 +397,9 @@ Events.run(Trigger.update, () => {
 				needsAlt === hasAlt &&
 				needsShift === hasShift
 			) {
-				let cmd = bindsCache[bindStr];
-				executeChat(cmd);
+				if (isAllowedOnServer(bindObj.ips)) {
+					executeChat(bindObj.cmd);
+				}
 			}
 		}
 	}

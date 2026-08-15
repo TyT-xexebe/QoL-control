@@ -8,10 +8,74 @@ let allIcons = [];
 
 function loadButtons() {
 	try {
-		return JSON.parse(Core.settings.getString(SETTINGS_KEY, '[]'));
+		let data = JSON.parse(Core.settings.getString(SETTINGS_KEY, '[]'));
+		data.forEach(btn => {
+			if (btn.enabled === undefined) btn.enabled = true;
+			if (btn.ips === undefined) btn.ips = '';
+		});
+		return data;
 	} catch (e) {
 		return [];
 	}
+}
+
+function isAllowedOnServer(ipsStr) {
+	if (!ipsStr) return true;
+	
+	let currentIpOnly = null;
+	let currentIpAndPort = null;
+	
+	try {
+		if (Vars.net.active() && Vars.net.client()) {
+			let hostField = Vars.netClient.getClass().getDeclaredField('host');
+			hostField.setAccessible(true);
+			let currentHost = hostField.get(Vars.netClient);
+			if (currentHost) {
+				let address = String(currentHost.address);
+				if (address.startsWith('/')) address = address.substring(1);
+				if (address.indexOf(':') !== -1) {
+					address = address.split(':')[0];
+				}
+				currentIpOnly = address;
+				currentIpAndPort = address + ":" + String(currentHost.port);
+			}
+		}
+	} catch (e) {}
+	
+	if (!currentIpOnly) {
+		let lastIp = String(Core.settings.getString('qol-last-ip', ''));
+		if (lastIp) {
+			if (lastIp.startsWith('/')) lastIp = lastIp.substring(1);
+			currentIpOnly = lastIp;
+			currentIpAndPort = lastIp;
+		}
+	}
+	if (!currentIpOnly) {
+		let ipSetting = String(Core.settings.getString('ip', ''));
+		if (ipSetting) {
+			if (ipSetting.startsWith('/')) ipSetting = ipSetting.substring(1);
+			currentIpOnly = ipSetting;
+			currentIpAndPort = ipSetting;
+		}
+	}
+	
+	if (!currentIpOnly) return false;
+	
+	let ips = ipsStr.split(',').map(s => String(s).trim().toLowerCase());
+	
+	for (let i = 0; i < ips.length; i++) {
+		let pattern = ips[i];
+		if (pattern.indexOf(':') !== -1) {
+			if (currentIpAndPort && currentIpAndPort.toLowerCase() === pattern) {
+				return true;
+			}
+		} else {
+			if (currentIpOnly && currentIpOnly.toLowerCase() === pattern) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 function saveButtons(data) {
@@ -209,6 +273,9 @@ function rebuildHUD() {
 	let isLocked = Core.settings.getBool('qol-cbinds-locked', false);
 
 	buttons.forEach((btnConfig) => {
+		if (btnConfig.enabled === false) return;
+		if (btnConfig.ips && !isAllowedOnServer(btnConfig.ips)) return;
+
 		let table = new Table();
 		Vars.ui.hudGroup.addChild(table);
 
@@ -339,6 +406,15 @@ function showMainMenu() {
 		buttons.forEach((btnConfig, index) => {
 			let rowTable = new Table();
 
+			rowTable.check("", btnConfig.enabled !== false, b => {
+				let currentButtons = loadButtons();
+				if (currentButtons[index]) {
+					currentButtons[index].enabled = b;
+					saveButtons(currentButtons);
+					rebuildHUD();
+				}
+			}).padRight(5);
+
 			let drawable = getIconDrawable(btnConfig.iconName, btnConfig.iconType);
 			let displayCmd = (btnConfig.commands || '').replace(/\n/g, ' | ');
 
@@ -348,7 +424,7 @@ function showMainMenu() {
 					b.image(drawable).size(24).padRight(4);
 				}
 				b.add('[accent]' + (btnConfig.name || (btnConfig.iconName ? "[" + btnConfig.iconName + "]" : "Unnamed")))
-					.width(140)
+					.width(100)
 					.left()
 					.padRight(10)
 					.get()
@@ -363,7 +439,7 @@ function showMainMenu() {
 				showEditDialog(index, btnConfig);
 			});
 
-			btnCell.size(300, 60).left().padRight(10);
+			btnCell.size(260, 60).left().padRight(10);
 			btnCell.get().setStyle(Styles.cleart);
 
 			rowTable.button(Icon.edit, Styles.cleari, () => {
@@ -414,6 +490,8 @@ function showEditDialog(index, btnData) {
 	let heightVal = btnData.height || 50;
 	let commands = btnData.commands || '';
 	let noBackground = btnData.noBackground || false;
+	let enabled = btnData.enabled !== false;
+	let ips = btnData.ips || '';
 
 	let t = new Table();
 	t.top().left();
@@ -469,9 +547,13 @@ function showEditDialog(index, btnData) {
 		noBackground = b;
 	}).colspan(2).padTop(10).left().row();
 
+	t.add('Server IPs (comma separated): ').colspan(2).padTop(10).left().row();
+	let ipField = t.field(ips, (txt) => (ips = txt)).size(400, 45).colspan(2).get();
+	t.row();
+
 	t.add('Commands/Messages: ').colspan(2).padTop(15).left().row();
 	t.area(commands, (txt) => (commands = txt))
-		.size(400, 180)
+		.size(400, 150)
 		.colspan(2)
 		.padTop(5)
 		.row();
@@ -495,6 +577,8 @@ function showEditDialog(index, btnData) {
 				width: widthVal,
 				height: heightVal,
 				commands: commands,
+				enabled: enabled,
+				ips: ips,
 				x: btnData.x || (Core.graphics.getWidth() / 2),
 				y: btnData.y || (Core.graphics.getHeight() / 2)
 			});
@@ -507,6 +591,8 @@ function showEditDialog(index, btnData) {
 				width: widthVal,
 				height: heightVal,
 				commands: commands,
+				enabled: enabled,
+				ips: ips,
 				x: btnData.x,
 				y: btnData.y
 			};
@@ -527,6 +613,10 @@ function handleCommand(args) {
 		if (sub === 'lock') {
 			let val = true;
 			if (args.length > 2) {
+				if (!interceptor.isBooleanArg(args[2])) {
+					Vars.ui.showInfoFade('[scarlet]Usage: !cbinds lock <1/0?>');
+					return;
+				}
 				val = interceptor.parseToggle(Core.settings.getBool('qol-cbinds-locked', false), args[2]);
 			} else {
 				val = !Core.settings.getBool('qol-cbinds-locked', false);

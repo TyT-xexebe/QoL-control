@@ -22,7 +22,7 @@ const state = {
 		beryllium: 3,
 	},
 	ignored: {},
-	interval: 0,
+	interval: 5,
 	freePercent: 50,
 };
 
@@ -35,6 +35,8 @@ try {
 	if (ig) Object.assign(state.ignored, JSON.parse(ig));
 	let f = Core.settings.getInt('qol-mining-free', 50);
 	state.freePercent = f;
+	let iv = Core.settings.getInt('qol-mining-interval', 5);
+	state.interval = iv;
 } catch (e) {}
 
 const itemColors = {
@@ -320,8 +322,229 @@ Events.on(WorldLoadEvent, () => {
 	stopIdleTracker();
 });
 
+function showMiningSettingsDialog() {
+	let d = new BaseDialog('Mining Controller Settings');
+	let scroll = null;
+	let lastScrollY = 0;
+
+	let rebuild = () => {
+		if (scroll) {
+			lastScrollY = scroll.getScrollY();
+		}
+		d.cont.clear();
+
+		let mainTable = new Table();
+		mainTable.top();
+
+		let leftTable = new Table();
+		leftTable.top().left();
+
+		let rightTable = new Table();
+		rightTable.top().left();
+
+		leftTable.add('[accent]=== GENERAL ===[]').colspan(2).left().padBottom(10).row();
+
+		leftTable.add('[lightgray]Mining Algorithm:[]').left().padRight(10);
+		leftTable.button(miningTask ? '[green]RUNNING' : '[scarlet]STOPPED', () => {
+			if (miningTask) {
+				miningTask.cancel();
+				miningTask = null;
+				stopIdleTracker();
+				notify('[scarlet]Mining stopped');
+			} else {
+				let interval = state.interval || 5;
+				if (interval <= 0) interval = 5;
+				state.interval = interval;
+				miningTask = Timer.schedule(() => {
+					try {
+						runMining();
+					} catch(e) {
+						if (miningTask) miningTask.cancel();
+						miningTask = null;
+						stopIdleTracker();
+					}
+				}, 0, interval);
+				startIdleTracker();
+				notify('[green]Mining started ([accent]' + interval + '[green]s)');
+			}
+			rebuild();
+		}).size(150, 45);
+		leftTable.row();
+
+		leftTable.add('[lightgray]Interval (sec):[]').left().padTop(10).padRight(10);
+		let intervalTable = new Table();
+		intervalTable.button('-', Styles.cleart, () => {
+			if (state.interval > 1) {
+				state.interval = Math.max(1, state.interval - 1);
+				if (miningTask) {
+					miningTask.cancel();
+					miningTask = Timer.schedule(() => {
+						try { runMining(); } catch(e) { if (miningTask) miningTask.cancel(); miningTask = null; stopIdleTracker(); }
+					}, 0, state.interval);
+				}
+				rebuild();
+			}
+		}).size(40, 40).padRight(5);
+		
+		intervalTable.field(String(state.interval || 5), txt => {
+			let n = parseFloat(txt);
+			if (!isNaN(n) && n > 0) {
+				state.interval = n;
+				if (miningTask) {
+					miningTask.cancel();
+					miningTask = Timer.schedule(() => {
+						try { runMining(); } catch(e) { if (miningTask) miningTask.cancel(); miningTask = null; stopIdleTracker(); }
+					}, 0, state.interval);
+				}
+			}
+		}).width(60).padRight(5);
+
+		intervalTable.button('+', Styles.cleart, () => {
+			state.interval = (state.interval || 5) + 1;
+			if (miningTask) {
+				miningTask.cancel();
+				miningTask = Timer.schedule(() => {
+					try { runMining(); } catch(e) { if (miningTask) miningTask.cancel(); miningTask = null; stopIdleTracker(); }
+				}, 0, state.interval);
+			}
+			rebuild();
+		}).size(40, 40);
+
+		leftTable.add(intervalTable).padTop(10).left().row();
+
+		leftTable.add('[lightgray]Free Units (%):[]').left().padTop(10).padRight(10);
+		let freeTable = new Table();
+		freeTable.button('-10', Styles.cleart, () => {
+			state.freePercent = Math.max(0, state.freePercent - 10);
+			rebuild();
+		}).size(50, 40).padRight(5);
+
+		freeTable.field(String(state.freePercent), txt => {
+			let n = parseInt(txt);
+			if (!isNaN(n) && n >= 0 && n <= 100) {
+				state.freePercent = n;
+			}
+		}).width(60).padRight(5);
+
+		freeTable.button('+10', Styles.cleart, () => {
+			state.freePercent = Math.min(100, state.freePercent + 10);
+			rebuild();
+		}).size(50, 40);
+
+		leftTable.add(freeTable).padTop(10).left().row();
+
+		leftTable.add('[accent]=== ACTIVE UNITS ===[]').colspan(2).left().padTop(20).padBottom(10).row();
+		for (let uName in state.units) {
+			let currentUnit = uName;
+			leftTable.check(currentUnit.toUpperCase(), state.units[currentUnit], b => {
+				state.units[currentUnit] = b;
+			}).colspan(2).left().padBottom(5).row();
+		}
+
+		rightTable.add('[accent]=== RESOURCES TO MINE ===[]').colspan(2).left().padBottom(10).row();
+		for (let iName in state.items) {
+			let currentItem = iName;
+			let color = itemColors[currentItem] || '[white]';
+			rightTable.check(color + currentItem.toUpperCase() + '[]', state.items[currentItem], b => {
+				state.items[currentItem] = b;
+				rebuild();
+			}).colspan(2).left().padBottom(5).row();
+		}
+
+		rightTable.add('[accent]=== UNIT RESOURCE IGNORES ===[]').colspan(2).left().padTop(15).padBottom(10).row();
+		
+		let ignoreTable = new Table();
+		ignoreTable.left();
+		
+		ignoreTable.add('').padRight(10);
+		for (let iName in state.items) {
+			let color = itemColors[iName] || '[white]';
+			ignoreTable.add(color + iName.substring(0, 3).toUpperCase() + '[]').padRight(10).center();
+		}
+		ignoreTable.row();
+
+		for (let uName in state.units) {
+			let currentUnit = uName;
+			ignoreTable.add('[lightgray]' + currentUnit.toUpperCase() + '[]').padRight(10).left();
+			
+			for (let iName in state.items) {
+				let currentItem = iName;
+				let isGlobalEnabled = state.items[currentItem];
+
+				let uType = Vars.content.unit(currentUnit);
+				let unitMineTier = uType ? uType.mineTier : ({ mono: 1, poly: 2, pulsar: 2, mega: 3, quasar: 3 }[currentUnit] || 1);
+				let itemTier = state.itemTiers[currentItem] || 1;
+
+				if (!isGlobalEnabled || unitMineTier < itemTier) {
+					ignoreTable.add('[gray]-[]').size(42, 35).padRight(10).center();
+				} else {
+					let isIgnored = state.ignored[currentUnit] && state.ignored[currentUnit][currentItem];
+					
+					ignoreTable.button(isIgnored ? '[scarlet]IG[]' : '[green]OK[]', Styles.cleart, () => {
+						if (!state.ignored[currentUnit]) state.ignored[currentUnit] = {};
+						if (isIgnored) {
+							delete state.ignored[currentUnit][currentItem];
+							if (Object.keys(state.ignored[currentUnit]).length === 0) {
+								delete state.ignored[currentUnit];
+							}
+						} else {
+							state.ignored[currentUnit][currentItem] = true;
+						}
+						rebuild();
+					}).size(42, 35).padRight(10);
+				}
+			}
+			ignoreTable.row();
+		}
+		rightTable.add(ignoreTable).colspan(2).left().row();
+
+		mainTable.add(leftTable).top().padRight(40);
+		mainTable.add(rightTable).top();
+
+		scroll = new ScrollPane(mainTable);
+		scroll.setScrollY(lastScrollY);
+		d.cont.add(scroll).grow().row();
+
+		let bottomTable = new Table();
+		bottomTable.button('Save Defaults', Icon.save, () => {
+			try {
+				Core.settings.put('qol-mining-units', String(JSON.stringify(state.units)));
+				Core.settings.put('qol-mining-items', String(JSON.stringify(state.items)));
+				Core.settings.put('qol-mining-ignored', String(JSON.stringify(state.ignored)));
+				try {
+					Core.settings.put('qol-mining-free', new java.lang.Integer(state.freePercent));
+					Core.settings.put('qol-mining-interval', new java.lang.Integer(state.interval));
+				} catch (e) {
+					Core.settings.put('qol-mining-free', state.freePercent);
+					Core.settings.put('qol-mining-interval', state.interval);
+				}
+				if (typeof Core.settings.forceSave === 'function') {
+					Core.settings.forceSave();
+				}
+				notify('[green]Mining settings saved');
+			} catch (err) {
+				notify('[scarlet]Save error: ' + err);
+			}
+		}).size(220, 50).padRight(15);
+
+		bottomTable.button('Close', Icon.cancel, () => {
+			d.hide();
+		}).size(220, 50);
+
+		d.cont.add(bottomTable).padTop(15);
+	};
+
+	rebuild();
+	d.show();
+}
+
 const miningHandler = (args) => {
 	let arg1 = args[1] ? String(args[1]).toLowerCase().trim() : '';
+
+	if (arg1 === 'ui') {
+		showMiningSettingsDialog();
+		return;
+	}
 
 	if (arg1 === 'stop') {
 		if (miningTask) {
@@ -340,8 +563,10 @@ const miningHandler = (args) => {
 			Core.settings.put('qol-mining-ignored', String(JSON.stringify(state.ignored)));
 			try {
 				Core.settings.put('qol-mining-free', new java.lang.Integer(state.freePercent));
+				Core.settings.put('qol-mining-interval', new java.lang.Integer(state.interval));
 			} catch (e) {
 				Core.settings.put('qol-mining-free', state.freePercent);
+				Core.settings.put('qol-mining-interval', state.interval);
 			}
 			if (typeof Core.settings.forceSave === 'function') {
 				Core.settings.forceSave();
@@ -363,9 +588,15 @@ const miningHandler = (args) => {
 	}
 
 	if (arg1 === 'set' || arg1 === 's') {
-		let time = parseFloat(args[2]);
-		if (isNaN(time) || time < 0)
-			return notify('[lightgrey]!mining set <sec>');
+		let time;
+		if (args[2] !== undefined && String(args[2]).trim() !== '') {
+			time = parseFloat(args[2]);
+			if (isNaN(time) || time < 0)
+				return notify('[lightgrey]!mining set <sec>');
+		} else {
+			time = state.interval;
+			if (time <= 0) time = 5;
+		}
 
 		state.interval = time;
 		if (time === 0) {
@@ -537,7 +768,7 @@ const miningHandler = (args) => {
 	}
 
 	notify(
-		'[lightgray]!mining status\n!mining <units/items?> <1/0?>\n!mining ignore <unit> <items.../clear>\n!mining set <sec>\n!mining free <0-100>\n!mining stop\n!mining save\n\n!m st\n!m <units/items?> <1/0?>\n!m ig <unit> <items.../clear>\n!m s <sec>\n!m f <0-100>\n!m stop\n!m save'
+		'[lightgray]!mining ui\n!mining status\n!mining <units/items?> <1/0?>\n!mining ignore <unit> <items.../clear>\n!mining set <sec>\n!mining free <0-100>\n!mining stop\n!mining save\n\n!m ui\n!m st\n!m <units/items?> <1/0?>\n!m ig <unit> <items.../clear>\n!m s <sec>\n!m f <0-100>\n!m stop\n!m save'
 	);
 };
 

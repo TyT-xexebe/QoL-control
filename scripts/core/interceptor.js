@@ -276,9 +276,15 @@ Events.on(ClientLoadEvent, (e) => {
 	} catch (e) {}
 });
 
+function isBooleanArg(arg) {
+	if (!arg) return true;
+	let lower = String(arg).toLowerCase();
+	return lower === '1' || lower === '0' || lower === 'true' || lower === 'false' || lower === 'on' || lower === 'off' || lower === 'yes' || lower === 'no';
+}
+
 function parseToggle(current, arg) {
 	if (!arg) return !current;
-	arg = arg.toLowerCase();
+	arg = String(arg).toLowerCase();
 	if (arg === '1' || arg === 'true' || arg === 'on' || arg === 'yes')
 		return true;
 	if (arg === '0' || arg === 'false' || arg === 'off' || arg === 'no')
@@ -289,5 +295,6 @@ function parseToggle(current, arg) {
 module.exports = {
 	add: registerCommand,
 	parseToggle: parseToggle,
+	isBooleanArg: isBooleanArg,
 	addPacketModifier: addPacketModifier,
 };

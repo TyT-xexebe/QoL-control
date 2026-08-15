@@ -4,7 +4,7 @@ const interceptor = require('qol-control/core/interceptor');
 const helpData = {
 	'features/trace': {
 		cmd: 'trace',
-		desc: '[lightgrey]Finds a unit [in your team and not controlled by player/processor] and tries to possess it\n\n[accent]!trace\ntoggle <1/0?>[lightgrey] - on/off\n[accent]set <unitType>[lightgrey] - set specific unit type to search and possess\n[accent]find[lightgrey] - possess the highest-priority unit found [preset list in status]\n[accent]status[lightgrey] - show trace status\n\n[accent]Shortcuts:[lightgrey] !tr t <1/0?> | !tr s <unit> | !tr f | !tr st',
+		desc: '[lightgrey]Finds a unit [in your team and not controlled by player/processor] and tries to possess it\n\n[accent]!trace <1/0?>[lightgrey] - on/off\n[accent]set <unitType>[lightgrey] - set specific unit type to search and possess\n[accent]find[lightgrey] - possess the highest-priority unit found [preset list in status]\n[accent]status[lightgrey] - show trace status\n\n[accent]Shortcuts:[lightgrey] !tr <1/0?> | !tr s <unit> | !tr f | !tr st',
 	},
 	'features/ai': {
 		cmd: 'ai',
@@ -12,7 +12,7 @@ const helpData = {
 	},
 	'features/mining': {
 		cmd: 'mining',
-		desc: '[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]!mining\n<units/items> <1/0?>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm\n[accent]save[lightgrey] - saves current settings as default\n[accent]free <val%>[lightgrey] - sets % of units that can be taken from mining by rts by any player\n[accent]ignore <unit> <items.../clear> <1/0?>[lightgrey] - toggle items for specific unit type\n\n[accent]Shortcuts:[lightgrey] !m <units/items?> <1/0?> | !m s <sec> | !m stop | !m save | !m s | !m f <val%> | !m ig <unit> <items.../clear>',
+		desc: '[lightgrey]Mining control for mono/poly/pulsar/quasar/mega\n\n[accent]!mining ui[lightgrey] - opens visual settings UI\n[accent]!mining <units/items> <1/0?>[lightgrey] - toggle units/items [ON/OFF], multiple allowed\n[accent]set <sec>[lightgrey] - enable mining algorithm (repeats every <sec> sec)\n[accent]stop[lightgrey] - stop mining algorithm\n[accent]save[lightgrey] - saves current settings as default\n[accent]free <val%>[lightgrey] - sets % of units that can be taken from mining by rts by any player\n[accent]ignore <unit> <items.../clear> <1/0?>[lightgrey] - toggle items for specific unit type\n\n[accent]Shortcuts:[lightgrey] !m ui | !m <units/items?> <1/0?> | !m s <sec> | !m stop | !m save | !m f <val%> | !m ig <unit> <items.../clear>',
 	},
 	'features/playermine': {
 		cmd: 'mine',
@@ -24,7 +24,7 @@ const helpData = {
 	},
 	'features/assist': {
 		cmd: 'assist',
-		desc: '[lightgrey]Builder mode (units will only build your blueprints)\n\n[accent]!assist\ntoggle <1/0?>[lightgrey] - on/off\n[accent]toggle <unit> <1/0?>[lightgrey] - toggle specific unit\n[accent]max <unit> <val>[lightgrey] - set max units to use\n[accent]range <val>[lightgrey] - set search radius (in blocks)\n[accent]status[lightgrey] - show settings\n[accent]save[lightgrey] - saves current settings as default\n\n[accent]Shortcuts:[lightgrey] !as t <1/0?> | !as t <unit> <1/0?> | !as m <unit> <val> | !as r <val> | !as s | !as save',
+		desc: '[lightgrey]Builder mode (units will only build your blueprints)\n\n[accent]!assist <1/0?>[lightgrey] - on/off\n[accent]!assist <unit> <1/0?>[lightgrey] - toggle specific unit\n[accent]!assist max <unit> <val>[lightgrey] - set max units to use\n[accent]!assist range <val>[lightgrey] - set search radius (in blocks)\n[accent]!assist status[lightgrey] - show settings\n[accent]!assist save[lightgrey] - saves current settings as default\n\n[accent]Shortcuts:[lightgrey] !as <1/0?> | !as <unit> <1/0?> | !as m <unit> <val> | !as r <val> | !as s | !as save',
 	},
 	'features/lookat': {
 		cmd: 'lookat',
@@ -40,7 +40,7 @@ const helpData = {
 	},
 	'features/autograb': {
 		cmd: 'grab',
-		desc: '[lightgrey]Auto-grab <item> from blocks in unit range\n\n[accent]!grab\ntoggle <1/0?>[lightgrey] - on/off\n[accent]<item>[lightgrey] - set item to grab [auto-enables]\n[accent]min <val>[lightgrey] - minimum amount to grab\n[accent]status[lightgrey] - grab status\n[accent]effects <1/0?>[lightgrey] - on/off blocks effect display\n\n[accent]Shortcuts:[lightgrey] !gr <item> | !gr t <1/0?> | !gr min <val> | !gr s | !gr e',
+		desc: '[lightgrey]Auto-grab <item> from blocks in unit range\n\n[accent]!grab <1/0?>[lightgrey] - on/off\n[accent]!grab <item>[lightgrey] - set item to grab [auto-enables]\n[accent]!grab min <val>[lightgrey] - minimum amount to grab\n[accent]!grab status[lightgrey] - grab status\n[accent]!grab effects <1/0?>[lightgrey] - on/off blocks effect display\n\n[accent]Shortcuts:[lightgrey] !gr <item> | !gr <1/0?> | !gr min <val> | !gr s | !gr e',
 	},
 	'features/trange': {
 		cmd: 'trange',
@@ -60,7 +60,7 @@ const helpData = {
 	},
 	'features/autofill': {
 		cmd: 'autofill',
-		desc: '[accent]!autofill <1/0?>[lightgrey] - autofills turrets\n\n[accent]Shortcuts:[lightgrey] !af <1/0?>',
+		desc: '[accent]!autofill <1/0?>[lightgrey] - toggle autofill turrets, factories, reconstructors, and projectors\n[accent]!autofill <s/settings>[lightgrey] - open autofill priority & visual configuration GUI\n\n[accent]Shortcuts:[lightgrey] !af <1/0?> | !af s',
 	},
 	'ui/render': {
 		cmd: 'render',
@@ -68,11 +68,11 @@ const helpData = {
 	},
 	'ui/table': {
 		cmd: 'table',
-		desc: '[lightgrey]Schematic table\n\n[accent]!table\ntoggle <1/0?>[lightgrey] - on/off\n[accent]<rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]size <val>[lightgrey] - sets table buttoms size\n[accent]reset[lightgrey] - resets table to default',
+		desc: '[lightgrey]Schematic table\n\n[accent]!table <1/0?>[lightgrey] - on/off\n[accent]!table <rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]!table size <val>[lightgrey] - sets table buttoms size\n[accent]!table reset[lightgrey] - resets table to default',
 	},
 	'features/logger': {
 		cmd: 'log',
-		desc: "Logs all player (in your team) actions in the UI & .txt\n\n[accent]!log\n[lightgrey]toggle <1/0?> - on/off\n[accent]<name?>[lightgrey] - shows all players' actions (or by name)\n[accent]show <name?>[lightgrey] - shows all logs on the map (or of one player), may cause FPS drops\n[accent]revert <name>[lightgrey] - adds all destroyed buildings (by <name>) to your build plan\n[accent]status[lightgrey] - logger status\n[accent]chat[lightgrey] - chat logs (join/leave/ingame name change)\n[accent]save [path?][lightgrey] - saves logs as a separate .txt file (optional custom path)\n[accent]path [path/reset?][lightgrey] - view or set custom directory/file path for saves",
+		desc: "Logs all player (in your team) actions in the UI & .txt\n\n[accent]!log <1/0?>[lightgrey] - on/off\n[accent]!log <name?>[lightgrey] - shows all players' actions (or by name)\n[accent]!log show <name?>[lightgrey] - shows all logs on the map (or of one player), may cause FPS drops\n[accent]!log revert <name>[lightgrey] - adds all destroyed buildings (by <name>) to your build plan\n[accent]!log status[lightgrey] - logger status\n[accent]!log chat[lightgrey] - chat logs (join/leave/ingame name change)\n[accent]!log save [path?][lightgrey] - saves logs as a separate .txt file (optional custom path)\n[accent]!log path [path/reset?][lightgrey] - view or set custom directory/file path for saves",
 	},
 	'features/here': {
 		cmd: 'here',
@@ -110,7 +110,7 @@ const helpData = {
 	},
 	'ui/core': {
 		cmd: 'core',
-		desc: '[lightgrey]Shows core resourses of any team on map\n\n[accent]!core <#team>[lightgrey] - toggles core resourses display of team #id you selected (sharded, crux, blue, malis, green also supported)',
+		desc: '[lightgrey]Shows core resources of teams on map\n\n[accent]!core <#team>[lightgrey] - toggles core resources display of team #id or name\n[accent]!core all[lightgrey] - toggles core resource panels for ALL teams with active cores on the map',
 	},
 	'ui/map': {
 		cmd: 'cmap',
@@ -134,6 +134,30 @@ interceptor.add('qol', (args) => {
 		notify(
 			"[lightgrey]Camera lock button\nbuild pause button\nquick chat button\nHeavy optimisation\nno Zoom limit"
 		);
+		return;
+	}
+
+	if (subcmd === 'status' || subcmd === 'st') {
+		const toggleableFeatures = [
+			{ key: 'qol-assist-enabled', def: false, msg: '[lightgrey]Assist [green]ON' },
+			{ key: 'qol-track-enabled', def: false, msg: '[lightgray]Tracking [green]ON' },
+			{ key: 'qol-logger-enabled', def: false, msg: '[lightgrey]Logger [green]ON' },
+			{ key: 'qol-playermine-enabled', def: false, msg: '[lightgray]Player Auto-Mine:[] [green]ON[]' },
+			{ key: 'qol-autofill-enabled', def: false, msg: '[lightgrey]Autofill [green]ON' },
+			{ key: 'qol-grab-active', def: false, msg: '[lightgrey]Grab [green]ON' },
+			{ key: 'qol-aim-active', def: false, msg: '[lightgrey]Aimbot [green]ON' },
+			{ key: 'qol-trange-enabled', def: false, msg: '[lightgrey]Turret Ranges [green]ON' },
+			{ key: 'qol-urange-enabled', def: false, msg: '[lightgrey]Enemy Unit Ranges [green]ON' },
+			{ key: 'qol-hp-enabled', def: true, msg: '[lightgrey]HP Display [green]ON' }
+		];
+		let any = false;
+		toggleableFeatures.forEach((t) => {
+			if (Core.settings.getBool(t.key, t.def)) {
+				notify(t.msg);
+				any = true;
+			}
+		});
+		if (!any) notify('[lightgray]No active toggles');
 		return;
 	}
 

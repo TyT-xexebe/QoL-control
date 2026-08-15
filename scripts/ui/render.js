@@ -2,23 +2,24 @@ const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
 const ArcReflect = Packages.arc.util.Reflect;
 
-let renderBullets = true;
-let renderUnits = true;
-let renderBlocks = true;
-let renderLayers = true;
+let renderBullets = Core.settings.getBool('qol-render-bullets', true);
+let renderUnits = Core.settings.getBool('qol-render-units', true);
+let renderBlocks = Core.settings.getBool('qol-render-blocks', true);
+let renderLayers = Core.settings.getBool('qol-render-layers', true);
 
 const origBulletSizes = [];
 const origUnitSizes = [];
 const origBlockDrawers = [];
 
-function restoreOriginals() {
+function applyRenderSettings() {
 	let idx = 0;
 
 	Vars.content.bullets().each(
 		cons((b) => {
-			if (origBulletSizes[idx] !== undefined && b.drawSize === -10000) {
-				b.drawSize = origBulletSizes[idx];
+			if (origBulletSizes[idx] === undefined) {
+				origBulletSizes[idx] = b.drawSize;
 			}
+			b.drawSize = renderBullets ? origBulletSizes[idx] : -10000;
 			idx++;
 		})
 	);
@@ -26,18 +27,28 @@ function restoreOriginals() {
 	Vars.content.units().each(
 		cons((u) => {
 			let id = u.id;
-			if (origUnitSizes[id] !== undefined && u.clipSize === -10000) {
-				u.clipSize = origUnitSizes[id];
+			if (origUnitSizes[id] === undefined) {
+				origUnitSizes[id] = u.clipSize;
 			}
+			u.clipSize = renderUnits ? origUnitSizes[id] : -10000;
 		})
 	);
+
+	let DrawDefault = Packages.mindustry.world.draw.DrawDefault;
+	let simpleDrawer = new DrawDefault();
 
 	Vars.content.blocks().each(
 		cons((b) => {
 			let id = b.id;
 			try {
-				if (origBlockDrawers[id] !== undefined && b.drawer) {
-					b.drawer = origBlockDrawers[id];
+				if (b.drawer !== undefined && b.drawer !== null) {
+					if (origBlockDrawers[id] === undefined) {
+						origBlockDrawers[id] = b.drawer;
+					}
+
+					b.drawer = renderLayers
+						? origBlockDrawers[id]
+						: simpleDrawer;
 				}
 			} catch (e) {}
 		})
@@ -45,7 +56,7 @@ function restoreOriginals() {
 }
 
 Events.on(ClientLoadEvent, () => {
-	restoreOriginals();
+	applyRenderSettings();
 });
 
 let savedTileSize = -1;
@@ -117,65 +128,36 @@ interceptor.add('render', (args) => {
 
 	let subcmd = args[1].toLowerCase();
 
+	if (args[2] && !interceptor.isBooleanArg(args[2])) {
+		notify('[lightgray]Usage: !render ' + subcmd + ' <1/0?>');
+		return;
+	}
+
 	if (subcmd === 'bullet') {
 		renderBullets = interceptor.parseToggle(renderBullets, args[2]);
-
-		let idx = 0;
-		Vars.content.bullets().each(
-			cons((b) => {
-				if (origBulletSizes[idx] === undefined) {
-					origBulletSizes[idx] = b.drawSize;
-				}
-				b.drawSize = renderBullets ? origBulletSizes[idx] : -10000;
-				idx++;
-			})
-		);
+		Core.settings.put('qol-render-bullets', renderBullets);
+		applyRenderSettings();
 		notify(
 			'[lightgray]Bullets ' +
 				(renderBullets ? '[green]ON' : '[scarlet]OFF')
 		);
 	} else if (subcmd === 'unit') {
 		renderUnits = interceptor.parseToggle(renderUnits, args[2]);
-		Vars.content.units().each(
-			cons((u) => {
-				let id = u.id;
-				if (origUnitSizes[id] === undefined) {
-					origUnitSizes[id] = u.clipSize;
-				}
-				u.clipSize = renderUnits ? origUnitSizes[id] : -10000;
-			})
-		);
+		Core.settings.put('qol-render-units', renderUnits);
+		applyRenderSettings();
 		notify(
 			'[lightgray]Units ' + (renderUnits ? '[green]ON' : '[scarlet]OFF')
 		);
 	} else if (subcmd === 'block') {
 		renderBlocks = interceptor.parseToggle(renderBlocks, args[2]);
-
+		Core.settings.put('qol-render-blocks', renderBlocks);
 		notify(
 			'[lightgray]Blocks ' + (renderBlocks ? '[green]ON' : '[scarlet]OFF')
 		);
 	} else if (subcmd === 'layer') {
 		renderLayers = interceptor.parseToggle(renderLayers, args[2]);
-
-		let DrawDefault = Packages.mindustry.world.draw.DrawDefault;
-		let simpleDrawer = new DrawDefault();
-
-		Vars.content.blocks().each(
-			cons((b) => {
-				let id = b.id;
-				try {
-					if (b.drawer !== undefined && b.drawer !== null) {
-						if (origBlockDrawers[id] === undefined) {
-							origBlockDrawers[id] = b.drawer;
-						}
-
-						b.drawer = renderLayers
-							? origBlockDrawers[id]
-							: simpleDrawer;
-					}
-				} catch (e) {}
-			})
-		);
+		Core.settings.put('qol-render-layers', renderLayers);
+		applyRenderSettings();
 		notify(
 			'[lightgray]Block Layers ' +
 				(renderLayers ? '[green]ON' : '[scarlet]OFF')

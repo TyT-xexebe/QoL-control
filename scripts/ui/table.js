@@ -238,14 +238,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		let sub = args[1] ? args[1].toLowerCase() : '';
 		let val = args[2] ? parseInt(args[2]) : 0;
 
-		if (sub === 'toggle') {
-			cfg.enabled = interceptor.parseToggle(cfg.enabled, args[2]);
-			saveCfg();
-			notify(
-				'[lightgray]Table ' +
-					(cfg.enabled ? '[green]ON' : '[scarlet]OFF')
-			);
-		} else if (sub === 'rows' && val > 0) {
+		if (sub === 'rows' && val > 0) {
 			cfg.rows = val;
 			saveCfg();
 			rebuildGrid();
@@ -272,9 +265,22 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 			Core.settings.put('qol-schem-y', new java.lang.Float(tableY));
 			rebuildGrid();
 			notify('[lightgray]Table [green]RESET');
-		} else {
+		} else if (sub === 'help') {
 			notify(
-				'[lightgray]!table toggle <1/0?>\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset'
+				'[lightgray]!table\n!table <1/0?>\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset'
+			);
+		} else {
+			if (sub && !interceptor.isBooleanArg(sub)) {
+				notify(
+					'[scarlet]Unknown command option\n[lightgray]!table <1/0?> or !table rows/cols/size/reset'
+				);
+				return;
+			}
+			cfg.enabled = interceptor.parseToggle(cfg.enabled, args[1]);
+			saveCfg();
+			notify(
+				'[lightgray]Table ' +
+					(cfg.enabled ? '[green]ON' : '[scarlet]OFF')
 			);
 		}
 	});

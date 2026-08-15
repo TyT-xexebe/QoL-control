@@ -2,7 +2,7 @@ const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
 
 const assistState = {
-	enabled: false,
+	enabled: Core.settings.getBool('qol-assist-enabled', false),
 	range: 400,
 	units: { poly: true, mega: true, pulsar: true, quasar: false },
 	max: { poly: 3, mega: 10, pulsar: 5, quasar: 0 },
@@ -20,6 +20,29 @@ try {
 let assistTimer = null;
 global.qolAssistingUnits = {};
 let assistingUnits = global.qolAssistingUnits;
+
+Events.on(WorldLoadEvent, () => {
+	if (assistState.enabled) {
+		if (!assistTimer) {
+			assistTimer = Timer.schedule(
+				() => {
+					try {
+						runAssist();
+					} catch (err) {
+						notify('[scarlet]Assist Error: ' + err);
+						if (assistTimer) assistTimer.cancel();
+						assistTimer = null;
+					}
+				},
+				0,
+				0.5
+			);
+		}
+	} else {
+		if (assistTimer) assistTimer.cancel();
+		assistTimer = null;
+	}
+});
 
 function releaseSingleUnit(u) {
 	try {
@@ -152,14 +175,9 @@ function runAssist() {
 }
 
 const assistHandler = (args) => {
-	if (args.length === 1) {
-		notify(
-			'[lightgrey]!assist toggle <1/0?>\n!assist toggle <unit> <1/0?>\n!assist max <unit> <val>\n!assist range <val>\n!assist status\n!assist save\n\n!as t <1/0?>\n!as t <unit> <1/0?>\n!as m <unit> <val>\n!as r <val>\n!as s\n!as save'
-		);
-		return;
-	}
+	let sub = args[1] ? args[1].toLowerCase() : '';
 
-	if (args[1] === 'save') {
+	if (sub === 'save') {
 		Core.settings.put(
 			'qol-assist-units',
 			JSON.stringify(assistState.units)
@@ -173,66 +191,8 @@ const assistHandler = (args) => {
 		return;
 	}
 
-	if (args[1] === 'toggle' || args[1] === 't') {
-		if (
-			args.length === 2 ||
-			(args.length === 3 &&
-				(args[2] === '1' ||
-					args[2] === '0' ||
-					args[2] === 'true' ||
-					args[2] === 'false' ||
-					args[2] === 'on' ||
-					args[2] === 'off'))
-		) {
-			assistState.enabled = interceptor.parseToggle(
-				assistState.enabled,
-				args[2]
-			);
-			if (assistState.enabled) {
-				if (!assistTimer) {
-					assistTimer = Timer.schedule(
-						() => {
-							try {
-								runAssist();
-							} catch (err) {
-								notify('[scarlet]Assist Error: ' + err);
-								if (assistTimer) assistTimer.cancel();
-								assistTimer = null;
-							}
-						},
-						0,
-						0.5
-					);
-				}
-				notify('[lightgrey]Assist [green]ON');
-			} else {
-				if (assistTimer) assistTimer.cancel();
-				assistTimer = null;
-				releaseAssistUnits();
-				notify('[lightgrey]Assist [scarlet]OFF');
-			}
-		} else {
-			let type = args[2];
-			if (assistState.units.hasOwnProperty(type)) {
-				assistState.units[type] = interceptor.parseToggle(
-					assistState.units[type],
-					args[3]
-				);
-				notify(
-					'[lightgrey]Assist for ' +
-						type +
-						' is now ' +
-						(assistState.units[type] ? '[green]ON' : '[scarlet]OFF')
-				);
-			} else {
-				notify('[scarlet]Unknown unit type');
-			}
-		}
-		return;
-	}
-
-	if (args[1] === 'max' || args[1] === 'm') {
-		let type = args[2];
+	if (sub === 'max' || sub === 'm') {
+		let type = args[2] ? args[2].toLowerCase() : '';
 		let val = parseInt(args[3]);
 		if (assistState.max.hasOwnProperty(type) && !isNaN(val) && val >= 0) {
 			assistState.max[type] = val;
@@ -245,7 +205,7 @@ const assistHandler = (args) => {
 		return;
 	}
 
-	if (args[1] === 'range' || args[1] === 'r') {
+	if (sub === 'range' || sub === 'r') {
 		let val = parseFloat(args[2]);
 		if (!isNaN(val) && val > 0) {
 			assistState.range = val * 8;
@@ -260,7 +220,7 @@ const assistHandler = (args) => {
 		return;
 	}
 
-	if (args[1] === 'status' || args[1] === 's') {
+	if (sub === 'status' || sub === 's') {
 		let uStr = '';
 		for (let k in assistState.units) {
 			uStr +=
@@ -280,6 +240,58 @@ const assistHandler = (args) => {
 				uStr
 		);
 		return;
+	}
+
+	if (assistState.units.hasOwnProperty(sub)) {
+		let toggleArg = args[2];
+		assistState.units[sub] = interceptor.parseToggle(
+			assistState.units[sub],
+			toggleArg
+		);
+		notify(
+			'[lightgrey]Assist for ' +
+				sub +
+				' is now ' +
+				(assistState.units[sub] ? '[green]ON' : '[scarlet]OFF')
+		);
+		Core.settings.put('qol-assist-units', JSON.stringify(assistState.units));
+		return;
+	}
+
+	if (sub && !interceptor.isBooleanArg(sub)) {
+		notify('[lightgray]Usage: !assist <1/0?> or !assist <unit> <1/0?> or !assist max <unit> <val>');
+		return;
+	}
+
+	// Otherwise, toggle the main assist state!
+	assistState.enabled = interceptor.parseToggle(
+		assistState.enabled,
+		args[1]
+	);
+	Core.settings.put('qol-assist-enabled', assistState.enabled);
+
+	if (assistState.enabled) {
+		if (!assistTimer) {
+			assistTimer = Timer.schedule(
+				() => {
+					try {
+						runAssist();
+					} catch (err) {
+						notify('[scarlet]Assist Error: ' + err);
+						if (assistTimer) assistTimer.cancel();
+						assistTimer = null;
+					}
+				},
+				0,
+				0.5
+			);
+		}
+		notify('[lightgrey]Assist [green]ON');
+	} else {
+		if (assistTimer) assistTimer.cancel();
+		assistTimer = null;
+		releaseAssistUnits();
+		notify('[lightgrey]Assist [scarlet]OFF');
 	}
 };
 

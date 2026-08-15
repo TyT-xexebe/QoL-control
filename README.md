@@ -19,13 +19,17 @@ You must use the ? prefix for my commands (?qol instead of !qol), because Foo's 
 
 ## Commands
 
-**Note on Toggles:** Most commands that toggle a feature on or off (e.g., `!trace toggle`, `!autofill`, `!log toggle`) can now accept an optional argument to explicitly set the state. 
+**Note on Toggles & State Persistence:** 
+All commands that toggle a feature on or off (e.g., `!trace <1/0?>`, `!autofill <1/0?>`, `!log <1/0?>`, `!assist <1/0?>`, `!grab <1/0?>`, `!trange <1/0?>`, `!urange <1/0?>`, `!hp <1/0?>`, `!mine <1/0?>`) accept explicit state arguments:
 You can use `1`, `true`, or `on` to enable the feature, and `0`, `false`, or `off` to disable it. 
-For example: `!trace toggle 1` will always turn trace ON, regardless of its previous state. If no argument is provided, it will simply switch the current state.
-This added for easier using commands, and also for quickchat things.
+For example: `!trace 1` or `!autofill on` will always turn the feature ON. If no argument is provided, it will switch the current toggle state.
+**Global Persistence:** All toggle states, configurations, and user preferences are automatically saved to `Core.settings` and restored when restarting the game.
 
 #### `!mining` | `!m`
 Takes all free units on the map (that are enabled in your settings) and distributes them to mine the enabled resources.
+
+`!mining ui` | `!m ui`
+Opens the comprehensive visual settings UI on your screen. You can control the active units, target resources, unit ignore matrix, and interval rate directly in this menu.
 
 `!mining set <sec>` | `!m s <sec>`
 Starts the unit distribution algorithm and updates it every `<sec>` seconds. The best option is to set it to 4-10 seconds. Type `0` in `<sec>` to run the distribution only once.
@@ -34,7 +38,7 @@ Starts the unit distribution algorithm and updates it every `<sec>` seconds. The
 Stops the distribution algorithm.
 
 `!mining <units/items?> <1/0?>` | `!m <units/items?> <1/0?>`
-Toggles the setting of a unit or resource to the opposite of what it currently is (or explicitly sets it). Supports entering multiple at once: `!mining scrap poly beryllium` or `!mining scrap poly 1`
+Toggles the setting of a unit or resource to the opposite of what it currently is (or explicitly sets it).
 
 `!mining status` | `!m st`
 Shows the status of the algorithm, enabled/disabled units and resources, and the current unit distribution.
@@ -43,10 +47,7 @@ Shows the status of the algorithm, enabled/disabled units and resources, and the
 Sets the % (0-100) of free units. Any player can take `<%>` of the units from the miner, and it won't take them back. To give the units back to the miner, you must give them a rts task to mine, or the units must not move for 5 seconds (within a 2-tile radius).
 
 `!mining ignore <unit> <items.../clear> <1/0?> | !m ig <unit? <items.../clear> <1/0?>`
-Toggles the setting of a unit which items it will ignore to mine
-Supports entering multiple items at once:
-`!m ig poly scrap lead`
-!!! settings of `!m <items?>` >>> then `!m ig` !!!
+Toggles the setting of a unit which items it will ignore to mine.
 
 `!mining save` | `!m save`
 Saves the current enabled/disabled settings for units, resources, and the % of free units as default settings.
@@ -70,10 +71,10 @@ _Example:_ `!select poly mega` selects all poly and mega units on your team.
 #### `!assist` | `!as`
 Units around you within an `n` tile radius will help you build, even if they are currently mining.
 
-`!assist toggle <1/0?>` | `!as t <1/0?>`
+`!assist <1/0?>` | `!as <1/0?>`
 Toggles assist mode on/off.
 
-`!assist toggle <unit> <1/0?>` | `!as t <unit> <1/0?>`
+`!assist <unit> <1/0?>` | `!as <unit> <1/0?>`
 Toggles assist mode for a specific unit type.
 
 `!assist max <unit> <val>` | `!as m <unit> <val>`
@@ -112,7 +113,7 @@ Automatically grabs a specific item from any blocks in your radius.
 `!grab <item>` | `!gr <item>`
 Sets the item to grab and enables it.
 
-`!grab toggle <1/0?>` | `!gr t <1/0?>`
+`!grab <1/0?>` | `!gr <1/0?>`
 Toggles autograb on/off.
 
 `!grab min <val>` | `!gr min <val>`
@@ -152,7 +153,7 @@ Tracks a specific player's HP and draws a line to them.
 #### `!log`
 Logs block placements, destructions and changed by players. (may cause FPS drops and longer load in world)
 
-`!log toggle <1/0?>` | `!log t <1/0?>`
+`!log <1/0?>`
 Toggles the logger on/off.
 
 `!log status`
@@ -201,7 +202,7 @@ Deletes .txt file
 #### `!trace` | `!tr`
 Automatically possesses a specific unit type when it becomes available.
 
-`!trace toggle <1/0?>` | `!tr t <1/0?>`
+`!trace <1/0?>` | `!tr <1/0?>`
 Toggles trace mode on/off.
 
 `!trace set <unit>` | `!tr s <unit>`
@@ -236,7 +237,7 @@ Sets button size.
 `!table reset`
 Resets table.
 
-`!table toggle <1/0?>`
+`!table <1/0?>`
 Toggles On / Off table display.
 
 #### `!render <bullet/unit/block/layer> <1/0?>`
@@ -331,10 +332,11 @@ When a new mod user is found you get a notification in chat.
 `!users` | `!user`
 Shows the list of all currently detected QoL Control users on the server.
 
-#### `!core <#team>`
+#### `!core <#team/all?>`
 
-Displays core resourses of team #id you selected, can displays multiple.
-Supports `sharded, crux, malis, green, blue` also.`!core` will show core resourses of your team.
+Displays core resources of team #id or name you selected. Supports multiple panels.
+`!core` shows core resources of your team.
+`!core all` enables core resource panels for ALL active teams on the map that have cores (and disables panels for teams without cores).
 
 #### `!colors`
 
@@ -457,7 +459,7 @@ For `!detector` you can add your own regex in:
 
 By default it contains `attem` and `wpx`.
 
-All logs from `!log save` are saved in `/qol/` (or your custom defined path), and it also always has a default log `/qol/main_log.txt` from your last game if `!log toggle` was enabled.
+All logs from `!log save` are saved in `/qol/` (or your custom defined path), and it also always has a default log `/qol/main_log.txt` from your last game if `!log` was enabled.
 
 ## Optimization
 

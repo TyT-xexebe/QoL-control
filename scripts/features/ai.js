@@ -242,12 +242,7 @@ interceptor.add('ai', (a) => {
 				notify('[lightgrey]Build [green]AUTO');
 			} else if (
 				a[2] &&
-				a[2] !== '1' &&
-				a[2] !== '0' &&
-				a[2] !== 'true' &&
-				a[2] !== 'false' &&
-				a[2] !== 'on' &&
-				a[2] !== 'off'
+				!interceptor.isBooleanArg(a[2])
 			) {
 				let f = null;
 				Groups.player.each((pl) => {
@@ -282,12 +277,7 @@ interceptor.add('ai', (a) => {
 		case 'm':
 			if (
 				a.length > 2 &&
-				a[2] !== '1' &&
-				a[2] !== '0' &&
-				a[2] !== 'true' &&
-				a[2] !== 'false' &&
-				a[2] !== 'on' &&
-				a[2] !== 'off'
+				!interceptor.isBooleanArg(a[2])
 			) {
 				let changed = [];
 				for (let i = 2; i < a.length; i++) {

@@ -120,6 +120,25 @@ Events.on(WorldLoadEvent, () => {
 interceptor.add('core', (args) => {
 	if (args[1]) {
 		let search = args[1].toLowerCase();
+		if (search === 'all') {
+			let teamsWithCores = {};
+			Vars.state.teams.getActive().each((t) => {
+				if (t.hasCore() || t.core() != null) {
+					teamsWithCores[t.team.id] = true;
+					if (!panels[t.team.id]) {
+						createPanel(t.team);
+					}
+				}
+			});
+			for (let id in panels) {
+				if (!teamsWithCores[id]) {
+					panels[id].table.remove();
+					delete panels[id];
+				}
+			}
+			notify('[lightgray]Core info enabled for [green]all active cores');
+			return;
+		}
 		let found = null;
 		Vars.state.teams.getActive().each((t) => {
 			if (t.team.name.toLowerCase().includes(search)) found = t.team;

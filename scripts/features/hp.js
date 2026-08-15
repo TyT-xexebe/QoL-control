@@ -1,6 +1,6 @@
 const notify = require('qol-control/core/logger').notify;
 
-let hpEnabled = true;
+let hpEnabled = Core.settings.getBool('qol-hp-enabled', true);
 let targetCache = null;
 let trackedPlayer = null;
 let targetTimer = 0;
@@ -50,19 +50,11 @@ Events.on(WorldLoadEvent, () => {
 const interceptor = require('qol-control/core/interceptor');
 
 interceptor.add('hp', (args) => {
-	if (
-		args[1] &&
-		args[1] !== 'toggle' &&
-		args[1] !== '1' &&
-		args[1] !== '0' &&
-		args[1] !== 'true' &&
-		args[1] !== 'false' &&
-		args[1] !== 'on' &&
-		args[1] !== 'off'
-	) {
+	let sub = args[1] ? args[1].toLowerCase() : '';
+	if (sub && !interceptor.isBooleanArg(sub)) {
 		let found = null;
 		Groups.player.each((p) => {
-			if (Strings.stripColors(p.name).toLowerCase().includes(args[1]))
+			if (Strings.stripColors(p.name).toLowerCase().includes(sub))
 				found = p;
 		});
 		if (found) {
@@ -71,10 +63,8 @@ interceptor.add('hp', (args) => {
 		} else
 			notify('[scarlet]Player [white]' + args[1] + ' [scarlet]not found');
 	} else {
-		hpEnabled = interceptor.parseToggle(
-			hpEnabled,
-			args[1] === 'toggle' ? args[2] : args[1]
-		);
+		hpEnabled = interceptor.parseToggle(hpEnabled, args[1]);
+		Core.settings.put('qol-hp-enabled', hpEnabled);
 		if (!hpEnabled) {
 			targetCache = null;
 			trackedPlayer = null;

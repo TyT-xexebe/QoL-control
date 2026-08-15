@@ -1,7 +1,7 @@
 const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
 
-let urangeEnabled = false;
+let urangeEnabled = Core.settings.getBool('qol-urange-enabled', false);
 let urangeUpdateTimer = 0;
 let cachedUnits = [];
 
@@ -10,7 +10,12 @@ Events.on(WorldLoadEvent, () => {
 });
 
 interceptor.add('urange', (args) => {
+	if (args[1] && !interceptor.isBooleanArg(args[1])) {
+		notify('[lightgray]Usage: !urange <1/0?>');
+		return;
+	}
 	urangeEnabled = interceptor.parseToggle(urangeEnabled, args[1]);
+	Core.settings.put('qol-urange-enabled', urangeEnabled);
 	if (!urangeEnabled) cachedUnits = [];
 	notify(
 		'[lightgrey]Enemy Unit Ranges ' +
