@@ -7,7 +7,7 @@ let state = {
 	blockSettings: {}
 };
 
-const DELAY_MS = 250;
+const DELAY_MS = 200;
 let lastActionTime = 0;
 let cacheInitialized = false;
 let currentlyFillingBuilding = null;
@@ -181,18 +181,13 @@ function isBlockEligible(b) {
 }
 
 function initBlockSettings() {
-	Object.keys(state.blockSettings).forEach(name => {
-		let b = Vars.content.block(name);
-		if (!b || !isBlockEligible(b)) {
-			delete state.blockSettings[name];
-		}
-	});
+	let allBlocks = Vars.content ? Vars.content.blocks() : null;
+	if (!allBlocks || allBlocks.size === 0) return false;
 
-	let allBlocks = Vars.content.blocks();
 	for (let i = 0; i < allBlocks.size; i++) {
 		let b = allBlocks.get(i);
 		let info = getBlockInfo(b);
-		if (!info.eligible) continue;
+		if (!info || !info.eligible) continue;
 		let name = info.name;
 
 		if (!state.blockSettings[name]) {
@@ -214,14 +209,23 @@ function initBlockSettings() {
 			}
 		}
 	}
+	return true;
 }
 
 function initCache() {
 	if (cacheInitialized) return;
-	loadSettings();
-	initBlockSettings();
-	cacheInitialized = true;
+	let ok = initBlockSettings();
+	if (ok) {
+		cacheInitialized = true;
+	}
 }
+
+loadSettings();
+
+Events.on(WorldLoadEvent, () => {
+	currentlyFillingBuilding = null;
+	lastActionTime = 0;
+});
 
 function showAmmoPriorityDialog(blockName) {
 	let blockObj = Vars.content.block(blockName);
@@ -578,7 +582,7 @@ Events.run(Trigger.draw, () => {
 		return;
 	}
 	Draw.z(Layer.max);
-	Lines.stroke(0.5);
+	Lines.stroke(1);
 	Draw.color(Color.gold, 0.8);
 	let sizePx = b.block.size * 8;
 	Lines.rect(b.x - sizePx / 2, b.y - sizePx / 2, sizePx, sizePx);

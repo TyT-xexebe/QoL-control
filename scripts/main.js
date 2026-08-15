@@ -100,7 +100,7 @@ global.qolActiveModules = activeModules;
 
 require('qol-control/core/help');
 require('qol-control/core/welcome');
-// require('qol-control/core/lags');
+require('qol-control/core/lags');
 
 for (let module of activeModules) {
 	try {
