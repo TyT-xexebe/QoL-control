@@ -425,19 +425,7 @@ Events.run(Trigger.update, () => {
 	let now = Time.millis();
 	if (now - lastActionTime < DELAY_MS) return;
 
-	let core = u.closestCore();
-	if (!core) {
-		currentlyFillingBuilding = null;
-		return;
-	}
-
 	let buildRange = Math.max(u.type.buildRange, 220);
-	let nearCore = u.within(core, buildRange + (core.block ? core.block.size * 4 : 0));
-	if (!nearCore) {
-		currentlyFillingBuilding = null;
-		return;
-	}
-
 	let stack = u.stack;
 	let hasItem = stack.amount > 0 && stack.item != null;
 
@@ -480,98 +468,103 @@ Events.run(Trigger.update, () => {
 		}
 	}));
 
-	if (targets.length === 0) {
-		if (hasItem) {
-			Call.transferInventory(p, core);
-			lastActionTime = now;
-		}
-		currentlyFillingBuilding = null;
-		return;
+	if (targets.length > 0) {
+		targets.sort((a, b) => {
+			let aSettings = state.blockSettings[a.block.name];
+			let bSettings = state.blockSettings[b.block.name];
+			let pA = aSettings ? aSettings.priority : 0;
+			let pB = bSettings ? bSettings.priority : 0;
+			if (pA !== pB) return pB - pA;
+			return u.dst2(a) - u.dst2(b);
+		});
 	}
 
-	targets.sort((a, b) => {
-		let aSettings = state.blockSettings[a.block.name];
-		let bSettings = state.blockSettings[b.block.name];
-		let pA = aSettings ? aSettings.priority : 0;
-		let pB = bSettings ? bSettings.priority : 0;
-		if (pA !== pB) return pB - pA;
-		return u.dst2(a) - u.dst2(b);
-	});
+	let core = u.closestCore();
+	let nearCore = core && u.within(core, buildRange + (core.block ? core.block.size * 4 : 0));
 
-	let topTarget = targets[0];
-	let topPriority = state.blockSettings[topTarget.block.name] ? state.blockSettings[topTarget.block.name].priority : 0;
-
-	if (hasItem) {
-		let itemTransferred = false;
-
+	if (nearCore) {
 		for (let i = 0; i < targets.length; i++) {
 			let t = targets[i];
-			let tPriority = state.blockSettings[t.block.name] ? state.blockSettings[t.block.name].priority : 0;
-			
-			if (tPriority < topPriority) {
-				break;
+			let info = getBlockInfo(t.block);
+			let bestItem = null;
+
+			if (info && info.isTurret) {
+				if (t.totalAmmo < t.block.maxAmmo * 0.85) {
+					let bSettings = state.blockSettings[t.block.name];
+					let ammoNames = (bSettings && bSettings.ammoPriority && bSettings.ammoPriority.length > 0) ? bSettings.ammoPriority : info.ammoTypes;
+
+					for (let j = 0; j < ammoNames.length; j++) {
+						let it = Vars.content.item(ammoNames[j]);
+						if (!it || !t.acceptItem(t, it)) continue;
+
+						if (hasItem && stack.item === it) {
+							bestItem = it;
+							break;
+						}
+
+						if (core.items && core.items.get(it) > 0) {
+							bestItem = it;
+							break;
+						}
+					}
+				}
+			} else if (info) {
+				let allConsumed = info.consumedItems;
+				for (let j = 0; j < allConsumed.length; j++) {
+					let it = allConsumed[j];
+					let currentAmt = t.items ? t.items.get(it) : 0;
+					if (currentAmt >= t.block.itemCapacity * 0.85 || !t.acceptItem(t, it)) continue;
+
+					if (hasItem && stack.item === it) {
+						bestItem = it;
+						break;
+					}
+
+					if (core.items && core.items.get(it) > 0) {
+						bestItem = it;
+						break;
+					}
+				}
 			}
 
+			if (bestItem != null) {
+				if (hasItem && stack.item === bestItem) {
+					if (t.acceptItem(t, stack.item)) {
+						Call.transferInventory(p, t);
+						lastActionTime = now;
+						currentlyFillingBuilding = t;
+						return;
+					}
+				} else if (hasItem && stack.item !== bestItem) {
+					Call.transferInventory(p, core);
+					lastActionTime = now;
+					return;
+				} else if (!hasItem) {
+					let countToTake = Math.min(u.type.itemCapacity, core.items.get(bestItem));
+					Call.requestItem(p, core, bestItem, countToTake);
+					lastActionTime = now;
+					currentlyFillingBuilding = t;
+					return;
+				}
+			}
+		}
+	}
+
+	if (hasItem) {
+		for (let i = 0; i < targets.length; i++) {
+			let t = targets[i];
 			if (t.acceptItem(t, stack.item)) {
 				Call.transferInventory(p, t);
 				lastActionTime = now;
 				currentlyFillingBuilding = t;
-				itemTransferred = true;
-				break;
+				return;
 			}
 		}
-
-		if (!itemTransferred) {
-			Call.transferInventory(p, core);
-			lastActionTime = now;
-			currentlyFillingBuilding = null;
-		}
-		return;
 	}
 
-	for (let i = 0; i < targets.length; i++) {
-		let t = targets[i];
-		let info = getBlockInfo(t.block);
-		let bestItem = null;
-
-		if (info && info.isTurret) {
-			if (t.totalAmmo >= t.block.maxAmmo * 0.85) continue;
-			let bSettings = state.blockSettings[t.block.name];
-			let ammoNames = (bSettings && bSettings.ammoPriority && bSettings.ammoPriority.length > 0) ? bSettings.ammoPriority : info.ammoTypes;
-
-			for (let j = 0; j < ammoNames.length; j++) {
-				let it = Vars.content.item(ammoNames[j]);
-				if (!it || !t.acceptItem(t, it)) continue;
-
-				if (core.items && core.items.get(it) > 0) {
-					bestItem = it;
-					break;
-				}
-			}
-		} else if (info) {
-			let allConsumed = info.consumedItems;
-			for (let j = 0; j < allConsumed.length; j++) {
-				let it = allConsumed[j];
-				let currentAmt = t.items ? t.items.get(it) : 0;
-				if (currentAmt >= t.block.itemCapacity * 0.85 || !t.acceptItem(t, it)) continue;
-
-				if (core.items && core.items.get(it) > 0) {
-					bestItem = it;
-					break;
-				}
-			}
-		}
-
-		if (bestItem != null) {
-			let countToTake = Math.min(u.type.itemCapacity, core.items.get(bestItem));
-			Call.requestItem(p, core, bestItem, countToTake);
-			lastActionTime = now;
-			currentlyFillingBuilding = t;
-			return;
-		}
+	if (!hasItem) {
+		currentlyFillingBuilding = null;
 	}
-	
-	currentlyFillingBuilding = null;
 });
 
 Events.run(Trigger.draw, () => {
