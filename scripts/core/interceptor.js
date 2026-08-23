@@ -9,16 +9,28 @@ function addPacketModifier(modifier) {
 	packetModifiers.push(modifier);
 }
 
+function cleanColors(str) {
+	if (!str) return '';
+	try {
+		if (typeof Strings !== 'undefined' && typeof Strings.stripColors === 'function') {
+			return String(Strings.stripColors(str));
+		}
+	} catch (e) {}
+	return String(str).replace(/\[([a-zA-Z0-9#_]+|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8})?\]/g, '');
+}
+
 function handleCommand(msg) {
+	let raw = cleanColors(msg);
+
 	let fooState = Core.settings.getBool('qol-control-foo-client', false);
-	if (fooState && msg.length > 1) {
-		msg = msg.replace(
+	if (fooState && raw.length > 1) {
+		raw = raw.replace(
 			/[\s\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uE000-\uF8FF\uFFF0-\uFFFF\x00-\x1F\u0F80-\u107F]+$/,
 			''
 		);
 	}
 
-	let cleanMsg = msg.replace(/^\/(t|a)\s+/i, '');
+	let cleanMsg = raw.replace(/^\/(t|a)\s+/i, '');
 
 	if (!cleanMsg.startsWith('!') && !cleanMsg.startsWith('?')) return false;
 	let args = cleanMsg.substring(1).split(' ');
@@ -106,7 +118,7 @@ Events.on(ClientLoadEvent, (e) => {
 					if (entered && isRhino) {
 						try {
 							Packages.org.mozilla.javascript.Context.exit();
-						} catch (e) {}
+							} catch (e) {}
 					}
 				}
 			};
@@ -297,4 +309,5 @@ module.exports = {
 	parseToggle: parseToggle,
 	isBooleanArg: isBooleanArg,
 	addPacketModifier: addPacketModifier,
+	cleanColors: cleanColors,
 };
