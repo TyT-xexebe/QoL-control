@@ -86,38 +86,19 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 	uiTable.margin(0);
 	let gridTable = new Table();
 	gridTable.margin(0);
-	let tableX = Core.settings.getFloat(
-		'qol-schem-x',
-		Core.graphics.getWidth() / 2
-	);
-	let tableY = Core.settings.getFloat(
-		'qol-schem-y',
-		Core.graphics.getHeight() / 2
-	);
-	let dragHandler,
+	uiTable.add(gridTable);
+
+	let dragHandler = null,
 		lastClickTime = 0,
 		lastClickSlot = -1;
 
-	dragHandler = uiUtils.setupDrag(
-		'qol-schem-x',
-		'qol-schem-y',
-		tableX,
-		tableY,
-		(x, y) => {
-			tableX = Mathf.clamp(
-				x,
-				0,
-				Core.graphics.getWidth() - uiTable.getWidth()
-			);
-			tableY = Mathf.clamp(
-				y,
-				0,
-				Core.graphics.getHeight() - uiTable.getHeight()
-			);
-			uiTable.setPosition(tableX, tableY);
-		}
-	);
-	dragHandler.attach(uiTable);
+	let getStageW = () =>
+		Core.scene ? Core.scene.getWidth() : Core.graphics.getWidth();
+	let getStageH = () =>
+		Core.scene ? Core.scene.getHeight() : Core.graphics.getHeight();
+
+	let tableX = 0;
+	let tableY = 0;
 
 	const openConfig = (idx) => {
 		let dialog = new BaseDialog('');
@@ -259,11 +240,19 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 			cfg.size = 32;
 			cfg.slots = {};
 			saveCfg();
-			tableX = Core.graphics.getWidth() / 2;
-			tableY = Core.graphics.getHeight() / 2;
+			rebuildGrid();
+			let sw = getStageW();
+			let sh = getStageH();
+			tableX = Math.max(0, (sw - uiTable.getWidth()) / 2);
+			tableY = Math.max(0, (sh - uiTable.getHeight()) / 2);
+			if (dragHandler && dragHandler.state) {
+				dragHandler.state.x = tableX;
+				dragHandler.state.y = tableY;
+				dragHandler.state.isDragging = false;
+			}
 			Core.settings.put('qol-schem-x', new java.lang.Float(tableX));
 			Core.settings.put('qol-schem-y', new java.lang.Float(tableY));
-			rebuildGrid();
+			uiTable.setPosition(tableX, tableY);
 			notify('[lightgray]Table [green]RESET');
 		} else if (sub === 'help') {
 			notify(
@@ -285,25 +274,68 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		}
 	});
 
-	uiTable.add(gridTable);
 	rebuildGrid();
+	Vars.ui.hudGroup.addChild(uiTable);
+
+	let initSw = getStageW();
+	let initSh = getStageH();
+	tableX = Core.settings.getFloat(
+		'qol-schem-x',
+		(initSw - uiTable.getWidth()) / 2
+	);
+	tableY = Core.settings.getFloat(
+		'qol-schem-y',
+		(initSh - uiTable.getHeight()) / 2
+	);
+
+	tableX = Mathf.clamp(tableX, 0, Math.max(0, initSw - uiTable.getWidth()));
+	tableY = Mathf.clamp(tableY, 0, Math.max(0, initSh - uiTable.getHeight()));
+
+	dragHandler = uiUtils.setupDrag(
+		'qol-schem-x',
+		'qol-schem-y',
+		tableX,
+		tableY,
+		(x, y) => {
+			let sw = getStageW();
+			let sh = getStageH();
+			let maxW = Math.max(0, sw - uiTable.getWidth());
+			let maxH = Math.max(0, sh - uiTable.getHeight());
+			let nx = Mathf.clamp(x, 0, maxW);
+			let ny = Mathf.clamp(y, 0, maxH);
+
+			let snap = 15;
+			if (nx < snap) nx = 0;
+			else if (nx > maxW - snap) nx = maxW;
+			if (ny < snap) ny = 0;
+			else if (ny > maxH - snap) ny = maxH;
+
+			tableX = nx;
+			tableY = ny;
+			uiTable.setPosition(tableX, tableY);
+		}
+	);
+	dragHandler.attach(uiTable);
+	uiTable.setPosition(tableX, tableY);
 
 	Events.run(Trigger.update, () => {
 		uiTable.visible =
 			cfg.enabled && Vars.state.isGame() && Vars.ui.hudfrag.shown;
 		if (!uiTable.visible) return;
+		if (dragHandler && dragHandler.state && dragHandler.state.isDragging)
+			return;
+		let sw = getStageW();
+		let sh = getStageH();
 		tableX = Mathf.clamp(
 			tableX,
 			0,
-			Core.graphics.getWidth() - uiTable.getWidth()
+			Math.max(0, sw - uiTable.getWidth())
 		);
 		tableY = Mathf.clamp(
 			tableY,
 			0,
-			Core.graphics.getHeight() - uiTable.getHeight()
+			Math.max(0, sh - uiTable.getHeight())
 		);
 		uiTable.setPosition(tableX, tableY);
 	});
-
-	Vars.ui.hudGroup.addChild(uiTable);
 });

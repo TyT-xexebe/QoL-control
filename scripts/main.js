@@ -308,6 +308,66 @@ if (!Vars.headless) {
 						})(modName);
 					}
 
+					let prefixKey = 'qol-control-prefix';
+					let currentPrefix = Core.settings.get(prefixKey, '!');
+					currentPrefix = ('' + (currentPrefix || '!')).trim();
+					if (!currentPrefix) currentPrefix = '!';
+
+					table
+						.table(
+							cons((prefTable) => {
+								prefTable
+									.add('[accent]Command Prefix:[]')
+									.left()
+									.padRight(10);
+
+								prefTable
+									.field(currentPrefix, (text) => {
+										let val = ('' + text).trim();
+										if (!val) val = '!';
+										Core.settings.put(
+											prefixKey,
+											new java.lang.String(val)
+										);
+										if (
+											typeof Core.settings.forceSave ===
+											'function'
+										) {
+											Core.settings.forceSave();
+										}
+									})
+									.size(140, 40)
+									.left();
+
+								prefTable
+									.button('?', Styles.cleart, () => {
+										let d = new BaseDialog(
+											'Command Prefix'
+										);
+										let t = new Table();
+										t.add(
+											'Customize the command prefix for QoL Control.\n\n' +
+												'Default: [green]![]\n\n' +
+												'Common prefixes: [accent]! ? . # $ ~ - /[]\n' +
+												'You can specify multiple prefixes separated by space (e.g. [accent]! ?[]).\n\n' +
+												'Leave empty to restore default [green]![]'
+										)
+											.width(450)
+											.wrap()
+											.left();
+										d.cont.add(t).pad(10);
+										d.addCloseButton();
+										d.show();
+									})
+									.size(40, 40)
+									.left()
+									.padLeft(10);
+							})
+						)
+						.left()
+						.padBottom(8)
+						.row();
+
 					let fooKey = 'qol-control-foo-client';
 					let fooState = Core.settings.getBool(fooKey, false);
 					table

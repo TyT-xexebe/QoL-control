@@ -19,22 +19,70 @@ function cleanColors(str) {
 	return String(str).replace(/\[([a-zA-Z0-9#_]+|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8})?\]/g, '');
 }
 
-function handleCommand(msg) {
-	let raw = cleanColors(msg);
+function getActivePrefixes() {
+	var prefStr = '!';
+	try {
+		var val = Core.settings.get('qol-control-prefix', '!');
+		if (val != null) {
+			prefStr = ('' + val).trim();
+		}
+	} catch (e) {}
+	if (!prefStr) prefStr = '!';
 
-	let fooState = Core.settings.getBool('qol-control-foo-client', false);
+	var rawParts = ('' + prefStr).split(' ');
+	var result = [];
+	for (var i = 0; i < rawParts.length; i++) {
+		var p = ('' + rawParts[i]).trim();
+		if (p.length > 0) {
+			result.push(p);
+		}
+	}
+	return result.length > 0 ? result : ['!'];
+}
+
+function handleCommand(msg) {
+	if (!msg) return false;
+	var raw = cleanColors(msg);
+
+	var fooState = Core.settings.getBool('qol-control-foo-client', false);
 	if (fooState && raw.length > 1) {
-		raw = raw.replace(
+		raw = ('' + raw).replace(
 			/[\s\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uE000-\uF8FF\uFFF0-\uFFFF\x00-\x1F\u0F80-\u107F]+$/,
 			''
 		);
 	}
 
-	let cleanMsg = raw.replace(/^\/(t|a)\s+/i, '');
+	var cleanMsg = ('' + raw).replace(/^\/(t|a)\s+/i, '');
 
-	if (!cleanMsg.startsWith('!') && !cleanMsg.startsWith('?')) return false;
-	let args = cleanMsg.substring(1).split(' ');
-	let cmd = args[0].toLowerCase();
+	var prefixes = getActivePrefixes();
+	var matchedPrefix = null;
+	for (var i = 0; i < prefixes.length; i++) {
+		var p = prefixes[i];
+		if (cleanMsg.indexOf(p) === 0) {
+			if (!matchedPrefix || p.length > matchedPrefix.length) {
+				matchedPrefix = p;
+			}
+		}
+	}
+
+	if (!matchedPrefix) return false;
+
+	var cleanWithoutPrefix = cleanMsg.substring(matchedPrefix.length);
+	while (cleanWithoutPrefix.charAt(0) === ' ') {
+		cleanWithoutPrefix = cleanWithoutPrefix.substring(1);
+	}
+	if (cleanWithoutPrefix.length === 0) return false;
+
+	var rawArgs = cleanWithoutPrefix.split(' ');
+	var args = [];
+	for (var j = 0; j < rawArgs.length; j++) {
+		if (rawArgs[j].length > 0) {
+			args.push(rawArgs[j]);
+		}
+	}
+	if (args.length === 0) return false;
+
+	var cmd = ('' + args[0]).toLowerCase();
 
 	if (commands.hasOwnProperty(cmd)) {
 		try {
@@ -304,10 +352,37 @@ function parseToggle(current, arg) {
 	return !current;
 }
 
+registerCommand('prefix', (args) => {
+	let prefixes = getActivePrefixes();
+	if (args.length <= 1) {
+		Vars.ui.hudfrag.showToast(
+			Icon.settings,
+			'[lightgray]Current command prefix(es): [accent]' +
+				prefixes.join(' ') +
+				'[]'
+		);
+		return;
+	}
+	let newRaw = ('' + args.slice(1).join(' ')).trim();
+	if (!newRaw) newRaw = '!';
+	Core.settings.put('qol-control-prefix', new java.lang.String(newRaw));
+	if (typeof Core.settings.forceSave === 'function') {
+		Core.settings.forceSave();
+	}
+	Vars.ui.hudfrag.showToast(
+		Icon.ok,
+		'[lightgray]Command prefix updated to: [accent]' + newRaw + '[]'
+	);
+});
+
 module.exports = {
 	add: registerCommand,
 	parseToggle: parseToggle,
 	isBooleanArg: isBooleanArg,
 	addPacketModifier: addPacketModifier,
 	cleanColors: cleanColors,
+	getPrefix: function () {
+		return getActivePrefixes()[0] || '!';
+	},
+	getPrefixes: getActivePrefixes,
 };
