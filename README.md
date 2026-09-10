@@ -332,11 +332,27 @@ When a new mod user is found you get a notification in chat.
 `!users` | `!user`
 Shows the list of all currently detected QoL Control users on the server.
 
-#### `!core <#team/all?>`
+#### `!core <#team/all/clear/close?>`
 
 Displays core resources of team #id or name you selected. Supports multiple panels.
-`!core` shows core resources of your team.
-`!core all` enables core resource panels for ALL active teams on the map that have cores (and disables panels for teams without cores).
+- `!core` shows core resources of your current team.
+- `!core all` enables core resource panels for ALL active teams on the map that have cores (and disables panels for teams without cores).
+- `!core clear` (or `!core close`) closes and clears all currently open core resource panels.
+
+#### `!units` | `!u`
+
+Draggable interactive HUD displaying real-time unit icons and unit counts for all teams on the map.
+
+**Interactions:**
+- **Hover**: Traces visual laser lines from your player/camera to all units of that type across the map.
+- **Click (Enemy)**: Centers the camera on the nearest enemy unit of that type (cycles across units on repeated clicks).
+- **Click (Friendly)**: Instantly selects all friendly units of that type in RTS command mode.
+- **Double-Click (Friendly)**: Possesses and takes direct control of the nearest friendly unit of that type.
+- **Right-Click**: Selects units in RTS mode.
+
+**Commands:**
+- `!units` / `!u` (or `!units 1/0`) — Toggle HUD visibility on/off.
+- `!units settings` (or `!units s` / `!u s`) — Open settings dialog (customize icon size, font scale, column layout, sorting, refresh rate, and blacklist filter).
 
 #### `!colors`
 

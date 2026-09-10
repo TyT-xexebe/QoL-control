@@ -39,5 +39,6 @@
   "ui/core": false,
   "ui/quickchat": false,
   "ui/map": false,
-  "ui/cbinds": false
+  "ui/cbinds": false,
+  "ui/units": false
 }

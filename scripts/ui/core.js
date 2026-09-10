@@ -350,6 +350,23 @@ Events.on(WorldLoadEvent, () => {
 interceptor.add('core', (args) => {
 	if (args[1]) {
 		let search = args[1].toLowerCase();
+		if (search === 'close' || search === 'hide' || search === 'clear' || search === 'c' || search === 'off') {
+			let count = 0;
+			for (let id in panels) {
+				if (panels[id] && panels[id].table) {
+					panels[id].table.remove();
+				}
+				delete panels[id];
+				count++;
+			}
+			panels = {};
+			if (count > 0) {
+				notify('[lightgray]All core info panels [scarlet]closed');
+			} else {
+				notify('[lightgray]No core info panels were open');
+			}
+			return;
+		}
 		if (search === 'all') {
 			let teamsWithCores = {};
 			Vars.state.teams.getActive().each((t) => {

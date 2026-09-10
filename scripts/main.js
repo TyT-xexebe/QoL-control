@@ -111,6 +111,28 @@ for (let module of activeModules) {
 	}
 }
 
+if (activeModules.indexOf('ui/units') === -1) {
+	const interceptor = require('qol-control/core/interceptor');
+	let dynamicLoaded = false;
+	let dynamicLoadUnits = (args) => {
+		if (dynamicLoaded) return;
+		try {
+			require('qol-control/ui/units');
+			dynamicLoaded = true;
+			logger.info('Dynamically loaded qol-control/ui/units');
+			if (args) interceptor.trigger('units', args);
+		} catch (err) {
+			logger.err('Failed to dynamic load ui/units: ' + err);
+		}
+	};
+	interceptor.add('units', (args) => {
+		dynamicLoadUnits(args);
+	});
+	interceptor.add('u', (args) => {
+		dynamicLoadUnits(args);
+	});
+}
+
 const toggleableFeatures = [
 	{ key: 'qol-assist-enabled', def: false, msg: '[lightgrey]Assist [green]ON' },
 	{ key: 'qol-track-enabled', def: false, msg: '[lightgray]Tracking [green]ON' },
@@ -121,6 +143,7 @@ const toggleableFeatures = [
 	{ key: 'qol-aim-active', def: false, msg: '[lightgrey]Aimbot [green]ON' },
 	{ key: 'qol-trange-enabled', def: false, msg: '[lightgrey]Turret Ranges [green]ON' },
 	{ key: 'qol-urange-enabled', def: false, msg: '[lightgrey]Enemy Unit Ranges [green]ON' },
+	{ key: 'qol-units-enabled', def: false, msg: '[lightgrey]Units HUD [green]ON' },
 	{ key: 'qol-hp-enabled', def: true, msg: '[lightgrey]HP Display [green]ON' }
 ];
 
@@ -239,13 +262,15 @@ if (!Vars.headless) {
 						'ui/binfo':
 							'Build info\nShows build info (name, team, hp, itmes, liquids, power, battery) when hover/tap on it',
 						'ui/core':
-							'!core <#team/all?>\nDisplays core resources of team #id or name you selected. !core all enables resource panels for ALL teams with active cores on the map.',
+							'!core <#team/all/clear/close?>\nDisplays core resources of team #id or name you selected.\n!core all: enables resource panels for ALL teams with active cores on the map.\n!core clear (or !core close): hides and clears all open core resource tables.',
 						'ui/quickchat':
 							'Quick chat button.\nYou can add your own quick text buttons to send them in chat.\nYou can send multiple messages with a single just write them on separate lines.\nLong texts that exceed the games 150 character limit are automatically split into several messages.\nIncludes a default Auto Execute button that automatically sends your text or commands every time you join server/world. It has crash protection that disables it if the game crashes during execution.',
 						'ui/map':
 							'Custom map\nAdds a draggable real time minimap that displays terrain, better units, other players (eye icons / nicknames), and your current camera viewport.\nUse !cmap to setting it.\nLeft-click / Tap: Opens the standard full-screen map.\nLeft-drag / Tap & drag: Moves the minimap widget around the screen.\nRight-click / Long-press (0.4s): Instantly teleports your camera to the selected location.\nRight-drag / Long-press & drag: Smoothly pans your camera across the map.',
 						'ui/cbinds':
 							'Custom Screen Binds\nCreate draggable on-screen buttons with custom sizes, icons, and commands.\n\n!cbinds to open settings\n!cbinds lock <1/0?> to lock/unlock button positions.',
+						'ui/units':
+							'Team Units HUD\nInteractive HUD displaying unit icons and counts for all teams on the map.\n\nInteractions:\n- Hover: Traces laser lines to all units of that type on the map.\n- Click (Enemy): Centers camera on nearest enemy unit (cycles between them on repeated clicks).\n- Click (Friendly): Selects all units of this type in RTS command mode.\n- Double-Click (Friendly): Instantly possesses the nearest friendly unit.\n- Right-Click: Selects units in RTS mode.\n\nCommands:\n!units / !u - Toggle HUD visibility on/off\n!units settings (or !units s / !u s) - Open settings & unit blacklist dialog',
 					};
 
 					for (let modName in defaultSettings) {

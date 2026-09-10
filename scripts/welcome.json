@@ -5,6 +5,6 @@
   "githubButton": "GitHub ⭐",
   "githubUrl": "https://github.com/TyT-xexebe/qol-control/",
   "updateTitle": "QoL Control Updated",
-  "updateText": "[accent]Mod updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]Now using stripColors on all messages to better detect commands.",
+  "updateText": "[accent]Mod updated to v{version}![]\n[lightgray]Previous version: v{previous}[]\n\n[accent]What's New & Changed:[]\n[orange]Team Units HUD (!units / !u)[]: Draggable HUD showing real-time unit counts for all teams. Hover for laser line tracing, click enemy to focus camera, click friendly for RTS command selection, double-click to possess, and quick settings via [accent]!units settings[] ([accent]!u s[]).\n[orange]Core Resources (!core)[]: Added [accent]!core clear[] (or [accent]!core close[]) to instantly close/clear all open resource panels, and [accent]!core all[] to view all team cores simultaneously.",
   "updateButton": "Got It"
 }

@@ -62,6 +62,10 @@ const helpData = {
 		cmd: 'autofill',
 		desc: '[accent]!autofill <1/0?>[lightgrey] - toggle autofill turrets, factories, reconstructors, and projectors\n[accent]!autofill <s/settings>[lightgrey] - open autofill priority & visual configuration GUI\n\n[accent]Shortcuts:[lightgrey] !af <1/0?> | !af s',
 	},
+	'features/path': {
+		cmd: 'path',
+		desc: '[accent]!path <1/0?>[lightgrey] - toggle smart conveyor auto-routing around obstacles with bridges and junctions',
+	},
 	'ui/render': {
 		cmd: 'render',
 		desc: '[accent]!render <unit|block|bullet|layer> <1/0?>[lightgrey] - off/on some render things',
@@ -110,7 +114,7 @@ const helpData = {
 	},
 	'ui/core': {
 		cmd: 'core',
-		desc: '[lightgrey]Shows core resources of teams on map\n\n[accent]!core <#team>[lightgrey] - toggles core resources display of team #id or name\n[accent]!core all[lightgrey] - toggles core resource panels for ALL teams with active cores on the map',
+		desc: '[lightgrey]Shows core resources of teams on map\n\n[accent]!core <#team>[lightgrey] - toggles core resources display of team #id or name\n[accent]!core all[lightgrey] - toggles core resource panels for ALL teams with active cores on the map\n[accent]!core clear[lightgrey] - closes/clears all open core resource panels (alias: !core close)',
 	},
 	'ui/map': {
 		cmd: 'cmap',
@@ -119,6 +123,10 @@ const helpData = {
 	'ui/cbinds': {
 		cmd: 'cbinds',
 		desc: '[lightgrey]Custom Screen Binds\nCreate draggable on-screen buttons with custom sizes, icons, and commands.\n\n[accent]!cbinds[lightgrey] - opens settings UI to create/edit custom buttons\n[accent]!cbinds lock <1/0?>[lightgrey] - lock or unlock custom button positions to prevent accidental dragging\n\n[accent]Shortcuts:[lightgrey] !cbind | !cbind lock',
+	},
+	'ui/units': {
+		cmd: 'units',
+		desc: '[lightgrey]Team Units HUD\nDisplays unit icons and counts for all teams on the map.\n\n[accent]Controls:[lightgrey]\n• [accent]Hover[lightgrey]: Draw lines to all units of that type on map\n• [accent]Click (Enemy)[lightgrey]: Focus camera on nearest unit (cycles on click)\n• [accent]Click (Friendly)[lightgrey]: Select all in RTS command mode\n• [accent]Double-Click (Friendly)[lightgrey]: Possess nearest friendly unit\n• [accent]Right-Click[lightgrey]: Select in RTS\n\n[accent]Commands:[lightgrey]\n[accent]!units <1/0?>[lightgrey] - toggle HUD on/off\n[accent]!units settings[lightgrey] - open settings & unit blacklist dialog\n\n[accent]Shortcuts:[lightgrey] !u | !u settings | !u s',
 	},
 	'core/colors': {
 		cmd: 'colors',
