@@ -62,10 +62,6 @@ const helpData = {
 		cmd: 'autofill',
 		desc: '[accent]!autofill <1/0?>[lightgrey] - toggle autofill turrets, factories, reconstructors, and projectors\n[accent]!autofill <s/settings>[lightgrey] - open autofill priority & visual configuration GUI\n\n[accent]Shortcuts:[lightgrey] !af <1/0?> | !af s',
 	},
-	'features/path': {
-		cmd: 'path',
-		desc: '[accent]!path <1/0?>[lightgrey] - toggle smart conveyor auto-routing around obstacles with bridges and junctions',
-	},
 	'ui/render': {
 		cmd: 'render',
 		desc: '[accent]!render <unit|block|bullet|layer> <1/0?>[lightgrey] - off/on some render things',
@@ -100,6 +96,10 @@ const helpData = {
 		cmd: 'wave',
 		desc: '[lightgrey]Skip waves, bypassing the waitEnemies map rule\n\n[accent]!wave <num?>[lightgrey] - skip 1 or N waves (call again to cancel)\n[accent]!wave status[lightgrey] - show wave info and current rules\n\n[lightgrey]Requires admin or host on servers.',
 	},
+	'features/path': {
+		cmd: 'path',
+		desc: '[lightgrey]Smart Pathfinding for Conveyors, Ducts & Pipes\n\nAutomatically calculates and routes your build line in real time around obstacles, terrain, and buildings. Inserts junctions when crossing perpendicular tracks and bridges to jump over obstacles.\n\n[accent]!path <1/0?>[lightgrey] - toggle smart pathfinding\n[accent]!path bridge <1/0?>[lightgrey] - toggle bridge jumps\n[accent]!path junction <1/0?>[lightgrey] - toggle junction crossings',
+	},
 	'features/aimbot': {
 		cmd: 'aim',
 		desc: '[lightgrey]Aimbot - auto aims and shoots at enemies\n\n[accent]!aim[lightgrey] - opens settings UI\n\nPer-preset options: attack units/blocks, heal blocks, predict fire, predict tiles, constant fire, disable shoot on reload, priority (Nearest/Farthest/Min-Max HP), type order (units/blocks/heal), target filter (Default/Ground/Air/etc)\n\nIgnored targets: set as CSV in the settings dialog (missiles, world processors, etc)\n\nTap a unit/block to lock it as priority target. Tap empty space to release.\n\nMay contains bugs with some units/weapons.',
@@ -126,7 +126,7 @@ const helpData = {
 	},
 	'ui/units': {
 		cmd: 'units',
-		desc: '[lightgrey]Team Units HUD\nDisplays unit icons and counts for all teams on the map.\n\n[accent]Controls:[lightgrey]\n• [accent]Hover[lightgrey]: Draw lines to all units of that type on map\n• [accent]Click (Enemy)[lightgrey]: Focus camera on nearest unit (cycles on click)\n• [accent]Click (Friendly)[lightgrey]: Select all in RTS command mode\n• [accent]Double-Click (Friendly)[lightgrey]: Possess nearest friendly unit\n• [accent]Right-Click[lightgrey]: Select in RTS\n\n[accent]Commands:[lightgrey]\n[accent]!units <1/0?>[lightgrey] - toggle HUD on/off\n[accent]!units settings[lightgrey] - open settings & unit blacklist dialog\n\n[accent]Shortcuts:[lightgrey] !u | !u settings | !u s',
+		desc: '[lightgrey]Team Units HUD\nDisplays unit icons and counts for all teams on the map.\n\n[accent]Controls:[lightgrey]\n• [accent]Hover[lightgrey]: Draw lines to all units of that type on map\n• [accent]Click (Enemy)[lightgrey]: Focus camera on nearest unit (cycles on click)\n• [accent]Click (Friendly)[lightgrey]: Select all in RTS command mode\n• [accent]Double-Click (Friendly)[lightgrey]: Possess nearest friendly unit\n• [accent]Right-Click[lightgrey]: Select in RTS\n\n[accent]Commands:[lightgrey]\n[accent]!units <1/0?>[lightgrey] - toggle HUD on/off\n[accent]!units settings[lightgrey] - open settings & unit blacklist dialog (alias: !units s)',
 	},
 	'core/colors': {
 		cmd: 'colors',

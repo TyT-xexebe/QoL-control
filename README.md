@@ -339,7 +339,7 @@ Displays core resources of team #id or name you selected. Supports multiple pane
 - `!core all` enables core resource panels for ALL active teams on the map that have cores (and disables panels for teams without cores).
 - `!core clear` (or `!core close`) closes and clears all currently open core resource panels.
 
-#### `!units` | `!u`
+#### `!units`
 
 Draggable interactive HUD displaying real-time unit icons and unit counts for all teams on the map.
 
@@ -351,8 +351,8 @@ Draggable interactive HUD displaying real-time unit icons and unit counts for al
 - **Right-Click**: Selects units in RTS mode.
 
 **Commands:**
-- `!units` / `!u` (or `!units 1/0`) — Toggle HUD visibility on/off.
-- `!units settings` (or `!units s` / `!u s`) — Open settings dialog (customize icon size, font scale, column layout, sorting, refresh rate, and blacklist filter).
+- `!units` (or `!units 1/0`) — Toggle HUD visibility on/off.
+- `!units settings` (or `!units s`) — Open settings dialog (customize icon size, font scale, column layout, sorting, refresh rate, and blacklist filter).
 
 #### `!colors`
 

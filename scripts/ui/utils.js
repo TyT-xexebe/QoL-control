@@ -1,4 +1,13 @@
+function formatNum(n) {
+	let num = Number(n);
+	let abs = Math.abs(num);
+	if (abs >= 1000000) return (Math.round(num / 100000) / 10) + 'm';
+	if (abs >= 1000) return (Math.round(num / 100) / 10) + 'k';
+	return String(Math.floor(num));
+}
+
 module.exports = {
+	formatNum: formatNum,
 	setupDrag: function (
 		settingsKeyX,
 		settingsKeyY,

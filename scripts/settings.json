@@ -31,6 +31,7 @@
   "features/omnirot": false,
   "features/aimbot": false,
   "features/wave": false,
+  "features/autopath": true,
   "ui/render": false,
   "ui/camera": false,
   "ui/table": false,
