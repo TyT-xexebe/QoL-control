@@ -1,5 +1,6 @@
 const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
+const uiUtils = require('qol-control/ui/utils');
 
 function formatNum(n) {
 	let num = Number(n);
@@ -95,7 +96,6 @@ const cfg = {
 	columns: safeGetInt('qol-core-cols', 4),
 	uiScale: safeGetFloat('qol-core-scale', 1.0),
 	bgOpacity: safeGetFloat('qol-core-opacity', 0.85),
-	locked: safeGetBool('qol-core-locked', false),
 };
 
 function saveCfg() {
@@ -108,7 +108,6 @@ function saveCfg() {
 	Core.settings.put('qol-core-cols', new JInt(cfg.columns));
 	Core.settings.put('qol-core-scale', new JFloat(cfg.uiScale));
 	Core.settings.put('qol-core-opacity', new JFloat(cfg.bgOpacity));
-	Core.settings.put('qol-core-locked', new JBool(cfg.locked));
 	if (typeof Core.settings.forceSave === 'function') {
 		Core.settings.forceSave();
 	}
@@ -415,8 +414,8 @@ function getPossibleItems(team) {
 
 // ---------------- Snapping & Position Management ----------------
 function applyDragWithSnapping(pData, targetX, targetY) {
-	let sw = Core.scene.getWidth();
-	let sh = Core.scene.getHeight();
+	let sw = uiUtils.stageWidth();
+	let sh = uiUtils.stageHeight();
 	let tw = pData.table.getWidth();
 	let th = pData.table.getHeight();
 	let clampedX = Mathf.clamp(targetX, 0, Math.max(0, sw - tw));
@@ -470,26 +469,30 @@ function savePanelPosition(pData, prefix) {
 
 function repositionPanel(pData) {
 	if (pData.isDragging) return;
-	let sw = (Core.scene && Core.scene.getWidth() > 0) ? Core.scene.getWidth() : Core.graphics.getWidth();
-	let sh = (Core.scene && Core.scene.getHeight() > 0) ? Core.scene.getHeight() : Core.graphics.getHeight();
+	let sw = uiUtils.stageWidth();
+	let sh = uiUtils.stageHeight();
 	let tw = pData.table.getWidth();
 	let th = pData.table.getHeight();
-	let x = pData.btnX;
-	let y = pData.btnY;
-	if (pData.anchorX === 'left') {
-		x = pData.offsetX;
-	} else if (pData.anchorX === 'right') {
-		x = Math.max(0, sw - tw - pData.offsetX);
-	} else {
-		x = Mathf.clamp(x, 0, Math.max(0, sw - tw));
-	}
-	if (pData.anchorY === 'top') {
-		y = Math.max(0, sh - th - pData.offsetY);
-	} else if (pData.anchorY === 'bottom') {
-		y = pData.offsetY;
-	} else {
-		y = Mathf.clamp(y, 0, Math.max(0, sh - th));
-	}
+	let maxX = Math.max(0, sw - tw);
+	let maxY = Math.max(0, sh - th);
+
+	// Positions are derived from (anchor, offset). A "free" panel keeps its real
+	// offset instead of re-clamping an already-clamped value, which is what used
+	// to permanently shift panels on every window resize.
+	let x;
+	if (pData.anchorX === 'left') x = pData.offsetX;
+	else if (pData.anchorX === 'right') x = Math.max(0, sw - tw - pData.offsetX);
+	else x = pData.offsetX !== undefined && pData.offsetX !== null ? pData.offsetX : pData.btnX;
+	if (!(x > 0)) x = 0;
+	if (x > maxX) x = maxX;
+
+	let y;
+	if (pData.anchorY === 'top') y = Math.max(0, sh - th - pData.offsetY);
+	else if (pData.anchorY === 'bottom') y = pData.offsetY;
+	else y = pData.offsetY !== undefined && pData.offsetY !== null ? pData.offsetY : pData.btnY;
+	if (!(y > 0)) y = 0;
+	if (y > maxY) y = maxY;
+
 	pData.btnX = x;
 	pData.btnY = y;
 	pData.table.setPosition(x, y);
@@ -500,10 +503,14 @@ function attachDraggable(table, pData, prefix) {
 	let dragStartMouseY = 0;
 	let dragStartPanelX = 0;
 	let dragStartPanelY = 0;
+	let dragArmed = false;
 
 	let listener = extend(InputListener, {
 		touchDown(event, x, y, pointer, button) {
-			if (cfg.locked) return false;
+			// Desktop drags with the right button, so left clicks belong to the
+			// widgets inside the panel. Touch devices keep finger dragging.
+			if (!uiUtils.isDragButton(button)) return false;
+			dragArmed = true;
 			pData.isDragging = true;
 			dragStartMouseX = Core.input.mouseX();
 			dragStartMouseY = Core.input.mouseY();
@@ -512,7 +519,7 @@ function attachDraggable(table, pData, prefix) {
 			return true;
 		},
 		touchDragged(event, x, y, pointer) {
-			if (!pData.isDragging || cfg.locked) return;
+			if (!dragArmed || !pData.isDragging) return;
 			let curMouseX = Core.input.mouseX();
 			let curMouseY = Core.input.mouseY();
 			let targetX = dragStartPanelX + (curMouseX - dragStartMouseX);
@@ -520,6 +527,8 @@ function attachDraggable(table, pData, prefix) {
 			applyDragWithSnapping(pData, targetX, targetY);
 		},
 		touchUp(event, x, y, pointer, button) {
+			if (!dragArmed) return false;
+			dragArmed = false;
 			if (pData.isDragging) {
 				pData.isDragging = false;
 				savePanelPosition(pData, prefix);
@@ -1022,12 +1031,6 @@ function openSettingsDialog() {
 		}
 	}).growX().padBottom(6).row();
 
-	// Lock dragging
-	c3.check('🔒 Lock HUD Positions (prevent accidental drag)', cfg.locked, (b) => {
-		cfg.locked = b;
-		saveCfg();
-	}).pad(3).left().row();
-
 	root.row();
 
 	// 4. Quick Actions Card
@@ -1154,8 +1157,8 @@ Events.run(Trigger.update, () => {
 	if (!setup) return;
 	let isGame = Vars.state.isGame() && Vars.ui.hudfrag && Vars.ui.hudfrag.shown;
 
-	let curSw = Core.scene.getWidth();
-	let curSh = Core.scene.getHeight();
+	let curSw = uiUtils.stageWidth();
+	let curSh = uiUtils.stageHeight();
 	let screenResized = (curSw !== lastScreenWidth || curSh !== lastScreenHeight);
 	if (screenResized) {
 		lastScreenWidth = curSw;

@@ -18,36 +18,16 @@ const buildUI = () => {
 		'pause-build-btn-x',
 		'pause-build-btn-y',
 		150,
-		210,
-		(x, y) => {
-			let nx = Mathf.clamp(x, 25, Core.graphics.getWidth() - 25);
-			let ny = Mathf.clamp(y, 25, Core.graphics.getHeight() - 25);
-			table.setPosition(nx, ny);
-		}
+		210
 	);
 
+	// The listener lives on the button (so the button still handles left clicks),
+	// while bind() places the table and re-anchors it on every window resize.
+	// Dragging is bound to the right mouse button on desktop.
 	btn.addListener(dragHandler.listener);
-
-	table.setPosition(
-		Mathf.clamp(dragHandler.state.x, 25, Core.graphics.getWidth() - 25),
-		Mathf.clamp(dragHandler.state.y, 25, Core.graphics.getHeight() - 25)
-	);
+	dragHandler.bind(table);
 
 	table.update(() => {
-		if (dragHandler)
-			table.setPosition(
-				Mathf.clamp(
-					dragHandler.state.x,
-					25,
-					Core.graphics.getWidth() - 25
-				),
-				Mathf.clamp(
-					dragHandler.state.y,
-					25,
-					Core.graphics.getHeight() - 25
-				)
-			);
-
 		if (!Vars.control.input.isBuilding) {
 			btn.getStyle().imageUp = Icon.play;
 			btn.color.set(Color.scarlet);

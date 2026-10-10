@@ -1,11 +1,16 @@
 const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
+const uiUtils = require('qol-control/ui/utils');
 
 let setup = false;
 let mapTable, mapElem, coordsLabel;
 let mapEnabled = Core.settings.getBool('map-enabled', false);
 let btnX = Core.settings.getFloat('map-x', 15);
 let btnY = Core.settings.getFloat('map-y', 400);
+let anchorX = Core.settings.getString('map-anchorX', 'free');
+let anchorY = Core.settings.getString('map-anchorY', 'free');
+let posOffsetX = Core.settings.getFloat('map-offsetX', Core.settings.getFloat('map-x', 15));
+let posOffsetY = Core.settings.getFloat('map-offsetY', Core.settings.getFloat('map-y', 400));
 let mapSize = Core.settings.getInt('map-size', 200);
 
 let playerMode = Core.settings.getInt('cmap-player-mode', 0);
@@ -207,16 +212,22 @@ const initUI = () => {
 				}
 
 				if (isMoving) {
+					let size = uiUtils.elementSize(mapTable);
 					btnX = Mathf.clamp(
 						e.stageX - offsetX,
 						0,
-						Core.scene.getWidth() - mapTable.getWidth()
+						Math.max(0, uiUtils.stageWidth() - size.w)
 					);
 					btnY = Mathf.clamp(
 						e.stageY - offsetY,
 						0,
-						Core.scene.getHeight() - mapTable.getHeight()
+						Math.max(0, uiUtils.stageHeight() - size.h)
 					);
+					// Free-floating while dragging; the anchor is decided on drop.
+					anchorX = 'free';
+					anchorY = 'free';
+					posOffsetX = btnX;
+					posOffsetY = btnY;
 					mapTable.setPosition(btnX, btnY);
 				}
 				return true;
@@ -232,8 +243,7 @@ const initUI = () => {
 				if (!isMoving && btn === KeyCode.mouseLeft) {
 					Vars.ui.minimapfrag.toggle();
 				} else if (isMoving) {
-					Core.settings.put('map-x', new java.lang.Float(btnX));
-					Core.settings.put('map-y', new java.lang.Float(btnY));
+					saveMapPosition();
 					isMoving = false;
 				}
 				return true;
@@ -265,9 +275,47 @@ const initUI = () => {
 	mapTable.add(coordsLabel).width(mapSize).padTop(2);
 	mapTable.pack();
 	Vars.ui.hudGroup.addChild(mapTable);
-	mapTable.setPosition(btnX, btnY);
+	applyAnchoredPosition();
 	mapTable.visible = false;
 };
+
+// Derive the pixel position from (anchor, offset) and register for resize
+// recalculation. Never writes the clamped result back into the offset, so a
+// window resize (F11) cannot permanently shift the minimap.
+function applyAnchoredPosition() {
+	if (!mapTable) return;
+	let size = uiUtils.elementSize(mapTable);
+	btnX = uiUtils.computeX(anchorX, posOffsetX, uiUtils.stageWidth(), size.w);
+	btnY = uiUtils.computeY(anchorY, posOffsetY, uiUtils.stageHeight(), size.h);
+	mapTable.setPosition(btnX, btnY);
+}
+
+uiUtils.onResize(applyAnchoredPosition);
+
+function saveMapPosition() {
+	let size = uiUtils.elementSize(mapTable);
+	let det = uiUtils.detectAnchor(
+		btnX,
+		btnY,
+		uiUtils.stageWidth(),
+		uiUtils.stageHeight(),
+		size.w,
+		size.h,
+		20
+	);
+	anchorX = det.anchorX;
+	anchorY = det.anchorY;
+	posOffsetX = det.offsetX;
+	posOffsetY = det.offsetY;
+
+	Core.settings.put('map-x', new java.lang.Float(btnX));
+	Core.settings.put('map-y', new java.lang.Float(btnY));
+	Core.settings.put('map-anchorX', det.anchorX);
+	Core.settings.put('map-anchorY', det.anchorY);
+	Core.settings.put('map-offsetX', new java.lang.Float(det.offsetX));
+	Core.settings.put('map-offsetY', new java.lang.Float(det.offsetY));
+	if (typeof Core.settings.forceSave === 'function') Core.settings.forceSave();
+}
 
 if (Vars.ui && Vars.ui.hudGroup) initUI();
 else Events.on(ClientLoadEvent, initUI);
@@ -383,9 +431,9 @@ Events.run(Trigger.update, () => {
 	}
 
 	mapTable.visible = true;
-	btnX = Mathf.clamp(btnX, 0, Core.scene.getWidth() - mapTable.getWidth());
-	btnY = Mathf.clamp(btnY, 0, Core.scene.getHeight() - mapTable.getHeight());
-	mapTable.setPosition(btnX, btnY);
+	// Anchor-based: recomputed each tick from the stored offset, never from an
+	// already-clamped pixel value, so resizes do not accumulate drift.
+	applyAnchoredPosition();
 
 	cacheTimer += Time.delta;
 	if (cacheTimer > 30) {

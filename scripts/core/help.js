@@ -122,7 +122,7 @@ const helpData = {
 	},
 	'ui/cbinds': {
 		cmd: 'cbinds',
-		desc: '[lightgrey]Custom Screen Binds\nCreate draggable on-screen buttons with custom sizes, icons, and commands.\n\n[accent]!cbinds[lightgrey] - opens settings UI to create/edit custom buttons\n[accent]!cbinds lock <1/0?>[lightgrey] - lock or unlock custom button positions to prevent accidental dragging\n\n[accent]Shortcuts:[lightgrey] !cbind | !cbind lock',
+		desc: '[lightgrey]Custom Screen Binds\nCreate draggable on-screen buttons with custom sizes, icons, and commands.\n\n[accent]!cbinds[lightgrey] - opens settings UI to create/edit custom buttons\n[accent]Shortcuts:[lightgrey] !cbind\n\n[lightgrey]Drag buttons with the [accent]right mouse button[lightgrey] (finger drag on touch devices).',
 	},
 	'ui/units': {
 		cmd: 'units',

@@ -1,5 +1,6 @@
 const notify = require('qol-control/core/logger').notify;
 const interceptor = require('qol-control/core/interceptor');
+const uiUtils = require('qol-control/ui/utils');
 
 let setup = false;
 let hudTable = null;
@@ -23,7 +24,6 @@ let lastClickedKey = '';
 
 var cfg = {
 	enabled: Core.settings.getBool('qol-units-enabled', true),
-	locked: Core.settings.getBool('qol-units-locked', false),
 	iconSize: Core.settings.getInt('qol-units-icon-size', 22),
 	fontScale: Core.settings.getFloat('qol-units-font-scale', 0.85),
 	maxCols: Core.settings.getInt('qol-units-max-cols', 6),
@@ -36,6 +36,10 @@ var cfg = {
 	showDeltas: Core.settings.getBool('qol-units-deltas', true),
 	rtsOnClick: Core.settings.getBool('qol-units-rts-click', true),
 	doubleClickPossess: Core.settings.getBool('qol-units-dc-possess', true),
+	anchorX: Core.settings.getString('qol-units-anchorX', 'free'),
+	anchorY: Core.settings.getString('qol-units-anchorY', 'free'),
+	offsetX: Core.settings.getFloat('qol-units-offsetX', Core.settings.getFloat('qol-units-x', 20)),
+	offsetY: Core.settings.getFloat('qol-units-offsetY', Core.settings.getFloat('qol-units-y', 360)),
 	ignored: {}
 };
 
@@ -48,7 +52,6 @@ try {
 
 function saveCfg() {
 	Core.settings.put('qol-units-enabled', new java.lang.Boolean(cfg.enabled));
-	Core.settings.put('qol-units-locked', new java.lang.Boolean(cfg.locked));
 	Core.settings.put('qol-units-icon-size', new java.lang.Integer(cfg.iconSize));
 	Core.settings.put('qol-units-font-scale', new java.lang.Float(cfg.fontScale));
 	Core.settings.put('qol-units-max-cols', new java.lang.Integer(cfg.maxCols));
@@ -57,6 +60,10 @@ function saveCfg() {
 	Core.settings.put('qol-units-interval', new java.lang.Integer(cfg.interval));
 	Core.settings.put('qol-units-x', new java.lang.Float(cfg.x));
 	Core.settings.put('qol-units-y', new java.lang.Float(cfg.y));
+	Core.settings.put('qol-units-anchorX', cfg.anchorX);
+	Core.settings.put('qol-units-anchorY', cfg.anchorY);
+	Core.settings.put('qol-units-offsetX', new java.lang.Float(cfg.offsetX));
+	Core.settings.put('qol-units-offsetY', new java.lang.Float(cfg.offsetY));
 	Core.settings.put('qol-units-lines', new java.lang.Boolean(cfg.showLines));
 	Core.settings.put('qol-units-deltas', new java.lang.Boolean(cfg.showDeltas));
 	Core.settings.put('qol-units-rts-click', new java.lang.Boolean(cfg.rtsOnClick));
@@ -406,9 +413,13 @@ function initUI() {
 	contentTable.touchable = Packages.arc.scene.event.Touchable.enabled;
 	hudTable.add(contentTable).growX().row();
 
+	let dragArmed = false;
+
 	let dragListener = extend(InputListener, {
 		touchDown(event, x, y, pointer, button) {
-			if (cfg.locked) return false;
+			// Desktop drags with the right button; touch devices with a finger.
+			if (!uiUtils.isDragButton(button)) return false;
+			dragArmed = true;
 			isDragging = false;
 			dragStartX = x;
 			dragStartY = y;
@@ -417,28 +428,26 @@ function initUI() {
 			return true;
 		},
 		touchDragged(event, x, y, pointer) {
-			if (cfg.locked) return false;
+			if (!dragArmed) return false;
 			if (!isDragging && (Math.abs(x - dragStartX) > 4 || Math.abs(y - dragStartY) > 4)) {
 				isDragging = true;
 			}
 			if (isDragging) {
-				let sw = Core.scene.getWidth();
-				let sh = Core.scene.getHeight();
-				let tw = hudTable.getWidth();
-				let th = hudTable.getHeight();
+				let size = uiUtils.elementSize(hudTable);
+				let sw = uiUtils.stageWidth();
+				let sh = uiUtils.stageHeight();
 
 				let targetX = event.stageX - dragStageOffsetX;
 				let targetY = event.stageY - dragStageOffsetY;
 
-				let nx = Mathf.clamp(targetX, 0, Math.max(0, sw - tw));
-				let ny = Mathf.clamp(targetY, 0, Math.max(0, sh - th));
+				let nx = Mathf.clamp(targetX, 0, Math.max(0, sw - size.w));
+				let ny = Mathf.clamp(targetY, 0, Math.max(0, sh - size.h));
 
-				let snap = 16;
-				if (nx < snap) nx = 0;
-				else if (nx > sw - tw - snap) nx = sw - tw;
-				if (ny < snap) ny = 0;
-				else if (ny > sh - th - snap) ny = sh - th;
-
+				// Free-floating while dragging; the anchor is chosen on drop.
+				cfg.anchorX = 'free';
+				cfg.anchorY = 'free';
+				cfg.offsetX = nx;
+				cfg.offsetY = ny;
 				cfg.x = nx;
 				cfg.y = ny;
 				hudTable.setPosition(nx, ny);
@@ -446,7 +455,27 @@ function initUI() {
 			return true;
 		},
 		touchUp(event, x, y, pointer) {
+			if (!dragArmed) return false;
+			dragArmed = false;
 			if (isDragging) {
+				// Re-anchor, then persist. saveCfg() no longer stores a clamped
+				// pixel value as the position, so resizes stay idempotent.
+				let size = uiUtils.elementSize(hudTable);
+				let det = uiUtils.detectAnchor(
+					hudTable.x,
+					hudTable.y,
+					uiUtils.stageWidth(),
+					uiUtils.stageHeight(),
+					size.w,
+					size.h,
+					16
+				);
+				cfg.anchorX = det.anchorX;
+				cfg.anchorY = det.anchorY;
+				cfg.offsetX = det.offsetX;
+				cfg.offsetY = det.offsetY;
+				cfg.x = hudTable.x;
+				cfg.y = hudTable.y;
 				saveCfg();
 				Timer.schedule(run(() => { isDragging = false; }), 0.1);
 			} else {
@@ -461,19 +490,26 @@ function initUI() {
 	hudTable.pack();
 	Vars.ui.hudGroup.addChild(hudTable);
 
-	let sw = Core.scene.getWidth();
-	let sh = Core.scene.getHeight();
-	let tw = hudTable.getWidth();
-	let th = hudTable.getHeight();
-	cfg.x = Mathf.clamp(cfg.x, 0, Math.max(0, sw - tw));
-	cfg.y = Mathf.clamp(cfg.y, 0, Math.max(0, sh - th));
-	hudTable.setPosition(cfg.x, cfg.y);
+	applyAnchoredPosition();
 
 	lastFingerprint = '';
 	let data = getTeamsUnitsData();
 	updateDeltas(data);
 	rebuildContent(data);
 }
+
+// Derive the pixel position from (anchor, offset). Called at build time and on
+// every window resize; it never writes the clamped result back into the stored
+// offset, so F11 / mode changes cannot permanently shift the HUD.
+function applyAnchoredPosition() {
+	if (!hudTable) return;
+	let size = uiUtils.elementSize(hudTable);
+	cfg.x = uiUtils.computeX(cfg.anchorX, cfg.offsetX, uiUtils.stageWidth(), size.w);
+	cfg.y = uiUtils.computeY(cfg.anchorY, cfg.offsetY, uiUtils.stageHeight(), size.h);
+	hudTable.setPosition(cfg.x, cfg.y);
+}
+
+uiUtils.onResize(applyAnchoredPosition);
 
 function openSettingsDialog(defaultTab) {
 	let dialog = new BaseDialog('Units HUD Settings');
@@ -536,11 +572,6 @@ function buildGeneralSettings(table, dialog) {
 		cfg.enabled = b;
 		saveCfg();
 		if (hudTable) hudTable.visible = b;
-	}).left().padBottom(6).row();
-
-	table.check('Lock Position (Disable Dragging)', cfg.locked, (b) => {
-		cfg.locked = b;
-		saveCfg();
 	}).left().padBottom(6).row();
 
 	table.check('Hide Empty Teams', cfg.hideEmpty, (b) => {
@@ -630,10 +661,14 @@ function buildGeneralSettings(table, dialog) {
 	}).width(280).left().padBottom(14).row();
 
 	table.button('Reset Window Position', Styles.cleart, () => {
-		let sw = Core.scene.getWidth();
-		let sh = Core.scene.getHeight();
+		let sw = uiUtils.stageWidth();
+		let sh = uiUtils.stageHeight();
+		cfg.anchorX = 'free';
+		cfg.anchorY = 'free';
 		cfg.x = Math.max(0, (sw - (hudTable ? hudTable.getWidth() : 200)) / 2);
 		cfg.y = Math.max(0, (sh - (hudTable ? hudTable.getHeight() : 200)) / 2);
+		cfg.offsetX = cfg.x;
+		cfg.offsetY = cfg.y;
 		saveCfg();
 		if (hudTable) hudTable.setPosition(cfg.x, cfg.y);
 		notify('[lightgray]Window position [green]reset');

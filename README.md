@@ -276,8 +276,8 @@ Create draggable on-screen buttons with custom sizes, icons, and commands.
 `!cbinds` | `!cbind`
 Opens the settings UI to create, edit, delete, and manage custom buttons.
 
-`!cbinds lock <1/0?>` | `!cbind lock <1/0?>`
-Locks or unlocks custom button positions on your screen to prevent accidental dragging.
+Drag buttons with the right mouse button (finger drag on touch devices).
+
 
 #### `!track <name?>`
 
@@ -354,11 +354,31 @@ Draggable interactive HUD displaying real-time unit icons and unit counts for al
 - `!units` (or `!units 1/0`) — Toggle HUD visibility on/off.
 - `!units settings` (or `!units s`) — Open settings dialog (customize icon size, font scale, column layout, sorting, refresh rate, and blacklist filter).
 
+#### `!path`
+
+Smart real-time pathfinding for conveyors, ducts, and liquid conduits.
+
+As you drag a build line from point A to point B:
+- Automatically calculates and previews an optimal route around solid obstacles, terrain, and buildings.
+- Automatically inserts junctions when crossing existing perpendicular conveyor lines.
+- Automatically places bridges to jump over obstacles and terrain gaps.
+
+**Commands:**
+- `!path` (or `!path 1/0`) — Toggle smart pathfinding on/off.
+- `!path bridge` (or `!path bridge 1/0`) — Toggle bridge jumping over obstacles.
+- `!path junction` (or `!path junction 1/0`) — Toggle automatic junction insertion.
+
 #### `!colors`
 
 You can customise all your mindustry colors from Pal.java.
 
 ## Features
+
+#### Moving HUD widgets
+
+All mod widgets (quick chat, build pause, camera lock, schematic table, build info, team units HUD, aimbot window, custom binds, core HUD panels) are dragged with the **right mouse button**; left clicks stay with the widget itself. On touch devices, drag with a finger as before.
+
+Positions are stored as anchor + offset, so F11, window resize and UI scale changes never shift or drift a widget.
 
 #### Player Auto-Mine
 
@@ -406,6 +426,8 @@ Left-drag / Tap & drag: Moves the minimap widget around the screen.
 Right-click / Long-press (0.4s): Instantly teleports your camera to the selected location.
 
 Right-drag / Long-press & drag: Smoothly pans your camera across the map.
+
+This widget is the only exception to right-mouse dragging: it keeps left-drag, because right-click is reserved for camera teleport/pan.
 
 #### Omnimovement + rotateSpeed for units
 

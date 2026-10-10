@@ -1,4 +1,5 @@
 const interceptor = require('qol-control/core/interceptor');
+const uiUtils = require('qol-control/ui/utils');
 const SETTINGS_KEY = 'qol-cbinds';
 
 let dialog = null;
@@ -254,6 +255,78 @@ function showIconPicker(callback) {
 	d.show();
 }
 
+// ---------------------------------------------------------------------------
+// Anchored positioning for custom screen binds
+//
+// Stored as (anchor, offset) so a window resize re-derives the pixel position
+// instead of re-clamping an already-clamped value. Legacy configs that only
+// carry a bare x/y get their anchor derived once, then migrated on next save.
+// ---------------------------------------------------------------------------
+function resolveAnchor(entry, fallbackX, fallbackY) {
+	let size = uiUtils.elementSize(entry.table);
+	let w = size.w > 0 ? size.w : entry.width || 50;
+	let h = size.h > 0 ? size.h : entry.height || 50;
+	let sw = uiUtils.stageWidth();
+	let sh = uiUtils.stageHeight();
+
+	if (!entry.anchorX || !entry.anchorY) {
+		let det = uiUtils.detectAnchor(
+			fallbackX,
+			fallbackY,
+			sw,
+			sh,
+			w,
+			h,
+			16
+		);
+		if (!entry.anchorX) {
+			entry.anchorX = det.anchorX;
+			entry.offsetX = entry.offsetX !== undefined ? entry.offsetX : det.offsetX;
+		}
+		if (!entry.anchorY) {
+			entry.anchorY = det.anchorY;
+			entry.offsetY = entry.offsetY !== undefined ? entry.offsetY : det.offsetY;
+		}
+		if (entry.config) {
+			entry.config.anchorX = entry.anchorX;
+			entry.config.anchorY = entry.anchorY;
+			entry.config.offsetX = entry.offsetX;
+			entry.config.offsetY = entry.offsetY;
+		}
+	}
+	if (entry.offsetX === undefined || entry.offsetX === null) entry.offsetX = fallbackX;
+	if (entry.offsetY === undefined || entry.offsetY === null) entry.offsetY = fallbackY;
+
+	entry.px = uiUtils.computeX(
+		entry.anchorX,
+		entry.offsetX,
+		sw,
+		size.w > 0 ? size.w : w
+	);
+	entry.py = uiUtils.computeY(
+		entry.anchorY,
+		entry.offsetY,
+		sh,
+		size.h > 0 ? size.h : h
+	);
+	return entry;
+}
+
+// Re-derive and apply without touching the stored offset (idempotent on resize).
+function positionEntry(entry) {
+	if (!entry || !entry.table) return;
+	resolveAnchor(entry, entry.px !== undefined ? entry.px : 100, entry.py !== undefined ? entry.py : 200);
+	entry.table.setPosition(entry.px, entry.py);
+}
+
+function repositionAllEntries() {
+	activeTables.forEach((entry) => {
+		try {
+			positionEntry(entry);
+		} catch (e) {}
+	});
+}
+
 function rebuildHUD() {
 	activeTables.forEach(entry => {
 		try {
@@ -270,7 +343,6 @@ function rebuildHUD() {
 	hudBuilt = true;
 
 	let buttons = loadButtons();
-	let isLocked = Core.settings.getBool('qol-cbinds-locked', false);
 
 	buttons.forEach((btnConfig) => {
 		if (btnConfig.enabled === false) return;
@@ -281,7 +353,21 @@ function rebuildHUD() {
 
 		let width = btnConfig.width || 50;
 		let height = btnConfig.height || 50;
-		table.setPosition(btnConfig.x || 100, btnConfig.y || 200);
+
+		// Anchor + offset instead of a raw pixel pair. Existing configs only have
+		// a bare x/y, so the anchor is derived from that once and then stored.
+		let entry = {
+			table: table,
+			width: width,
+			height: height,
+			config: btnConfig,
+			anchorX: btnConfig.anchorX || null,
+			anchorY: btnConfig.anchorY || null,
+			offsetX: btnConfig.offsetX,
+			offsetY: btnConfig.offsetY
+		};
+		resolveAnchor(entry, btnConfig.x || 100, btnConfig.y || 200);
+		table.setPosition(entry.px, entry.py);
 
 		let drawable = getIconDrawable(btnConfig.iconName, btnConfig.iconType);
 		let btn;
@@ -316,6 +402,7 @@ function rebuildHUD() {
 		btn.size(width, height).get();
 
 		let localDragging = false;
+		let dragArmed = false;
 		let startX = 0;
 		let startY = 0;
 		let currentX = btnConfig.x || 100;
@@ -324,7 +411,10 @@ function rebuildHUD() {
 		btn.get().addListener(
 			extend(InputListener, {
 				touchDown(event, x, y, pointer, button) {
-					if (isLocked) return true;
+					// Desktop moves buttons with the right button, so a left click
+					// still fires the command bound to the button.
+					if (!uiUtils.isDragButton(button)) return false;
+					dragArmed = true;
 					localDragging = false;
 					isDraggingBtn = false;
 					startX = x;
@@ -332,7 +422,7 @@ function rebuildHUD() {
 					return true;
 				},
 				touchDragged(event, x, y, pointer) {
-					if (isLocked) return true;
+					if (!dragArmed) return false;
 					if (
 						!localDragging &&
 						(Math.abs(x - startX) > 5 || Math.abs(y - startY) > 5)
@@ -340,28 +430,55 @@ function rebuildHUD() {
 						localDragging = true;
 						isDraggingBtn = true;
 					}
-					if (localDragging) {
-						currentX = Mathf.clamp(
-							event.stageX,
-							width / 2,
-							Core.scene.getWidth() - width / 2
-						);
-						currentY = Mathf.clamp(
-							event.stageY,
-							height / 2,
-							Core.scene.getHeight() - height / 2
-						);
-						table.setPosition(currentX, currentY);
-					}
-					return true;
-				},
-				touchUp(event, x, y, pointer) {
-					if (isLocked) return true;
-					if (localDragging) {
-						btnConfig.x = currentX;
-						btnConfig.y = currentY;
-						saveButtons(buttons);
-					}
+				if (localDragging) {
+					let sw = uiUtils.stageWidth();
+					let sh = uiUtils.stageHeight();
+					currentX = Mathf.clamp(
+						event.stageX,
+						width / 2,
+						Math.max(width / 2, sw - width / 2)
+					);
+					currentY = Mathf.clamp(
+						event.stageY,
+						height / 2,
+						Math.max(height / 2, sh - height / 2)
+					);
+					entry.px = currentX;
+					entry.py = currentY;
+					table.setPosition(currentX, currentY);
+				}
+				return true;
+			},
+			touchUp(event, x, y, pointer) {
+				if (!dragArmed) return false;
+				dragArmed = false;
+				if (localDragging) {
+					// Re-anchor from the drop point, then persist anchor + offset.
+					let size = uiUtils.elementSize(table);
+					let det = uiUtils.detectAnchor(
+						currentX,
+						currentY,
+						uiUtils.stageWidth(),
+						uiUtils.stageHeight(),
+						size.w > 0 ? size.w : width,
+						size.h > 0 ? size.h : height,
+						16
+					);
+					entry.anchorX = det.anchorX;
+					entry.anchorY = det.anchorY;
+					entry.offsetX = det.offsetX;
+					entry.offsetY = det.offsetY;
+					entry.px = currentX;
+					entry.py = currentY;
+
+					btnConfig.x = currentX;
+					btnConfig.y = currentY;
+					btnConfig.anchorX = det.anchorX;
+					btnConfig.anchorY = det.anchorY;
+					btnConfig.offsetX = det.offsetX;
+					btnConfig.offsetY = det.offsetY;
+					saveButtons(buttons);
+				}
 					Timer.schedule(() => {
 						localDragging = false;
 						isDraggingBtn = false;
@@ -371,11 +488,7 @@ function rebuildHUD() {
 			})
 		);
 
-		activeTables.push({
-			table: table,
-			width: width,
-			height: height
-		});
+		activeTables.push(entry);
 	});
 }
 
@@ -387,18 +500,11 @@ function buildUI() {
 
 function showMainMenu() {
 	let buttons = loadButtons();
-	let isLocked = Core.settings.getBool('qol-cbinds-locked', false);
 
 	dialog.cont.clear();
 
 	let table = new Table();
 	table.top().left();
-
-	table.check('Lock Positions (Disable Dragging)', isLocked, b => {
-		Core.settings.put('qol-cbinds-locked', b);
-		Core.settings.forceSave();
-		rebuildHUD();
-	}).left().padBottom(10).row();
 
 	if (buttons.length === 0) {
 		table.add('[lightgray]No custom screen buttons found. Create one!').pad(10).row();
@@ -473,8 +579,8 @@ function showMainMenu() {
 			width: 50,
 			height: 50,
 			commands: '',
-			x: Core.graphics.getWidth() / 2,
-			y: Core.graphics.getHeight() / 2
+			x: uiUtils.stageWidth() / 2,
+			y: uiUtils.stageHeight() / 2
 		});
 	}).size(440, 50).padTop(10);
 }
@@ -579,8 +685,8 @@ function showEditDialog(index, btnData) {
 				commands: commands,
 				enabled: enabled,
 				ips: ips,
-				x: btnData.x || (Core.graphics.getWidth() / 2),
-				y: btnData.y || (Core.graphics.getHeight() / 2)
+				x: btnData.x || (uiUtils.stageWidth() / 2),
+				y: btnData.y || (uiUtils.stageHeight() / 2)
 			});
 		} else {
 			buttons[index] = {
@@ -608,30 +714,6 @@ function showEditDialog(index, btnData) {
 }
 
 function handleCommand(args) {
-	if (args.length > 1) {
-		let sub = args[1].toLowerCase();
-		if (sub === 'lock') {
-			let val = true;
-			if (args.length > 2) {
-				if (!interceptor.isBooleanArg(args[2])) {
-					Vars.ui.showInfoFade('[scarlet]Usage: !cbinds lock <1/0?>');
-					return;
-				}
-				val = interceptor.parseToggle(Core.settings.getBool('qol-cbinds-locked', false), args[2]);
-			} else {
-				val = !Core.settings.getBool('qol-cbinds-locked', false);
-			}
-			Core.settings.put('qol-cbinds-locked', val);
-			Core.settings.forceSave();
-			rebuildHUD();
-			if (val) {
-				Vars.ui.showInfoFade('[accent]Custom binds locked!');
-			} else {
-				Vars.ui.showInfoFade('[accent]Custom binds unlocked!');
-			}
-			return;
-		}
-	}
 	if (!dialog) buildUI();
 	else showMainMenu();
 	dialog.show();
@@ -674,11 +756,8 @@ Events.run(Trigger.update, () => {
 			entry.table.visible = visible;
 		}
 		if (visible) {
-			let clampedX = Mathf.clamp(entry.table.x, entry.width / 2, Core.scene.getWidth() - entry.width / 2);
-			let clampedY = Mathf.clamp(entry.table.y, entry.height / 2, Core.scene.getHeight() - entry.height / 2);
-			if (clampedX !== entry.table.x || clampedY !== entry.table.y) {
-				entry.table.setPosition(clampedX, clampedY);
-			}
+			// Idempotent: recomputed from anchor + offset, nothing written back.
+			positionEntry(entry);
 		}
 	});
 });

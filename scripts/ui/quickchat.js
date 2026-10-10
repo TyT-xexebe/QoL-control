@@ -1,13 +1,9 @@
 const interceptor = require('qol-control/core/interceptor');
+const uiUtils = require('qol-control/ui/utils');
 const SETTINGS_KEY = 'qol-quickchat';
 let dialog = null;
 
-let isDragging = false;
-let startX = 0;
-let startY = 0;
-
-let btnX = Core.settings.getFloat('quickchat-btn-x', 150);
-let btnY = Core.settings.getFloat('quickchat-btn-y', 200);
+let dragHandler = null;
 
 let currentSessionExecuting = false;
 let execTimer = null;
@@ -141,11 +137,21 @@ Events.on(EventType.WorldLoadEvent, (e) => {
 function buildHUD() {
 	let table = new Table();
 	Vars.ui.hudGroup.addChild(table);
-	table.setPosition(btnX, btnY);
+
+	// Position is owned by the anchored drag handler: it stores anchor + offset
+	// and re-derives pixel coordinates on every resize instead of clamping a
+	// value and writing the clamped result back into itself. Dragged with the
+	// right mouse button (left click stays on the chat button).
+	dragHandler = uiUtils.setupDrag(
+		'quickchat-btn-x',
+		'quickchat-btn-y',
+		150,
+		200
+	);
 
 	let btn = table
 		.button(Icon.chat, Styles.clearNonei, () => {
-			if (!isDragging) {
+			if (!dragHandler.state.isDragging) {
 				if (!dialog) buildUI();
 				else showMainMenu();
 				dialog.show();
@@ -154,54 +160,11 @@ function buildHUD() {
 		.size(50)
 		.get();
 
-	btn.addListener(
-		extend(InputListener, {
-			touchDown(event, x, y, pointer, button) {
-				isDragging = false;
-				startX = x;
-				startY = y;
-				return true;
-			},
-			touchDragged(event, x, y, pointer) {
-				if (
-					!isDragging &&
-					(Math.abs(x - startX) > 5 || Math.abs(y - startY) > 5)
-				) {
-					isDragging = true;
-				}
-				if (isDragging) {
-					btnX = Mathf.clamp(
-						event.stageX,
-						25,
-						Core.scene.getWidth() - 25
-					);
-					btnY = Mathf.clamp(
-						event.stageY,
-						25,
-						Core.scene.getHeight() - 25
-					);
-					table.setPosition(btnX, btnY);
-				}
-				return true;
-			},
-			touchUp(event, x, y, pointer) {
-				Core.settings.put('quickchat-btn-x', new java.lang.Float(btnX));
-				Core.settings.put('quickchat-btn-y', new java.lang.Float(btnY));
-				Core.settings.forceSave();
-				Timer.schedule(() => {
-					isDragging = false;
-				}, 0.1);
-				return true;
-			},
-		})
-	);
+	btn.addListener(dragHandler.listener);
+	dragHandler.bind(table);
 
 	Events.run(Trigger.update, () => {
 		if (!table) return;
-
-		btnX = Mathf.clamp(btnX, 25, Core.scene.getWidth() - 25);
-		btnY = Mathf.clamp(btnY, 25, Core.scene.getHeight() - 25);
-		table.setPosition(btnX, btnY);
 
 		let visible = Vars.state.isGame() && Vars.ui.hudfrag.shown;
 		if (table.visible !== visible) table.visible = visible;

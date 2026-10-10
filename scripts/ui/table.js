@@ -92,10 +92,8 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		lastClickTime = 0,
 		lastClickSlot = -1;
 
-	let getStageW = () =>
-		Core.scene ? Core.scene.getWidth() : Core.graphics.getWidth();
-	let getStageH = () =>
-		Core.scene ? Core.scene.getHeight() : Core.graphics.getHeight();
+	let getStageW = () => uiUtils.stageWidth();
+	let getStageH = () => uiUtils.stageHeight();
 
 	let tableX = 0;
 	let tableY = 0;
@@ -246,12 +244,16 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 			tableX = Math.max(0, (sw - uiTable.getWidth()) / 2);
 			tableY = Math.max(0, (sh - uiTable.getHeight()) / 2);
 			if (dragHandler && dragHandler.state) {
-				dragHandler.state.x = tableX;
-				dragHandler.state.y = tableY;
+				dragHandler.state.anchorX = 'free';
+				dragHandler.state.anchorY = 'free';
+				dragHandler.state.offsetX = tableX;
+				dragHandler.state.offsetY = tableY;
 				dragHandler.state.isDragging = false;
+				dragHandler.persist();
+			} else {
+				Core.settings.put('qol-schem-x', new java.lang.Float(tableX));
+				Core.settings.put('qol-schem-y', new java.lang.Float(tableY));
 			}
-			Core.settings.put('qol-schem-x', new java.lang.Float(tableX));
-			Core.settings.put('qol-schem-y', new java.lang.Float(tableY));
 			uiTable.setPosition(tableX, tableY);
 			notify('[lightgray]Table [green]RESET');
 		} else if (sub === 'help') {
@@ -279,6 +281,8 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 	let initSw = getStageW();
 	let initSh = getStageH();
+	// Saved values are passed through untouched: clamping them here used to
+	// become the new "saved" position, so every resize crept the table inward.
 	tableX = Core.settings.getFloat(
 		'qol-schem-x',
 		(initSw - uiTable.getWidth()) / 2
@@ -288,35 +292,18 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		(initSh - uiTable.getHeight()) / 2
 	);
 
-	tableX = Mathf.clamp(tableX, 0, Math.max(0, initSw - uiTable.getWidth()));
-	tableY = Mathf.clamp(tableY, 0, Math.max(0, initSh - uiTable.getHeight()));
-
 	dragHandler = uiUtils.setupDrag(
 		'qol-schem-x',
 		'qol-schem-y',
 		tableX,
 		tableY,
 		(x, y) => {
-			let sw = getStageW();
-			let sh = getStageH();
-			let maxW = Math.max(0, sw - uiTable.getWidth());
-			let maxH = Math.max(0, sh - uiTable.getHeight());
-			let nx = Mathf.clamp(x, 0, maxW);
-			let ny = Mathf.clamp(y, 0, maxH);
-
-			let snap = 15;
-			if (nx < snap) nx = 0;
-			else if (nx > maxW - snap) nx = maxW;
-			if (ny < snap) ny = 0;
-			else if (ny > maxH - snap) ny = maxH;
-
-			tableX = nx;
-			tableY = ny;
+			tableX = x;
+			tableY = y;
 			uiTable.setPosition(tableX, tableY);
 		}
 	);
 	dragHandler.attach(uiTable);
-	uiTable.setPosition(tableX, tableY);
 
 	Events.run(Trigger.update, () => {
 		uiTable.visible =
@@ -324,18 +311,10 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		if (!uiTable.visible) return;
 		if (dragHandler && dragHandler.state && dragHandler.state.isDragging)
 			return;
-		let sw = getStageW();
-		let sh = getStageH();
-		tableX = Mathf.clamp(
-			tableX,
-			0,
-			Math.max(0, sw - uiTable.getWidth())
-		);
-		tableY = Mathf.clamp(
-			tableY,
-			0,
-			Math.max(0, sh - uiTable.getHeight())
-		);
-		uiTable.setPosition(tableX, tableY);
+		// Recomputed from anchor + offset; nothing is written back, so repeated
+		// resizes stay idempotent.
+		dragHandler.recompute();
+		tableX = dragHandler.state.x;
+		tableY = dragHandler.state.y;
 	});
 });

@@ -36,17 +36,7 @@ const initUI = () => {
 	Vars.ui.hudGroup.addChild(infoTable);
 
 	dragHandler = uiUtils.setupDrag('binfo-x', 'binfo-y', 15, 180, (x, y) => {
-		let nx = Mathf.clamp(
-			x,
-			0,
-			Core.scene.getWidth() - infoTable.getWidth()
-		);
-		let ny = Mathf.clamp(
-			y,
-			0,
-			Core.scene.getHeight() - infoTable.getHeight()
-		);
-		infoTable.setPosition(nx, ny);
+		infoTable.setPosition(x, y);
 	});
 	dragHandler.attach(infoTable);
 };
@@ -89,19 +79,10 @@ Events.run(Trigger.update, () => {
 	infoTable.visible = true;
 	timer += Time.delta;
 
-	if (dragHandler) {
-		dragHandler.state.x = Mathf.clamp(
-			dragHandler.state.x,
-			0,
-			Core.scene.getWidth() - infoTable.getWidth()
-		);
-		dragHandler.state.y = Mathf.clamp(
-			dragHandler.state.y,
-			0,
-			Core.scene.getHeight() - infoTable.getHeight()
-		);
-		infoTable.setPosition(dragHandler.state.x, dragHandler.state.y);
-	}
+	// Position comes from anchor + offset inside the drag handler. The clamp
+	// there never writes back into the stored offset, so a window resize (F11)
+	// can no longer permanently shift this panel.
+	if (dragHandler) dragHandler.recompute();
 
 	if (timer > 10 || lastBuild !== targetBuild) {
 		timer = 0;
