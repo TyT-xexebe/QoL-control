@@ -61,7 +61,7 @@
   },
   "features/path": {
     "cmd": "path",
-    "desc": "[accent]!path <1/0?>[lightgrey] - toggle smart conveyor auto-routing around obstacles with bridges and junctions"
+    "desc": "[accent]!path[lightgrey] - open the Autopath UI (bind the key you hold while dragging)\n[accent]!path <1/0?>[lightgrey] - quick on/off toggle\n\n[lightgrey]No key is bound by default. Bind one in the UI, then hold it while dragging a conveyor to route it with the pathfinder, jumping obstacles with bridges and junctions. Without a bound key (or without holding it) the drag stays vanilla — straight lines and native diagonals."
   },
   "ui/render": {
     "cmd": "render",

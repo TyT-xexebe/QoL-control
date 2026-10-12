@@ -95,6 +95,214 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 	let getStageW = () => uiUtils.stageWidth();
 	let getStageH = () => uiUtils.stageHeight();
 
+	// -----------------------------------------------------------------------
+	// Slot drag & drop: Shift + LEFT mouse
+	//
+	// The panel is moved with the RIGHT button (uiUtils.isDragButton), so LMB is
+	// a completely separate channel and the two gestures cannot collide — no
+	// event-order tricks, no vetoes. RMB keeps moving the panel everywhere,
+	// including on top of a filled slot, exactly as it always did.
+	//
+	// The button's own ClickListener reads `button === KeyCode.mouseLeft` from
+	// the constructor (verified against Mindustry.jar), so a Shift+LMB press also
+	// reaches this listener. It does not swallow our gesture; both listeners are
+	// notified, and ClickListener's clicked() only fires when the pointer stayed
+	// inside its 14px tap square — our drag threshold is smaller, so the button
+	// callback additionally ignores anything while a drag is in progress.
+	// -----------------------------------------------------------------------
+	let slotButtons = [];
+	const iconDrag = {
+		active: false, // right button is down on an occupied slot
+		moving: false, // the pointer actually travelled, so the icon is lifted
+		fromIdx: -1,
+		hoverIdx: -1,
+		ghost: null,
+		startStageX: 0,
+		startStageY: 0,
+	};
+
+	// Shift held = the icon is dragged instead of the schematic being placed.
+	const panelModifierHeld = () => {
+		try {
+			const KC = Packages.arc.input.KeyCode;
+			return Core.input.keyDown(KC.shiftLeft) || Core.input.keyDown(KC.shiftRight);
+		} catch (e) {
+			return false;
+		}
+	};
+
+	// ImageButton keeps the icon in a child Image; that child is what gets
+	// tinted for the drop highlight and dimmed while its icon is in the air.
+	const iconImage = (btn) => {
+		try {
+			if (btn && typeof btn.getImage === 'function') return btn.getImage();
+		} catch (e) {}
+		return null;
+	};
+
+	const tintSlot = (idx, r, g, b, a) => {
+		let img = iconImage(slotButtons[idx]);
+		if (img) img.color.set(r, g, b, a);
+	};
+
+	const dropGhost = () => {
+		if (!iconDrag.ghost) return;
+		try {
+			iconDrag.ghost.remove();
+		} catch (e) {}
+		iconDrag.ghost = null;
+	};
+
+	const clearHover = () => {
+		if (iconDrag.hoverIdx >= 0) tintSlot(iconDrag.hoverIdx, 1, 1, 1, 1);
+		iconDrag.hoverIdx = -1;
+	};
+
+	const setHover = (idx) => {
+		if (idx === iconDrag.hoverIdx) return;
+		clearHover();
+		iconDrag.hoverIdx = idx;
+		if (idx >= 0) tintSlot(idx, 0.6, 1, 0.6, 1);
+	};
+
+	const cancelIconDrag = () => {
+		clearHover();
+		dropGhost();
+		iconDrag.active = false;
+		iconDrag.moving = false;
+		iconDrag.fromIdx = -1;
+	};
+
+	// Which slot is under a stage point.
+	//
+	// The scene's own hit test decides, not hand-rolled math: arc lays elements out
+	// through its own transform chain, and Core.scene.hit() is the one
+	// implementation guaranteed to agree with what the input system considers
+	// "under the cursor". A manual localToStageCoordinates pass was tried first
+	// and returned wrong rectangles inside hudGroup — the debug log caught it:
+	// hit correct, rect -1 for almost every slot. hit() yields the deepest element,
+	// which is the button's icon Image, so the parent chain is walked up to the
+	// button. If nothing matches, no slot is reported and the drop is discarded.
+	const slotAt = (stageX, stageY) => {
+		try {
+			let e = Core.scene.hit(stageX, stageY, true);
+			while (e) {
+				for (let i = 0; i < slotButtons.length; i++) {
+					if (slotButtons[i] === e) return i;
+				}
+				e = e.parent;
+			}
+		} catch (err) {}
+		return -1;
+	};
+
+	const liftIcon = (idx, stageX, stageY) => {
+		const slot = cfg.slots[idx];
+		if (!slot) return;
+		dropGhost();
+		const size = Math.max(8, cfg.size - 8);
+		const ghost = new Packages.arc.scene.ui.Image(
+			new TextureRegionDrawable(getIcon(slot.icon, slot.type))
+		);
+		ghost.setSize(size);
+		ghost.setPosition(stageX - size / 2, stageY - size / 2);
+		ghost.color.a = 0.75;
+		// The ghost must never eat input: the gesture has to stay on the button.
+		ghost.touchable = Packages.arc.scene.event.Touchable.disabled;
+		Vars.ui.hudGroup.addChild(ghost);
+		iconDrag.ghost = ghost;
+		tintSlot(idx, 1, 1, 1, 0.35);
+	};
+
+	// Empty target: the icon moves. Occupied target: the two swap. Dropped
+	// anywhere outside the grid nothing is touched — no write, no save.
+	const commitDrop = (from, to) => {
+		if (from < 0 || to < 0 || from === to) return;
+		const src = cfg.slots[from];
+		if (!src) return;
+		const dst = cfg.slots[to];
+		if (dst) {
+			cfg.slots[from] = dst;
+			cfg.slots[to] = src;
+		} else {
+			cfg.slots[to] = src;
+			delete cfg.slots[from];
+		}
+		saveCfg();
+		// Deferred on purpose: rebuildGrid() destroys the very button whose
+		// listener is mid-call right now. One tick later the gesture is fully
+		// unwound and the grid can be torn down safely.
+		Time.run(1, run(() => rebuildGrid()));
+	};
+
+	// Single source of truth for "does this press grab an icon?".
+	const grabTargetAt = (stageX, stageY) => {
+		if (Vars.mobile) return -1;
+		const idx = slotAt(stageX, stageY);
+		if (idx < 0) return -1;
+		const slot = cfg.slots[idx];
+		// A slot can carry an icon without a schematic bound to it yet; those
+		// are worth rearranging too, so accept either.
+		if (!slot || (!slot.schem && !slot.icon)) return -1;
+		return idx;
+	};
+
+	const makeSlotListener = (idx) =>
+		extend(InputListener, {
+			touchDown(event, x, y, pointer, button) {
+				// Shift + LEFT mouse only. RMB belongs to the panel drag, so the
+				// two gestures never compete for the same press.
+				if (button !== Packages.arc.input.KeyCode.mouseLeft) return false;
+				if (!panelModifierHeld()) return false;
+				if (grabTargetAt(event.stageX, event.stageY) !== idx) return false;
+				iconDrag.active = true;
+				iconDrag.moving = false;
+				iconDrag.fromIdx = idx;
+				iconDrag.startStageX = event.stageX;
+				iconDrag.startStageY = event.stageY;
+				return true;
+			},
+			touchDragged(event, x, y, pointer) {
+				if (!iconDrag.active) return false;
+				if (!iconDrag.moving) {
+					if (
+						Math.abs(event.stageX - iconDrag.startStageX) > 4 ||
+						Math.abs(event.stageY - iconDrag.startStageY) > 4
+					) {
+						iconDrag.moving = true;
+						liftIcon(iconDrag.fromIdx, event.stageX, event.stageY);
+					}
+				}
+				if (iconDrag.moving && iconDrag.ghost) {
+					const size = iconDrag.ghost.getWidth();
+					iconDrag.ghost.setPosition(
+						event.stageX - size / 2,
+						event.stageY - size / 2
+					);
+					setHover(slotAt(event.stageX, event.stageY));
+				}
+				return true;
+			},
+			touchUp(event, x, y, pointer) {
+				if (!iconDrag.active) return false;
+				const wasMoving = iconDrag.moving;
+				const from = iconDrag.fromIdx;
+				const to = wasMoving ? slotAt(event.stageX, event.stageY) : -1;
+				if (wasMoving && from >= 0) tintSlot(from, 1, 1, 1, 1);
+				cancelIconDrag();
+				if (wasMoving) {
+					// A drop is not a click: keep the double-click handler in the
+					// button callback from firing off this gesture.
+					lastClickTime = 0;
+					lastClickSlot = -1;
+					if (dragHandler && dragHandler.state)
+						dragHandler.state.isDragging = false;
+					commitDrop(from, to);
+				}
+				return true;
+			},
+		});
+
 	let tableX = 0;
 	let tableY = 0;
 
@@ -164,13 +372,16 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 	};
 
 	const rebuildGrid = () => {
+		// A rebuild destroys the buttons an in-flight drag is holding on to.
+		cancelIconDrag();
 		gridTable.clear();
+		slotButtons = [];
 		let iconSize = Math.max(8, cfg.size - 8);
 		for (let r = 0; r < cfg.rows; r++) {
 			for (let c = 0; c < cfg.cols; c++) {
 				let idx = r * cfg.cols + c;
 				let slot = cfg.slots[idx];
-				gridTable
+				let btn = gridTable
 					.button(
 						new TextureRegionDrawable(
 							getIcon(
@@ -183,6 +394,11 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 						() => {
 							if (dragHandler && dragHandler.state.isDragging)
 								return;
+							// A Shift+LMB drag ends with a click callback if the
+							// pointer stayed inside the button's tap square, and
+							// ClickListener runs before this listener's touchUp —
+							// so the icon drag is still flagged as active here.
+							if (iconDrag.active || iconDrag.moving) return;
 							let time = Time.millis();
 							if (
 								time - lastClickTime < 300 &&
@@ -206,7 +422,10 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 							lastClickSlot = idx;
 						}
 					)
-					.size(cfg.size);
+					.size(cfg.size)
+					.get();
+				btn.addListener(makeSlotListener(idx));
+				slotButtons[idx] = btn;
 			}
 			gridTable.row();
 		}
@@ -258,7 +477,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 			notify('[lightgray]Table [green]RESET');
 		} else if (sub === 'help') {
 			notify(
-				'[lightgray]!table\n!table <1/0?>\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset'
+				'[lightgray]!table\n!table <1/0?>\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset\n\n[accent]Shift+LMB[] on a filled slot — drag the icon: drop on an empty slot to move it, on another icon to swap. Drop outside to cancel.\n[accent]RMB[] — moves the whole panel (anywhere, as before).\nLMB / double click — place schematic / open the slot config.'
 			);
 		} else {
 			if (sub && !interceptor.isBooleanArg(sub)) {

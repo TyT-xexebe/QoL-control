@@ -1,5 +1,29 @@
 const notify = require('qol-control/core/logger').notify;
 
+// ---------------------------------------------------------------------------
+// Is this building actually doing its job?
+//
+// Verified against real fields: Building.enabled, ForceProjector$ForceBuild.broken,
+// OverdriveProjector$OverdriveBuild.smoothEfficiency, Building.efficiency.
+//
+// Strict comparisons on purpose: Rhino hands a method that has no backing FIELD
+// back as a truthy function, so `!bld.broken` would read a method as "not broken"
+// and hide the very state being displayed.
+// ---------------------------------------------------------------------------
+function isBlockIdle(bld) {
+	try {
+		if (bld.enabled === false) return true;
+		if (bld.broken === true) return true;
+
+		const smooth = bld.smoothEfficiency;
+		if (typeof smooth === 'number') return smooth <= 0.02;
+
+		const eff = bld.efficiency;
+		if (typeof eff === 'number') return eff <= 0.001;
+	} catch (e) {}
+	return false;
+}
+
 Events.run(Trigger.draw, () => {
 	if (!Vars.state.isGame() || !Vars.player || !Vars.player.unit()) return;
 
@@ -58,6 +82,10 @@ Events.run(Trigger.draw, () => {
 							if (type.name.indexOf('overdrive') > -1)
 								color = Color.valueOf('feb380');
 							else color = Pal.accent;
+
+							// Unpowered / broken projectors are drawn grey, so it is
+							// obvious at a glance which of them actually contribute.
+							if (isBlockIdle(bld)) color = Color.valueOf('909090');
 
 							Draw.color(color, 0.5);
 							Lines.circle(bld.x, bld.y, r);
@@ -124,3 +152,7 @@ Events.run(Trigger.draw, () => {
 
 	Draw.reset();
 });
+
+module.exports = {
+	isBlockIdle: isBlockIdle
+};

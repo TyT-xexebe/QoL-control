@@ -20,7 +20,96 @@ let sortByHp = Core.settings.getBool('cmap-sort-hp', true);
 
 let unitCache = [];
 let cacheTimer = 0;
+let mapWasVisible = false;
 const colorWhite = Packages.arc.graphics.Color.white;
+
+// How often the unit list is rebuilt, in rendered frames. It used to be gated on
+// `Time.delta` accumulating past 30 — i.e. every 30 SECONDS — which froze unit
+// positions on the minimap and made them jump in bursts. Ticks instead of seconds
+// also keeps the per-frame cost constant when the framerate drops.
+const UNIT_CACHE_TICKS = 10;
+// With a lot of units the rebuild itself (filter + sort) becomes the expensive
+// part, so it is simply done less often. Positions are read live from the Java
+// objects, so a slightly stale list only delays newly spawned units appearing.
+const UNIT_CACHE_TICKS_HEAVY = 20;
+
+// ---------------------------------------------------------------------------
+// Unit cache
+//
+// Every property read on a Java object from JS costs Rhino marshalling, so the
+// per-frame loop must touch as few of them as possible. Everything that does not
+// change from frame to frame — icon region, its aspect ratio, team colour, team
+// id for batching, HP for sorting — is resolved once per rebuild into a plain JS
+// record. The draw loop then reads only x / y / rotation / dead off the Java unit.
+// ---------------------------------------------------------------------------
+function pushUnitRecord(out, u, t) {
+	const icon = t.fullIcon;
+	if (!icon || !icon.width) return;
+	out.push({
+		u: u,
+		icon: icon,
+		ar: icon.height / icon.width,
+		color: u.team.color,
+		team: u.team.id,
+		hp: u.maxHealth
+	});
+}
+
+function rebuildUnitCache() {
+	const out = [];
+	let seq = null;
+	try {
+		// rawSeq() hands back the group's internal Seq without copying, so the
+		// backing array can be walked directly: no closure per unit, no Java
+		// iterator driven from JS.
+		seq = Groups.unit.rawSeq();
+	} catch (e) {
+		seq = null;
+	}
+
+	if (seq && seq.items) {
+		const items = seq.items;
+		const n = Math.min(seq.size, items.length);
+		for (let i = 0; i < n; i++) {
+			const u = items[i];
+			if (!u || u.dead) continue;
+			const t = u.type;
+			if (!t || !t.drawMinimap) continue;
+			if (u.isPlayer()) continue;
+			pushUnitRecord(out, u, t);
+		}
+	} else {
+		// Safety net for a game build without rawSeq(): the previous nested
+		// iteration, unchanged in behaviour.
+		Vars.state.teams.present.each((data) => {
+			data.units.each((u) => {
+				if (!u || u.dead) return;
+				const t = u.type;
+				if (!t || !t.drawMinimap) return;
+				if (u.isPlayer()) return;
+				pushUnitRecord(out, u, t);
+			});
+		});
+	}
+
+	// Sorted by team first, so Draw.color() can be switched once per team group
+	// instead of once per unit — that alone removes one Java call per unit per
+	// frame. The HP ordering the setting asks for is kept inside each group.
+	if (sortByHp) {
+		out.sort((a, b) => (a.team !== b.team ? a.team - b.team : a.hp - b.hp));
+	} else {
+		out.sort((a, b) => a.team - b.team);
+	}
+	return out;
+}
+
+function refreshUnitCache(force) {
+	const interval = unitCache.length > 800 ? UNIT_CACHE_TICKS_HEAVY : UNIT_CACHE_TICKS;
+	cacheTimer++;
+	if (!force && cacheTimer < interval) return;
+	cacheTimer = 0;
+	unitCache = rebuildUnitCache();
+}
 
 const initUI = () => {
 	if (setup || !Vars.ui || !Vars.ui.hudGroup) return;
@@ -61,36 +150,46 @@ const initUI = () => {
 			if (unitOutline) {
 				Draw.color(colorWhite);
 				for (let i = 0; i < cacheLen; i++) {
-					let u = unitCache[i];
-					if (!u || !u.isAdded() || u.dead) continue;
+					let rec = unitCache[i];
+					let u = rec.u;
+					if (u.dead) continue;
 
-					let icon = u.type.fullIcon;
+					let icon = rec.icon;
 					let px = this.x + u.x * pxScl;
 					let py = this.y + u.y * pyScl;
-					let iw = scale;
-					let ih = (scale * icon.height) / icon.width;
+					let ih = scale * rec.ar;
 					let rot = u.rotation - 90;
 
-					Draw.rect(icon, px + off, py, iw, ih, rot);
-					Draw.rect(icon, px - off, py, iw, ih, rot);
-					Draw.rect(icon, px, py + off, iw, ih, rot);
-					Draw.rect(icon, px, py - off, iw, ih, rot);
+					Draw.rect(icon, px + off, py, scale, ih, rot);
+					Draw.rect(icon, px - off, py, scale, ih, rot);
+					Draw.rect(icon, px, py + off, scale, ih, rot);
+					Draw.rect(icon, px, py - off, scale, ih, rot);
 				}
 			}
 
+			// Colour switches only when the team actually changes: the records are
+			// sorted by team, so this is a handful of Draw.color() calls per frame
+			// rather than one per unit. Everything else comes from the cached
+			// record, and only x / y / rotation are read off the Java unit.
+			let lastTeam = -1;
 			for (let i = 0; i < cacheLen; i++) {
-				let u = unitCache[i];
-				if (!u || !u.isAdded() || u.dead) continue;
+				let rec = unitCache[i];
+				let u = rec.u;
+				if (u.dead) continue;
 
-				let icon = u.type.fullIcon;
-				let px = this.x + u.x * pxScl;
-				let py = this.y + u.y * pyScl;
-				let iw = scale;
-				let ih = (scale * icon.height) / icon.width;
-				let rot = u.rotation - 90;
+				if (rec.team !== lastTeam) {
+					lastTeam = rec.team;
+					Draw.color(rec.color);
+				}
 
-				Draw.color(u.team.color);
-				Draw.rect(icon, px, py, iw, ih, rot);
+				Draw.rect(
+					rec.icon,
+					this.x + u.x * pxScl,
+					this.y + u.y * pyScl,
+					scale,
+					scale * rec.ar,
+					u.rotation - 90
+				);
 			}
 
 			Draw.color();
@@ -321,7 +420,12 @@ if (Vars.ui && Vars.ui.hudGroup) initUI();
 else Events.on(ClientLoadEvent, initUI);
 
 Events.on(WorldLoadEvent, () => {
+	// Drop the stale list and let the update loop rebuild it (forcing the rebuild
+	// on the first visible tick), so a new map never draws the previous one's
+	// units.
 	unitCache = [];
+	cacheTimer = 0;
+	mapWasVisible = false;
 	let t = Vars.world.tiles;
 	Packages.arc.util.Reflect.set(
 		Vars.renderer.minimap,
@@ -427,6 +531,7 @@ Events.run(Trigger.update, () => {
 		mapOpen
 	) {
 		mapTable.visible = false;
+		mapWasVisible = false;
 		return;
 	}
 
@@ -435,18 +540,11 @@ Events.run(Trigger.update, () => {
 	// already-clamped pixel value, so resizes do not accumulate drift.
 	applyAnchoredPosition();
 
-	cacheTimer += Time.delta;
-	if (cacheTimer > 30) {
-		cacheTimer = 0;
-		let cacheLen = 0;
-		Vars.state.teams.present.each((data) => {
-			data.units.each((u) => {
-				if (!u.isPlayer() && u.type && u.type.drawMinimap) {
-					unitCache[cacheLen++] = u;
-				}
-			});
-		});
-		unitCache.length = cacheLen;
-		if (sortByHp) unitCache.sort((a, b) => a.maxHealth - b.maxHealth);
-	}
+	// The throttle lives inside refreshUnitCache(); this loop must NOT touch
+	// cacheTimer. Resetting it here every tick made the interval unreachable on
+	// maps with >800 units, which froze the unit list and stopped newly created
+	// units from ever appearing. The first tick after the map (re)appears forces
+	// a rebuild, so opening it never shows a stale list.
+	refreshUnitCache(!mapWasVisible);
+	mapWasVisible = true;
 });
