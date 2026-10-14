@@ -816,7 +816,7 @@ function updatePowerContainer(p, powerInfo) {
 function renderBuildPlanGrid(gridContainer, titleLabel, buildInfo, core) {
 	if (!buildInfo || buildInfo.totalPlans === 0) {
 		gridContainer.clearChildren();
-		if (titleLabel) titleLabel.setText('[accent]🔨 Build Plans: 0[]');
+		if (titleLabel) titleLabel.setText('[accent]Build Plans: 0[]');
 		return;
 	}
 
@@ -824,11 +824,11 @@ function renderBuildPlanGrid(gridContainer, titleLabel, buildInfo, core) {
 	let timeStr = buildInfo.estSeconds.toFixed(1) + 's';
 	let speedDesc = buildInfo.totalSpeed.toFixed(1) + 'x';
 	if (buildInfo.helpersCount > 0) {
-		speedDesc += ' [lightgray](+' + buildInfo.helpersCount + '👥)[]';
+		speedDesc += ' [lightgray](+' + buildInfo.helpersCount + ' helpers)[]';
 	}
 
 	if (titleLabel) {
-		titleLabel.setText('[accent]🔨 Plans (' + buildInfo.totalPlans + ')[] [lightgray]• ~' + timeStr + ' (' + speedDesc + ')[]');
+		titleLabel.setText('[accent]Plans (' + buildInfo.totalPlans + ')[] [lightgray]• ~' + timeStr + ' (' + speedDesc + ')[]');
 	}
 
 	gridContainer.clearChildren();
@@ -921,7 +921,7 @@ function openSettingsDialog() {
 	}
 
 	// 1. Core & Resources Card
-	let c1 = createCard('📦 Core & Resources', '73d216');
+	let c1 = createCard('Core & Resources', '73d216');
 
 	c1.check('Show Core Resources Grid', cfg.showCoreItems, (b) => {
 		cfg.showCoreItems = b;
@@ -952,7 +952,7 @@ function openSettingsDialog() {
 	root.row();
 
 	// 2. Power & Construction Card
-	let c2 = createCard('⚡ Power & Construction', 'ffd37f');
+	let c2 = createCard('Power & Construction', 'ffd37f');
 
 	c2.check('Show Power & Battery Bar', cfg.showPower, (b) => {
 		cfg.showPower = b;
@@ -987,7 +987,7 @@ function openSettingsDialog() {
 	root.row();
 
 	// 3. Layout & Appearance Card (Smooth Interactive Sliders)
-	let c3 = createCard('🎨 Layout & Appearance', '84c8ff');
+	let c3 = createCard('Layout & Appearance', '84c8ff');
 
 	// Grid Columns slider
 	let colLabel = c3.add('[lightgray]Grid Columns: [accent]' + cfg.columns + '[]').growX().left().pad(2).get();
@@ -1038,7 +1038,7 @@ function openSettingsDialog() {
 	actCard.margin(8);
 	let actRow = actCard.table().center().get();
 
-	actRow.button('[#73d216]Enable All Teams[]', Styles.defaultt, () => {
+	actRow.button('[#73d216]Enable All Teams[]', Styles.grayt, () => {
 		if (Vars.state && Vars.state.teams) {
 			Vars.state.teams.getActive().each((t) => {
 				if (t.hasCore() || t.core() != null) {
@@ -1049,7 +1049,7 @@ function openSettingsDialog() {
 		notify('[green]Enabled HUDs for all active teams');
 	}).size(160, 36).padRight(8);
 
-	actRow.button('[accent]Reset Positions[]', Styles.defaultt, () => {
+	actRow.button('[accent]Reset Positions[]', Styles.grayt, () => {
 		for (let id in corePanels) {
 			Core.settings.remove('coreinfo-' + id + '-x');
 			Core.settings.remove('coreinfo-' + id + '-y');
@@ -1062,7 +1062,7 @@ function openSettingsDialog() {
 		notify('[lightgray]HUD positions reset');
 	}).size(150, 36).padRight(8);
 
-	actRow.button('[#ff5555]Close All HUDs[]', Styles.defaultt, () => {
+	actRow.button('[#ff5555]Close All HUDs[]', Styles.grayt, () => {
 		closeAllPanels();
 	}).size(150, 36);
 
@@ -1072,7 +1072,7 @@ function openSettingsDialog() {
 	pane.setScrollingDisabled(true, false);
 	pane.setOverscroll(false, true);
 
-	let dw = Math.min(Core.scene.getWidth() * 0.90, 680);
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 740);
 	let dh = Math.min(Core.scene.getHeight() * 0.85, 520);
 	dialog.cont.add(pane).width(dw).height(dh);
 	dialog.show();
@@ -1294,3 +1294,11 @@ Events.run(Trigger.update, () => {
 		}
 	}
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'ui/core',
+	'Core Resources',
+	openSettingsDialog,
+	{ menuSafe: true }
+);

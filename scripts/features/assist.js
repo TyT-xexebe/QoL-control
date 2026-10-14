@@ -22,27 +22,43 @@ global.qolAssistingUnits = {};
 let assistingUnits = global.qolAssistingUnits;
 
 Events.on(WorldLoadEvent, () => {
-	if (assistState.enabled) {
-		if (!assistTimer) {
-			assistTimer = Timer.schedule(
-				() => {
-					try {
-						runAssist();
-					} catch (err) {
-						notify('[scarlet]Assist Error: ' + err);
-						if (assistTimer) assistTimer.cancel();
-						assistTimer = null;
-					}
-				},
-				0,
-				0.5
-			);
-		}
-	} else {
-		if (assistTimer) assistTimer.cancel();
-		assistTimer = null;
-	}
+	if (assistState.enabled) startAssistTimer();
+	else stopAssistTimer();
 });
+
+function startAssistTimer() {
+	if (assistTimer) return;
+	assistTimer = Timer.schedule(
+		() => {
+			try {
+				runAssist();
+			} catch (err) {
+				notify('[scarlet]Assist Error: ' + err);
+				if (assistTimer) assistTimer.cancel();
+				assistTimer = null;
+			}
+		},
+		0,
+		0.5
+	);
+}
+
+function stopAssistTimer() {
+	if (assistTimer) assistTimer.cancel();
+	assistTimer = null;
+}
+
+function saveAssistSettings() {
+	Core.settings.put('qol-assist-units', JSON.stringify(assistState.units));
+	Core.settings.put('qol-assist-max', JSON.stringify(assistState.max));
+	Core.settings.put(
+		'qol-assist-range',
+		new java.lang.Float(assistState.range)
+	);
+	if (typeof Core.settings.forceSave === 'function') {
+		Core.settings.forceSave();
+	}
+}
 
 function releaseSingleUnit(u) {
 	try {
@@ -174,20 +190,149 @@ function runAssist() {
 	}
 }
 
+function showAssistSettingsDialog() {
+	let d = new BaseDialog('Builder Assist Config');
+	d.addCloseButton();
+
+	let root = new Table();
+	root.top().left().margin(10);
+
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
+
+	function render() {
+		root.clearChildren();
+
+		// 1. General Assist Core Card
+		let c1 = createCard('Assist Core & Range', '50fa7b');
+
+		c1.check('Enable Builder Assist', assistState.enabled, (b) => {
+			assistState.enabled = b;
+			Core.settings.put('qol-assist-enabled', b);
+			if (b) {
+				startAssistTimer();
+				notify('[lightgrey]Assist [green]ON');
+			} else {
+				stopAssistTimer();
+				releaseAssistUnits();
+				notify('[lightgrey]Assist [scarlet]OFF');
+			}
+		}).pad(3).left().row();
+
+		let curBlocks = Math.round(assistState.range / 8);
+		let rangeLabel = c1.add('[lightgray]Assist Range: [accent]' + curBlocks + ' blocks (' + Math.round(assistState.range) + ' px)[]').left().pad(2).get();
+		c1.row();
+		c1.slider(4, 120, 2, curBlocks, (v) => {
+			let val = Math.round(v);
+			assistState.range = val * 8;
+			rangeLabel.setText('[lightgray]Assist Range: [accent]' + val + ' blocks (' + (val * 8) + ' px)[]');
+			saveAssistSettings();
+		}).growX().padBottom(6).row();
+
+		root.row();
+
+		// 2. Drone Fleet Card
+		let c2 = createCard('Builder Drone Fleet', '8be9fd');
+
+		for (let name in assistState.units) {
+			let uName = name;
+			let row = c2.table().growX().pad(2).get();
+			let uObj = Vars.content ? Vars.content.unit(uName) : null;
+			if (uObj && uObj.uiIcon) {
+				row.image(uObj.uiIcon).size(24).padRight(6);
+			}
+
+			row.check(uName.toUpperCase(), assistState.units[uName], (b) => {
+				assistState.units[uName] = b;
+				saveAssistSettings();
+			}).left().growX().minWidth(120);
+
+			row.add('[lightgray]max: []').padRight(4);
+
+			let maxVal = assistState.max[uName] || 0;
+			let maxLabel = row.add(String(maxVal)).color(Pal.accent).width(30).center().get();
+
+			row.button('-', Styles.grayt, () => {
+				assistState.max[uName] = Math.max(0, (assistState.max[uName] || 0) - 1);
+				maxLabel.setText(String(assistState.max[uName]));
+				saveAssistSettings();
+			}).size(32, 32).padRight(4);
+
+			row.button('+', Styles.grayt, () => {
+				assistState.max[uName] = (assistState.max[uName] || 0) + 1;
+				maxLabel.setText(String(assistState.max[uName]));
+				saveAssistSettings();
+			}).size(32, 32);
+
+			c2.row();
+		}
+
+		let fleetActRow = c2.table().left().padTop(6).get();
+		fleetActRow.button('Enable All', Styles.grayt, () => {
+			for (let u in assistState.units) assistState.units[u] = true;
+			saveAssistSettings();
+			render();
+		}).size(120, 32).padRight(8);
+		fleetActRow.button('Disable All', Styles.grayt, () => {
+			for (let u in assistState.units) assistState.units[u] = false;
+			saveAssistSettings();
+			render();
+		}).size(120, 32);
+
+		root.row();
+
+		// 3. Information Card
+		let c3 = createCard('Behavior Guidelines', 'ffd37f');
+		c3.add('[lightgray]• Only builder drones within the configured [accent]Range[] assist your construction.[]').left().padBottom(3).row();
+		c3.add('[lightgray]• Units with [accent]max: 0[] or unchecked are never recruited.[]').left().padBottom(3).row();
+		c3.add('[lightgray]• Nova units automatically assist whenever available in range.[]').left().padBottom(3).row();
+
+		root.row();
+
+		// 4. Quick Actions & Save Card
+		let actCard = root.table(Styles.black6).growX().padBottom(2).get();
+		actCard.margin(8);
+		let actRow = actCard.table().center().get();
+
+		actRow.button('[#73d216]Save Defaults[]', Icon.save, Styles.grayt, () => {
+			saveAssistSettings();
+			notify('[green]Assist settings saved');
+		}).size(170, 38).padRight(10);
+
+		actRow.button('Close', Icon.cancel, Styles.grayt, () => {
+			d.hide();
+		}).size(140, 38);
+	}
+
+	let pane = new ScrollPane(root);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 680);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 520);
+	d.cont.add(pane).width(dw).height(dh);
+
+	render();
+	d.show();
+}
+
 const assistHandler = (args) => {
 	let sub = args[1] ? args[1].toLowerCase() : '';
 
 	if (sub === 'save') {
-		Core.settings.put(
-			'qol-assist-units',
-			JSON.stringify(assistState.units)
-		);
-		Core.settings.put('qol-assist-max', JSON.stringify(assistState.max));
-		Core.settings.put(
-			'qol-assist-range',
-			new java.lang.Float(assistState.range)
-		);
+		saveAssistSettings();
 		notify('[green]Assist settings saved');
+		return;
+	}
+
+	if (sub === 'ui' || sub === 'settings') {
+		showAssistSettingsDialog();
 		return;
 	}
 
@@ -196,6 +341,7 @@ const assistHandler = (args) => {
 		let val = parseInt(args[3]);
 		if (assistState.max.hasOwnProperty(type) && !isNaN(val) && val >= 0) {
 			assistState.max[type] = val;
+			saveAssistSettings();
 			notify('[lightgrey]Max ' + type + ' set to [accent]' + val);
 		} else {
 			notify(
@@ -209,6 +355,7 @@ const assistHandler = (args) => {
 		let val = parseFloat(args[2]);
 		if (!isNaN(val) && val > 0) {
 			assistState.range = val * 8;
+			saveAssistSettings();
 			notify(
 				'[lightgrey]Assist range set to [accent]' +
 					val +
@@ -237,7 +384,8 @@ const assistHandler = (args) => {
 				assistState.range / 8 +
 				' blocks' +
 				'\n[lightgrey]Units ' +
-				uStr
+				uStr +
+				'\n[lightgrey]Tip: [accent]!assist ui[lightgrey] for the full settings window'
 		);
 		return;
 	}
@@ -259,7 +407,7 @@ const assistHandler = (args) => {
 	}
 
 	if (sub && !interceptor.isBooleanArg(sub)) {
-		notify('[lightgray]Usage: !assist <1/0?> or !assist <unit> <1/0?> or !assist max <unit> <val>');
+		notify('[lightgray]Usage: !assist ui | !assist <1/0?> | !assist <unit> <1/0?> | !assist max <unit> <val> | !assist range <blocks>');
 		return;
 	}
 
@@ -271,25 +419,10 @@ const assistHandler = (args) => {
 	Core.settings.put('qol-assist-enabled', assistState.enabled);
 
 	if (assistState.enabled) {
-		if (!assistTimer) {
-			assistTimer = Timer.schedule(
-				() => {
-					try {
-						runAssist();
-					} catch (err) {
-						notify('[scarlet]Assist Error: ' + err);
-						if (assistTimer) assistTimer.cancel();
-						assistTimer = null;
-					}
-				},
-				0,
-				0.5
-			);
-		}
+		startAssistTimer();
 		notify('[lightgrey]Assist [green]ON');
 	} else {
-		if (assistTimer) assistTimer.cancel();
-		assistTimer = null;
+		stopAssistTimer();
 		releaseAssistUnits();
 		notify('[lightgrey]Assist [scarlet]OFF');
 	}
@@ -297,3 +430,11 @@ const assistHandler = (args) => {
 
 interceptor.add('assist', assistHandler);
 interceptor.add('as', assistHandler);
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'features/assist',
+	'Assist',
+	showAssistSettingsDialog,
+	{ menuSafe: true }
+);

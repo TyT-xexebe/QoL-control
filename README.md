@@ -1,521 +1,288 @@
-## About
+# QoL Control
 
-This mod tries to combine most basic features that may be useful during gameplay and a QoL functional.
-
-You can see more detailed info about commands directly in the game by typing:
-
-`!qol <cmd?>`
-
-you can use `!` or `?` prefixes for commands
-
-## Foo's Client Compatibility
-
-If you use Foo's Client, my mod chat commands will conflict with it because of 2 character ID in Foo's messages, to fix this:
-
-Go to Settings -> QoL Control.
-Enable "Turn on if you using Foo's client" and restart the game.
-
-You must use the ? prefix for my commands (?qol instead of !qol), because Foo's Client already reserves the ! prefix for its own commands.
-
-## Commands
-
-**Note on Toggles & State Persistence:** 
-All commands that toggle a feature on or off (e.g., `!trace <1/0?>`, `!autofill <1/0?>`, `!log <1/0?>`, `!assist <1/0?>`, `!grab <1/0?>`, `!trange <1/0?>`, `!urange <1/0?>`, `!hp <1/0?>`, `!mine <1/0?>`) accept explicit state arguments:
-You can use `1`, `true`, or `on` to enable the feature, and `0`, `false`, or `off` to disable it. 
-For example: `!trace 1` or `!autofill on` will always turn the feature ON. If no argument is provided, it will switch the current toggle state.
-**Global Persistence:** All toggle states, configurations, and user preferences are automatically saved to `Core.settings` and restored when restarting the game.
-
-#### `!mining` | `!m`
-Takes all free units on the map (that are enabled in your settings) and distributes them to mine the enabled resources.
-
-`!mining ui` | `!m ui`
-Opens the comprehensive visual settings UI on your screen. You can control the active units, target resources, unit ignore matrix, and interval rate directly in this menu.
-
-`!mining set <sec>` | `!m s <sec>`
-Starts the unit distribution algorithm and updates it every `<sec>` seconds. The best option is to set it to 4-10 seconds. Type `0` in `<sec>` to run the distribution only once.
-
-`!mining stop` | `!m stop`
-Stops the distribution algorithm.
-
-`!mining <units/items?> <1/0?>` | `!m <units/items?> <1/0?>`
-Toggles the setting of a unit or resource to the opposite of what it currently is (or explicitly sets it).
-
-`!mining status` | `!m st`
-Shows the status of the algorithm, enabled/disabled units and resources, and the current unit distribution.
-
-`!mining free <%>` | `!m f <%>`
-Sets the % (0-100) of free units. Any player can take `<%>` of the units from the miner, and it won't take them back. To give the units back to the miner, you must give them a rts task to mine, or the units must not move for 5 seconds (within a 2-tile radius).
-
-`!mining ignore <unit> <items.../clear> <1/0?> | !m ig <unit? <items.../clear> <1/0?>`
-Toggles the setting of a unit which items it will ignore to mine.
-
-`!mining save` | `!m save`
-Saves the current enabled/disabled settings for units, resources, and the % of free units as default settings.
-
-#### `!mine`
-Automated player unit copper and lead mining with dynamic auto-balancing when core resources are low.
-
-`!mine <1/0?>`
-Toggles the player unit auto-mine feature on/off.
-
-`!mine s` | `!mine settings`
-Opens the settings dialog to configure the minimum threshold to start mining and maximum threshold to stop.
-
-#### `!select`
-Enables RTS control and selects all specified unit types on the map belonging to your team.
-
-`!select <units...>`
-Selects all units of the specified types on your team and activates RTS command mode.
-_Example:_ `!select poly mega` selects all poly and mega units on your team.
-
-#### `!assist` | `!as`
-Units around you within an `n` tile radius will help you build, even if they are currently mining.
-
-`!assist <1/0?>` | `!as <1/0?>`
-Toggles assist mode on/off.
-
-`!assist <unit> <1/0?>` | `!as <unit> <1/0?>`
-Toggles assist mode for a specific unit type.
-
-`!assist max <unit> <val>` | `!as m <unit> <val>`
-Sets the maximum number of a specific unit type that can assist you.
-
-`!assist range <val>` | `!as r <val>`
-Sets the assist radius in blocks.
-
-`!assist status` | `!as s`
-Shows the current assist settings and status.
-
-`!assist save` | `!as save`
-Saves the current assist settings as default.
-
-#### `!ai`
-AI for automatic mining, building help and unit lock.
-
-`!ai mining <item?> <1/0?>` | `!ai m <item?> <1/0?>`
-Toggles automatic mining  (can toggle specific items to mine).
-
-`!ai build <name? | -1> <1/0?>` | `!ai b <name? | -1> <1/0?>`
-Toggles automatic building to help another playere to build. If a player name is provided, your unit will follow and help them build. Use `-1` for AUTO mode.
-
-`!ai lock <1/0?>` | `!ai l <1/0?>`
-Toggles lock mode, will fix your unit coordinates and mining coords.
-
-`!ai status` | `!ai s`
-Shows the current AI status.
-
-#### `!autofill <1/0?>` | `!af <1/0?>`
-Toggles autofilling of turrets with resources from the core / your inventory.
-
-#### `!grab` | `!gr`
-Automatically grabs a specific item from any blocks in your radius.
-
-`!grab <item>` | `!gr <item>`
-Sets the item to grab and enables it.
-
-`!grab <1/0?>` | `!gr <1/0?>`
-Toggles autograb on/off.
-
-`!grab min <val>` | `!gr min <val>`
-Sets the minimum amount of item in block to grab it.
-
-`!grab status` | `!gr s`
-Shows the current grab status.
-
-`!grab effects | !gr e`
-Toggles blocks effect display.
-
-#### `!cghost` | `!cg`
-Clears all your ghost blocks (destroyed blocks waiting to be rebuilt) if they in enemy turrets range.
-
-#### `!detector` | `!dt`
-Finds logic processors matching specific regex rules from `qol/mlog/regex.json` (in your Mindustry directory),
-
-`!detector <name>` | `!dt <name>`
-Searches for processors matching the `<name>` rule.
-
-`!detector log` | `!dt log`
-Shows the coordinates of the last found processors.
-
-#### `!here <text?> `
-Sends a chat message with your current camera coordinates.
-
-#### `!herec <text?> `
-Sends a chat message with your current cursor coordinates.
-
-#### `!hp`
-`!hp <1/0?>`
-Toggles the display of HP and shield for the unit you are currently shooting at.
-
-`!hp <name?> <1/0?>`
-Tracks a specific player's HP and draws a line to them.
-
-#### `!log`
-Logs block placements, destructions and changed by players. (may cause FPS drops and longer load in world)
-
-`!log <1/0?>`
-Toggles the logger on/off.
-
-`!log status`
-Shows the current logger status.
-
-`!log <name?>`
-Shows the logs, optionally filtered by player name.
-
-`!log show <name?>`
-Draws the logged actions on the map, optionally filtered by player name.
-
-`!log revert <name>`
-Reverts all block destructions made by a specific player.
-
-`!log chat`
-Show chat loga (join/leave/ingame name change also).
-
-`!log save [path?]`
-Saves the logs to a file in Mindustry directory (`/qol/` by default, or the specified custom folder/file path).
-
-`!log path [path/reset?]`
-Views or sets the custom folder/file path for log saving. Use `reset` or `clear` to return to default.
-
-#### `!lookat` | `!la`
-`!lookat <x> <y>` | `!la <x> <y>`
-Moves your camera to the specified coordinates.
-
-`!lookat last <n?>` | `!la l <n?>`
-Moves your camera to the last `n` recorded locations. `!lookat last` to see saved history
-
-#### `!mlog`
-Injects mlog code from the `/qol/mlog/` folder (in Mindustry directory) into processors.
-
-`!mlog list`
-Lists all available `.txt` files in the `mlog/` folder.
-
-`!mlog <filename>`
-Injects the code from the specified file into the first empty processor found on your team.
-
-`!mlog <filename> set`
-Prepares the code to be injected into a processor you shoot at.
-
-`!mlog <filename> set`
-Deletes .txt file
-
-#### `!trace` | `!tr`
-Automatically possesses a specific unit type when it becomes available.
-
-`!trace <1/0?>` | `!tr <1/0?>`
-Toggles trace mode on/off.
-
-`!trace set <unit>` | `!tr s <unit>`
-Sets a specific unit type to automatically possess.
-
-`!trace find` | `!tr f`
-Automatically possesses the best available unit based on a priority list.
-
-`!trace fconfig <units...>`
-Changes priority list to your own.
-You need type units with commas in priority line you want:
-`quasar, mega, cleroi, mono`..c
-
-`!trace status` | `!tr st`
-Shows the current trace status and priority list.
-
-#### `!trange <1/0?>`
-Toggles the display of enemy turret ranges. (may cause FPS drops)
-
-#### `!urange <1/0?>`
-Toggles the display of enemy unit ranges. (may cause FPS drops)
-
-#### `!table`
-Table of schematics which can be changed and moved.
-
-`!table rows/cols <val>`
-Sets rows / columns of table.
-
-`!table size <val>`
-Sets button size.
-
-`!table reset`
-Resets table.
-
-`!table <1/0?>`
-Toggles On / Off table display.
-
-#### `!render <bullet/unit/block/layer> <1/0?>`
-Toggles render of <?> (may have some issues on PC, or with using other mods, layers cursed af).
-
-#### `!server`
-Fast join to servers which you added to it.
-
-#### `!mute`
-Local chat mute for specific players. Hides their messages from your chat (dont work for bubble chat).
-
-`!mute list`
-Shows all currently muted players (both exact and partial mutes).
-
-`!mute add <name>`
-Mutes a player by their exact name (ignoring color tags. You can write only part of a name, it will search for player on server with it and add full name in mute list).
-
-`!mute addp <name>`
-Mutes any player whose name contains the specified `<name>` (partial match).
-
-`!mute remove <name>` | `!mute rem <name>`
-Unmutes a player by removing them from the mute list.
-
-#### `!map`
-
-Shows current map stats.
-
-#### `!bind`
-
-You can add keybinds for your PC to launch some commands or text in chat.
-
-#### `!cbinds` | `!cbind`
-
-Create draggable on-screen buttons with custom sizes, icons, and commands.
-
-`!cbinds` | `!cbind`
-Opens the settings UI to create, edit, delete, and manage custom buttons.
-
-Drag buttons with the right mouse button (finger drag on touch devices).
-
-
-#### `!track <name?>`
-
-Shows cursor position of all players / selected player and unit controlled by RTS and unit factory's set path. 
-
-`!track <rts/rec>`
-Turns on/off visual displays of players RTS and reconstructor rally lines on-screen.
-
-`!track <notify/n> <1/0?>`
-Toggles chat notifications/alerts for players' RTS movements and reconstructor rally point changes. Features smart anti-spam coordinate and rate-limit filtering.
-
-#### `!wave`
-Skips to the next wave immediately, bypassing the `waitEnemies` map rule that normally hides the skip button while enemy units are alive.
-
-`!wave <num?>`
-Skips 1 wave, or N waves one per second. Call again while a multi-wave skip is running to cancel it.
-
-`!wave status` | `!wave s`
-Shows current wave number, enemies alive, wave timer and the current wave-related map rules.
-
-**Note:** Requires admin or host privileges on multiplayer servers. The server enforces this — regular non-admin players cannot force wave skips regardless of the mod.
-
-
-#### `!aim`
-
-Opens the Aimbot settings UI (draggable widget).
-
-Automatically aims and shoots at the nearest enemy unit or building based on your preset config. Supports target priority, bullet prediction, healing mode and per-unit presets.
-
-Options per preset:
-- **Attack Units / Blocks** — toggle enemy unit and building targeting
-- **Heal Blocks** — target damaged friendly buildings
-- **Predict Fire** — leads moving targets based on bullet speed, ping and velocity
-- **Predict Tiles** — extra search radius beyond weapon range for prediction
-- **Constant Fire** — always shoots forward with no target needed
-- **Disable Shoot on Reload** — stops shooting while reloading
-- **Priority** — `Nearest`, `Farthest`, `Min/Max Current HP`, `Min/Max Max HP`
-- **Type Order** — priority order between `units`, `blocks`, `heal`
-- **Target Filter** — `Default`, `Ground/Air`, `Air/Ground`, `Ground Only`, `Air Only`
-
-Ignored targets (missiles, world processors, etc) can be set as CSV in the settings dialog.
-
-Tap a unit/block to manually lock it as priority target. Tap empty space to release.
-
-May contains bugs with some units/weapons.
-
-#### `!users` | `!user`
-Detects other players on the server who are also using QoL Control. Detection is passive and automatic, no action needed.
-
-When a new mod user is found you get a notification in chat.
-
-`!users` | `!user`
-Shows the list of all currently detected QoL Control users on the server.
-
-#### `!core <#team/all/clear/close?>`
-
-Displays core resources of team #id or name you selected. Supports multiple panels.
-- `!core` shows core resources of your current team.
-- `!core all` enables core resource panels for ALL active teams on the map that have cores (and disables panels for teams without cores).
-- `!core clear` (or `!core close`) closes and clears all currently open core resource panels.
-
-#### `!units`
-
-Draggable interactive HUD displaying real-time unit icons and unit counts for all teams on the map.
-
-**Interactions:**
-- **Hover**: Traces visual laser lines from your player/camera to all units of that type across the map.
-- **Click (Enemy)**: Centers the camera on the nearest enemy unit of that type (cycles across units on repeated clicks).
-- **Click (Friendly)**: Instantly selects all friendly units of that type in RTS command mode.
-- **Double-Click (Friendly)**: Possesses and takes direct control of the nearest friendly unit of that type.
-- **Right-Click**: Selects units in RTS mode.
-
-**Commands:**
-- `!units` (or `!units 1/0`) — Toggle HUD visibility on/off.
-- `!units settings` (or `!units s`) — Open settings dialog (customize icon size, font scale, column layout, sorting, refresh rate, and blacklist filter).
-
-#### `!path`
-
-Smart real-time pathfinding for conveyors, ducts, and liquid conduits.
-
-As you drag a build line from point A to point B:
-- Automatically calculates and previews an optimal route around solid obstacles, terrain, and buildings.
-- Automatically inserts junctions when crossing existing perpendicular conveyor lines.
-- Automatically places bridges to jump over obstacles and terrain gaps.
-
-**Commands:**
-- `!path` (or `!path 1/0`) — Toggle smart pathfinding on/off.
-- `!path bridge` (or `!path bridge 1/0`) — Toggle bridge jumping over obstacles.
-- `!path junction` (or `!path junction 1/0`) — Toggle automatic junction insertion.
-
-#### `!colors`
-
-You can customise all your mindustry colors from Pal.java.
-
-## Features
-
-#### Moving HUD widgets
-
-All mod widgets (quick chat, build pause, camera lock, schematic table, build info, team units HUD, aimbot window, custom binds, core HUD panels) are dragged with the **right mouse button**; left clicks stay with the widget itself. On touch devices, drag with a finger as before.
-
-Positions are stored as anchor + offset, so F11, window resize and UI scale changes never shift or drift a widget.
-
-#### Player Auto-Mine
-
-Automatically pauses building and starts mining the nearest required resource when core copper or lead stocks fall below the minimum configured limit. It dynamically balances mining by targeting whichever resource has the lower amount in the core, continuing until the core stocks reach the maximum limit. It automatically resumes building/deconstructing when the thresholds are met or if the unit flies away from the ore.
-
-#### Plan Range & Block Highlight
-
-Highlights the range of planned blocks, as well as currently selected overdrive projectors (and domes) and mass drivers.
-
-#### Multitask (Shoot while Building/Mining)
-
-Allows you to shoot enemies without interrupting your mining or building processes.
-
-#### Camera lock button
-
-Locks your unit, while you can move your camera anywhere.
-
-#### Build pause button
-
-Pauses building.
-
-#### Quick chat button.
-
-You can add your own quick text buttons to send them in chat.
-
-You can send multiple messages with a single just write them on separate lines.
-
-Long texts that exceed the games 150 character limit are automatically split into several messages.
-
-Includes a default Auto Execute button that automatically sends your text or commands every time you join server/world. It has crash protection that disables it if the game crashes during execution.
-
-#### Build info
-
-Shows build info (name, team, hp, itmes, liquids, power, battery) when hover/tap on it
-
-#### Custom map
-
-Adds a draggable real time minimap that displays terrain, better units, other players (eye icons / nicknames), and your current camera viewport.
-Use `!cmap` to setting it.
-
-Left-click / Tap: Opens the standard full-screen map.
-
-Left-drag / Tap & drag: Moves the minimap widget around the screen.
-
-Right-click / Long-press (0.4s): Instantly teleports your camera to the selected location.
-
-Right-drag / Long-press & drag: Smoothly pans your camera across the map.
-
-This widget is the only exception to right-mouse dragging: it keeps left-drag, because right-click is reserved for camera teleport/pan.
-
-#### Omnimovement + rotateSpeed for units
-
-#### Mlog Editor Extensions
-
-##### Requires "Features mlog" enabled in settings. This feature is experimental and lightly tested; bugs may occur. Always backup your processor code before merging.
-
-##### Available at the processors Edit menu:
-
-Copy with Labels
-Converts absolute line numbers in jump commands into text labels, and copies the result to the clipboard.
-
-Save/Load to QoL
-Saves the current processor code to the Mindustry/qol/mlog/ folder (survives mod updates), or opens a menu to load/delete existing one.
-
-Save Range to QoL
-Saves a specific chunk of code by defining start and end lines (0-indexed). 
-(Jumps within the range are converted to labels, jumps pointing outside the range are set to -1)
-
-Insert Code
-Injects code from the clipboard or a saved file after a specified line (use -1 to insert at the very beginning). 
-Automatically assigns unique label prefixes to both the existing and inserted code to prevent jump conflicts.
-
-Replace Code
-Finds and replaces specific lines or multi-line blocks of code throughout all processor.
-Automatically protects and updates all jump targets using labels, ensuring that replacing code blocks of different lengths wont break your existing jumps.
-
-##### Processor Tracker & Variables
-Provides real-time visualization and debugging for logic processors directly in the world.
-
-Visual Connections
-Visually tracks processor variables and connections, drawing target lines from the processor to the blocks or units it controls.
-
-Variables Window
-View live variable values, pause the processor execution, refresh config, and search through variables.
-
-Tracker Window
-Add track rules to variables. Set conditions (`==`, `!=`, `>`, `<`, `>=`, `<=`, `changed`, `typeof`, `contains`) and actions (`none`, `pause`, `highlight`, `count`, `notify`, `camera`) to trigger when a variable state changes.
-The `camera` action allows dynamic tracking of block/unit coordinates, or explicitly specified `x,y` coordinates, automatically shifting your view.
-
-
-## Performance
-
-The mod is made to be as lightweight as possible so it doesn't heavily load your device.
-
-However, some features may cause FPS drops in certain situations (`log`, `ai`, `trange`, `urange`).
-
-There is also a optimizer that disables some unnecessary game features to increase FPS.
-
-## Settings
-
-All features can be fully disabled ingame settings meny.
-
-By default everything is disabled, but you can disable anything if you want.
-
-
-For `!mlog` you can add your own mlog codes in:
-
-`/qol/mlog/` which is in your Mindustry directory `/files/`
-
-(Some stuff is already there by default.)
-
-
-For `!detector` you can add your own regex in:
-
-`/qol/mlog/regex.json`
-
-By default it contains `attem` and `wpx`.
-
-All logs from `!log save` are saved in `/qol/` (or your custom defined path), and it also always has a default log `/qol/main_log.txt` from your last game if `!log` was enabled.
-
-## Optimization
-
-The mod has been fully refactored and restructured to be lightweight, with reusable UI components and minimal performance footprint. It runs smoothly even when multiple modules are enabled!
-`!opt` for open optimizer settings.
-
-## Issues
-
-Make an issue on GitHub if you find bugs.
-
-Suggestions for expanding the mod (or improving the garbage code) are not really needed.  
-I'm too lazy to expand it and make it heavier, I think the current features are enough.
-
-## Note
-
-`!mining` and `!assist` are **not synchronized between players** using the mod.  
-This may cause some problems if multiple players use them at the same time.
+A comprehensive Quality-of-Life (QoL), automation, and utility mod for Mindustry.
 
 ---
 
-⭐ Leave a star if you like it :3
+## Important: How to Read Command Arguments (Placeholders)
+
+Commands in this guide use standard notation. **Do NOT type the brackets literally into chat!**
+
+- **`[1/0]` (or `<1/0>`):** represents a boolean choice. Supply `1` (or `on`, `true`) to turn the feature ON, or `0` (or `off`, `false`) to turn it OFF.
+  - *Correct:* `!path 1`, `!autofill on`, `!trange 0`
+  - *Incorrect:* `!path <1/0>`, `!autofill [1/0]`
+- **`[param?]` with a question mark:** optional parameter. Calling the command without this parameter toggles its current state or opens its settings dialog.
+  - *Example:* `!path` opens the settings dialog, whereas `!path 1` directly enables it.
+- **`[units/items...]` or `[params...]` with an ellipsis:** indicates that **multiple values can be specified in a single command, separated by spaces**.
+  - *Example:* `!mining poly mega copper mono coal 1` enables mining automation for poly, mega, mono, copper, and coal all at once.
+  - *Example:* `!select poly mega mono` selects all three unit types in RTS mode simultaneously.
+
+---
+
+## Command Prefixes & Window Management
+
+- **Default prefix:** `!` (e.g. `!goto`, `!path`, `!core`).
+- **Changing prefix:** use `!prefix [new_prefix]` (e.g. `!prefix ?`). The prefix input field in the mod settings category dynamically updates in real time.
+- **Foo's Client compatibility:** Enable "Turn on if using Foo's client" in mod settings to route commands to the `?` prefix and resolve message ID collisions.
+- **Settings persistence:** All toggles, custom keybinds, and window coordinates are saved to `Core.settings` and persist across game restarts.
+- **Dragging HUD widgets:** All widgets and panels are dragged across the screen using the **Right Mouse Button** (RMB) on desktop, or a direct finger drag on mobile touchscreens. This ensures left-clicks do not accidentally fire buttons while repositioning.
+
+---
+
+## Commands & Features
+
+### 1. Movement & Navigation
+
+#### `!goto`
+Directs your unit to fly to the current cursor position and hold position upon arrival.
+- **Command:** `!goto` — opens the keybind assignment dialog.
+- **Controls:**
+  - Hover your cursor over any destination on the map and tap the bound key (e.g. `G`, `Z`, or mouse button). The unit flies to that spot and anchors its position upon arrival.
+  - **Camera support:** Works seamlessly in normal view, Freecam, and Minimap Pan View.
+  - **Instant manual override:** Pressing any movement key (`W`, `A`, `S`, `D`, arrow keys) or moving the axis immediately disengages the autopilot and returns manual control.
+  - **Visuals:** Renders a thin, dual-layered high-contrast path line with an arrival marker, visible across all map biomes.
+
+#### `!path` | `!autopath` | `!ap`
+Intelligent A* pathfinding for conveyors, ducts, conduits, and bridges.
+- **Commands:**
+  - `!path` (or `!ap`) — opens settings dialog and hold-key assignment.
+  - `!path [1/0]` — quick on/off toggle.
+- **Controls:**
+  - Select a conveyor/conduit/duct and drag **while holding** the bound activation key: the pathfinder navigates around obstacles, inserts bridges over gaps and buildings, and places sorter/junction cross-overs.
+  - Releasing the key or dragging without it preserves standard vanilla line-dragging behavior (straight lines and native diagonals).
+
+---
+
+### 2. Unit & Resource Automation
+
+#### `!mining` | `!m`
+Global autonomous distribution of unassigned friendly mining units across needed ores.
+- `!mining ui` (or `!m ui`) — open the interactive visual mining control panel.
+- `!mining set [seconds]` — start automatic distribution, refreshing every N seconds (`0` for single execution).
+- `!mining stop` — stop unit distribution.
+- `!mining [units/items...] [1/0?]` — enable or disable groups of units or ores (e.g. `!mining poly mega copper mono coal 1`).
+- `!mining free [0-100]` — reserve a percentage of units for manual player control.
+- `!mining ignore [unit] [items... | clear] [1/0?]` — configure ignored ores for a specific unit type.
+- `!mining status` — display current miner assignments and resource quotas.
+- `!mining save` — save active setup as default.
+
+#### `!mine`
+Automated player-unit mining for copper and lead with core stock balancing.
+- `!mine [1/0?]` — toggle player auto-mining.
+- `!mine settings` (or `!mine s`) — configure lower trigger threshold and upper fill limits in the core.
+
+#### `!ai`
+Autonomous helper for building assistance, ore mining, and coordinate anchoring.
+- `!ai` — display AI module status.
+- `!ai lock [1/0?]` (or `!ai l`) — freeze unit position and current mining tile.
+- `!ai build [player_name | -1] [1/0?]` — follow and assist a builder with construction plans (`-1` for AUTO mode targeting nearest builder).
+- `!ai mining [1/0?]` — automatically mine specified resources to fill the core.
+- `!ai mining [items...] [1/0?]` — specify items to mine.
+
+#### `!assist` | `!as`
+Nearby unit construction and repair assistance.
+- `!assist ui` (or `!as ui`) — open the interactive visual assist control panel.
+- `!assist [1/0?]` — toggle assist mode.
+- `!assist [units...] [1/0?]` — toggle assistance for specific unit types (e.g. `!assist poly mega 1`).
+- `!assist max [unit] [number]` — set maximum helper count for a unit type.
+- `!assist range [tiles]` — set detection radius in tiles.
+- `!assist status` — view active helper limits and units.
+- `!assist save` — save current settings as default.
+
+#### `!autofill` | `!af`
+Automatically feeds ammunition and production resources into turrets and factories within player radius from core or inventory.
+- `!autofill [1/0?]` — toggle auto-replenishment.
+- `!autofill settings` (or `!af s`) — open the interactive visual autofill control panel.
+
+#### `!grab` | `!gr`
+Automatically pulls designated item from nearby blocks into your unit inventory.
+- `!grab [item]` — specify item to collect and activate collector.
+- `!grab [1/0?]` — toggle autograb on/off.
+- `!grab min [number]` — minimum item threshold in block before grabbing.
+- `!grab status` — view active grab configuration.
+- `!grab effects` — toggle visual on block.
+
+#### `!trace` | `!tr`
+Auto-possesses designated unit types as soon as they spawn or become free.
+- `!trace [1/0?]` — toggle auto-possession.
+- `!trace set [unit]` — set single target unit type.
+- `!trace find` — possess highest-priority unit available.
+- `!trace fconfig [units...]` — configure priority hierarchy (e.g. `!trace fconfig corvus mega reign`).
+- `!trace status` — view queue and active target.
+
+#### `!select`
+Mass RTS selection for specified unit types across the map.
+- `!select [units...]` — select all friendly units of specified types in RTS mode (e.g. `!select poly mega mono`).
+
+---
+
+### 3. Combat, Aiming & Range Overlays
+
+#### `!aim`
+Advanced combat aimbot with target priority filters, lead prediction, and heal targeting.
+- `!aim` — opens draggable aimbot configuration widget.
+- **Features:**
+  - Independent toggles for targeting enemy units and structures.
+  - Auto-targets damaged friendly structures with repair weapons.
+  - Ballistic lead calculation accounting for bullet speed, ping, and target velocity.
+  - Priority Modes: `Nearest`, `Farthest`, `Min/Max Current HP`, `Min/Max Max HP`.
+  - Filter Modes: `Ground/Air`, `Air/Ground`, `Ground Only`, `Air Only`.
+  - Tap-to-Lock: click any unit or block to lock as exclusive priority; tap empty ground to release.
+
+#### `!trange`
+- `!trange [1/0?]` — weapon range circles for all enemy turrets.
+
+#### `!urange`
+- `!urange [1/0?]` — weapon range circles around all enemy units.
+
+#### `!hp`
+- `!hp [1/0?]` — health and shield bars above targeted units and buildings.
+- `!hp [player_name] [1/0?]` — track a specific player with a line and health HUD.
+
+---
+
+### 4. HUD Panels & Widgets
+
+#### `!core`
+Draggable real-time statistics panel showing core storage, dynamic income rates, and power balance.
+- `!core` — open interactive GUI configuration.
+- `!core all` — display resource panels for ALL teams on the map that own cores.
+- `!core clear` (or `!core close`) — close all open core panels.
+- `!core [team_name | id]` — toggle panel for a specific team.
+- **Displays:** item counts with live rate of change (`+/-` per second), power generation vs. consumption balance, battery storage, and remaining construction plan costs.
+- Drag panels with Right Mouse Button (RMB).
+
+#### `!units` | `!u`
+Draggable HUD showing active unit counts and icons for all teams on the map.
+- `!units [1/0?]` (or `!u`) — toggle visibility.
+- `!units settings` (or `!units s`) — configure icon size, columns, refresh rate, and blacklist.
+- **Interactions:**
+  - Hover: traces laser lines to all units of that type across the map.
+  - Click (Enemy): centers camera on nearest enemy unit of that type.
+  - Click (Friendly): selects all units of this type in RTS command mode.
+  - Double-Click (Friendly): immediately possesses the nearest unit of that type.
+  - Right-Click: selects units in RTS mode.
+
+#### `!table`
+Draggable schematic palette HUD for one-click placement.
+- `!table [1/0?]` — toggle table display.
+- `!table settings` (or `!table s`) — configure rows, columns, button sizes, and resets.
+- **Interactions:**
+  - Left-Click: select and place schematic.
+  - Double-Click: open slot configuration.
+  - **Shift + Left-Click Drag:** drag and drop slot icons to reorder or swap schematics.
+  - Right-Click Drag: move the entire table across the screen.
+
+#### `!cmap`
+Draggable real-time minimap widget displaying terrain, units, structures, and player viewports.
+- `!cmap` — open minimap settings dialog.
+- Left-Click / Tap: open vanilla full-screen map.
+- Left-Drag / Tap & Drag: move the minimap widget across HUD.
+- Right-Click / Long-Press (0.4s): instantly teleport camera to clicked location.
+- Right-Drag / Long-Press & Drag: smoothly pan camera across the map.
+
+#### `!cbinds` | `!cbind`
+Create custom draggable on-screen action buttons.
+- `!cbinds` — open editor dialog to create, resize, style, and assign chat commands or texts to buttons.
+- Drag buttons across HUD with Right Mouse Button.
+
+#### `!quickchat`
+Customizable on-screen macros and chat automation widget.
+- Supports multi-line messages, automatic 150-character message splitting, and command triggers.
+- Auto Execute: automatically runs selected commands upon joining any world or server.
+
+---
+
+### 5. Diagnostics, System & Utilities
+
+#### `!opt`
+Visual Performance & FPS Optimizer dialog.
+- Toggle particle effects, bullet trails, smoke, vegetation rendering, block shadows, floor animations, and lighting.
+- One-click "Max Performance" profile and "Reset Defaults".
+- Automatic configuration bypass for World Processors.
+
+#### `!log`
+Action and chat logging engine.
+- `!log [1/0?]` — toggle logging.
+- `!log status` — view log status and total recorded actions.
+- `!log [player_name?]` — view recent actions (optional player filter).
+- `!log show [player_name?]` — render logged block placements/destructions directly on world tiles.
+- `!log revert [player_name]` — revert all block destructions performed by a player.
+- `!log chat` — view chat history including player joins, leaves, and name changes.
+- `!log save [path?]` — export log to file.
+- `!log path [path / reset]` — configure export directory.
+
+#### `!mlog`
+Processor Mlog script loader, injector, and editor extensions.
+- `!mlog list` — list available scripts in `qol/mlog/`.
+- `!mlog [file]` — inject code into the first empty friendly processor.
+- `!mlog [file] set` — prime code to inject into the next processor you shoot.
+- **Editor Extensions (inside Processor Edit screen):**
+  - Copy with Labels: converts line-number jumps to readable symbolic labels.
+  - Save / Load to QoL: persist processor code directly to local files.
+  - Insert & Replace Code: search/replace code with automatic jump and label remapping.
+
+#### `!detector` | `!dt`
+Scans all logic processors on the map matching regex patterns defined in `Mindustry/qol/mlog/regex.json`.
+- `!detector [pattern_name]` — find processors matching pattern.
+- `!detector log` — display coordinates of matching processors.
+
+#### `!track`
+Real-time player cursor and RTS command path visualizer.
+- `!track [player_name?]` — show cursor positions for all players or a specific player.
+- `!track ui` (or `!track settings`) — open tracking configuration dialog.
+- `!track [rts / rec]` — toggle visual RTS path lines or factory rally lines.
+- `!track notify [1/0]` — chat notifications when players issue RTS commands.
+
+#### `!bind` | `!binds`
+Keyboard shortcut manager for chat commands and text macros with multi-key combos and server IP filtering.
+
+#### `!colors`
+Real-time color palette customizer for Mindustry engine colors (`Pal.java`).
+
+#### `!mute`
+Local chat mute for specific players.
+- `!mute list` — list muted players.
+- `!mute add [player_name]` — mute exact player name.
+- `!mute addp [substring]` — mute any player name containing substring.
+- `!mute remove [player_name]` — unmute player.
+
+#### `!lookat` | `!la`
+- `!lookat [x] [y]` — center camera on world tile coordinates.
+- `!lookat last [number?]` — review or jump to recent coordinate history.
+
+#### `!here` | `!herec`
+- `!here [message?]` — broadcast camera center coordinates to team chat.
+- `!herec [message?]` — broadcast mouse cursor coordinates to team chat.
+
+#### `!cghost` | `!cg`
+Instantly deletes broken structure ghost plans that lie within enemy turret range to prevent auto-rebuilding units from dying.
+
+#### `!wave`
+Skips waves immediately, bypassing the `waitEnemies` map rule.
+- `!wave [number?]` — skip 1 wave, or N waves at 1 wave/sec.
+- `!wave status` — view wave status, alive enemies, and map rules.
+*(Requires admin/host on multiplayer servers)*.
+
+#### `!render`
+Toggle rendering of visual layers to save performance.
+- `!render <bullets | units | blocks | layers> [1/0?]`
+
+#### `!server`
+Fast server connection dialog to ping, favorite, and connect to multiplayer servers.
+
+#### `!users` | `!user`
+Lists all players on the current server running QoL-Control.
+
+---
+
+### 6. Passive & Background Features
+
+- **Logic Processor Buffer (`core/logicfix`):** When placing processors, it placings empty and only then pastes the code? so it bypasses server bug when code is big.
+- **Research & Sandbox Unlocker (`core/unlocker`):** Removes research locks on items, units, and structures, and exposes sandbox blocks and hidden ones.
+- **Multitask (`features/multitask`):** Allows firing weapons at enemies or cursor while simultaneously building, deconstructing, or mining.
+- **Omni Rotation & Speed (`features/omnirot`):** Enables omnidirectional movement and maximum rotation speed on all units.
+- **Plan Range & Projector Highlights (`features/plan_range`):** Renders range circles for planned turrets and overdrives.
+- **Building Info HUD (`ui/binfo`):** Draggable HUD displaying building name, team, HP, items, liquids, and power balance when hovering or tapping structures.
+- **Build Pause Button (`ui/buildpause`):** Draggable HUD button to pause and resume the construction queue.
+- **Camera Lock Button (`ui/camera`):** Draggable HUD button to lock player unit in place while freely moving camera.

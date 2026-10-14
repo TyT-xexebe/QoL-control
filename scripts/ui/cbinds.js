@@ -503,14 +503,25 @@ function showMainMenu() {
 
 	dialog.cont.clear();
 
-	let table = new Table();
-	table.top().left();
+	let root = new Table();
+	root.top().left().margin(10);
+
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
+
+	let c1 = createCard('On-Screen Action Buttons (' + buttons.length + ')', '50fa7b');
 
 	if (buttons.length === 0) {
-		table.add('[lightgray]No custom screen buttons found. Create one!').pad(10).row();
+		c1.add('[lightgray]No custom screen buttons configured. Click button below to create one![]').pad(10).left().row();
 	} else {
 		buttons.forEach((btnConfig, index) => {
-			let rowTable = new Table();
+			let rowTable = c1.table().growX().pad(2).get();
 
 			rowTable.check("", btnConfig.enabled !== false, b => {
 				let currentButtons = loadButtons();
@@ -519,18 +530,18 @@ function showMainMenu() {
 					saveButtons(currentButtons);
 					rebuildHUD();
 				}
-			}).padRight(5);
+			}).padRight(6);
 
 			let drawable = getIconDrawable(btnConfig.iconName, btnConfig.iconType);
-			let displayCmd = (btnConfig.commands || '').replace(/\n/g, ' | ');
+			let displayCmd = (btnConfig.commands || "").replace(/\r/g, "").replace(/\n/g, " | ");
 
 			let btnCell = rowTable.button(cons(b => {
 				b.left();
 				if (drawable) {
-					b.image(drawable).size(24).padRight(4);
+					b.image(drawable).size(22).padRight(6);
 				}
 				b.add('[accent]' + (btnConfig.name || (btnConfig.iconName ? "[" + btnConfig.iconName + "]" : "Unnamed")))
-					.width(100)
+					.width(110)
 					.left()
 					.padRight(10)
 					.get()
@@ -545,12 +556,12 @@ function showMainMenu() {
 				showEditDialog(index, btnConfig);
 			});
 
-			btnCell.size(260, 60).left().padRight(10);
-			btnCell.get().setStyle(Styles.cleart);
+			btnCell.growX().height(48).left().padRight(8);
+			btnCell.get().setStyle(Styles.grayt);
 
 			rowTable.button(Icon.edit, Styles.cleari, () => {
 				showEditDialog(index, btnConfig);
-			}).size(45, 60);
+			}).size(40, 48).padRight(4);
 
 			rowTable.button(Icon.trash, Styles.cleari, () => {
 				Vars.ui.showConfirm(
@@ -564,15 +575,20 @@ function showMainMenu() {
 						showMainMenu();
 					}
 				);
-			}).size(45, 60);
+			}).size(40, 48);
 
-			table.add(rowTable).padBottom(5).row();
+			c1.row();
 		});
 	}
 
-	dialog.cont.add(new ScrollPane(table)).width(440).height(340).row();
+	root.row();
 
-	dialog.cont.button('Add Screen Button', Icon.add, () => {
+	// Add Button Card
+	let actCard = root.table(Styles.black6).growX().padBottom(2).get();
+	actCard.margin(8);
+	let actRow = actCard.table().center().get();
+
+	actRow.button('[#73d216]Add Screen Button[]', Icon.add, Styles.grayt, () => {
 		showEditDialog(-1, {
 			name: '',
 			iconName: '',
@@ -582,12 +598,23 @@ function showMainMenu() {
 			x: uiUtils.stageWidth() / 2,
 			y: uiUtils.stageHeight() / 2
 		});
-	}).size(440, 50).padTop(10);
+	}).size(220, 40);
+
+	root.row();
+
+	let pane = new ScrollPane(root);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 680);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 480);
+	dialog.cont.add(pane).width(dw).height(dh);
 }
 
 function showEditDialog(index, btnData) {
 	let isNew = index === -1;
 	let d = new BaseDialog(isNew ? 'Add Screen Button' : 'Edit Screen Button');
+	d.addCloseButton();
 
 	let name = btnData.name || '';
 	let iconName = btnData.iconName || '';
@@ -599,18 +626,35 @@ function showEditDialog(index, btnData) {
 	let enabled = btnData.enabled !== false;
 	let ips = btnData.ips || '';
 
-	let t = new Table();
-	t.top().left();
+	let root = new Table();
+	root.top().left().margin(10);
 
-	t.add('Label/Text: ').padRight(5).right();
-	let nameField = t.field(name, (n) => (name = n)).size(180, 45).get();
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
 
-	let iconBtnCell = t.button(cons(b => {
+	// 1. Button Identity Card
+	let c1 = createCard('Button Identity & Icon', '50fa7b');
+
+	let nameRow = c1.table().growX().pad(2).get();
+	nameRow.add('[lightgray]Label / Text: []').left().padRight(8);
+	let nameField = nameRow.field(name, (n) => { name = n; }).height(38).growX().get();
+	c1.row();
+
+	let iconRow = c1.table().growX().pad(2).get();
+	iconRow.add('[lightgray]Icon: []').left().padRight(8);
+	let iconBtnCell = iconRow.button(cons(b => {
+		b.left();
 		let drawable = getIconDrawable(iconName, iconType);
 		if (drawable) {
-			b.image(drawable).size(24).padRight(4);
+			b.image(drawable).size(22).padRight(6);
 		}
-		b.add(iconName ? "[accent]" + iconName : "Select Icon");
+		b.add(iconName ? ('[accent]' + iconName + '[]') : '[gray]Choose Icon...[]');
 	}), () => {
 		showIconPicker((selectedIcon) => {
 			iconName = selectedIcon.name;
@@ -618,98 +662,111 @@ function showEditDialog(index, btnData) {
 			iconBtnCell.get().clearChildren();
 			let drawable = getIconDrawable(iconName, iconType);
 			if (drawable) {
-				iconBtnCell.get().image(drawable).size(24).padRight(4);
+				iconBtnCell.get().image(drawable).size(22).padRight(6);
 			}
-			iconBtnCell.get().add("[accent]" + iconName);
+			iconBtnCell.get().add('[accent]' + iconName + '[]');
 		});
-	});
-	iconBtnCell.get().setStyle(Styles.cleart);
-	iconBtnCell.size(160, 45).padLeft(5);
-	t.row();
+	}).height(38).growX().get();
+	iconBtnCell.setStyle(Styles.grayt);
+	c1.row();
 
-	t.add('Size (W x H): ').padRight(5).right().padTop(10);
-	let sizeTable = new Table();
-	let widthField = sizeTable.field(String(widthVal), (w) => {
+	c1.check('No Background (Transparent button)', noBackground, (b) => {
+		noBackground = b;
+	}).padTop(4).left().row();
+
+	root.row();
+
+	// 2. Dimensions Card
+	let c2 = createCard('Size & Dimensions', '8be9fd');
+	let sizeRow = c2.table().growX().pad(2).get();
+	sizeRow.add('[lightgray]Width: []').left().padRight(4);
+	let widthField = sizeRow.field(String(widthVal), (w) => {
 		widthVal = parseInt(w) || 50;
-	}).size(70, 45).get();
+	}).size(65, 36).get();
 
-	sizeTable.add(' x ').padLeft(5).padRight(5);
-
-	let heightField = sizeTable.field(String(heightVal), (h) => {
+	sizeRow.add('[lightgray]px  Height: []').padLeft(8).padRight(4);
+	let heightField = sizeRow.field(String(heightVal), (h) => {
 		heightVal = parseInt(h) || 50;
-	}).size(70, 45).get();
+	}).size(65, 36).get();
+	sizeRow.add('[lightgray]px[]').padLeft(4).padRight(12);
 
-	sizeTable.button('Reset', Styles.cleart, () => {
+	sizeRow.button('Reset 50x50', Styles.grayt, () => {
 		widthVal = 50;
 		heightVal = 50;
 		widthField.setText('50');
 		heightField.setText('50');
-	}).size(70, 45).padLeft(10);
+	}).size(120, 36);
+	c2.row();
 
-	t.add(sizeTable).padTop(10).left();
-	t.row();
+	root.row();
 
-	t.check("No Background", noBackground, (b) => {
-		noBackground = b;
-	}).colspan(2).padTop(10).left().row();
+	// 3. Commands Card
+	let c3 = createCard('Commands / Messages', 'ffd37f');
+	c3.add('[lightgray]Command or chat message executed on click:[]').left().padBottom(4).row();
+	let cmdArea = c3.area(commands, (txt) => { commands = txt; }).growX().height(100).get();
+	c3.row();
+	c3.add('[gray]Tip: Multiple commands can be chained using newlines or |[]').fontScale(0.85).left().padTop(4).row();
 
-	t.add('Server IPs (comma separated): ').colspan(2).padTop(10).left().row();
-	let ipField = t.field(ips, (txt) => (ips = txt)).size(400, 45).colspan(2).get();
-	t.row();
+	root.row();
 
-	t.add('Commands/Messages: ').colspan(2).padTop(15).left().row();
-	t.area(commands, (txt) => (commands = txt))
-		.size(400, 150)
-		.colspan(2)
-		.padTop(5)
-		.row();
+	// 4. Server Filter Card
+	let c4 = createCard('Server Filter (Optional)', 'f1fa8c');
+	c4.add('[lightgray]Only show on specific server IPs (comma-separated, leave blank for all):[]').left().padBottom(4).row();
+	let ipField = c4.field(ips, (txt) => { ips = txt; }).growX().height(38).get();
 
-	d.cont.add(t).row();
+	root.row();
 
-	d.buttons.button('@cancel', Icon.cancel, () => d.hide()).size(150, 50);
-	d.buttons.button('@ok', Icon.ok, () => {
+	// 5. Actions Card
+	let actCard = root.table(Styles.black6).growX().padBottom(2).get();
+	actCard.margin(8);
+	let actRow = actCard.table().center().get();
+
+	actRow.button('[#73d216]Save Button[]', Icon.ok, Styles.grayt, () => {
 		if (!name && !iconName) {
 			Vars.ui.showInfo('Button must have either a Label/Text or an Icon.');
 			return;
 		}
 
 		let buttons = loadButtons();
+		let targetObj = {
+			name: name,
+			iconName: iconName,
+			iconType: iconType,
+			noBackground: noBackground,
+			width: widthVal,
+			height: heightVal,
+			commands: commands,
+			enabled: enabled,
+			ips: ips,
+			x: isNew ? (btnData.x || (uiUtils.stageWidth() / 2)) : btnData.x,
+			y: isNew ? (btnData.y || (uiUtils.stageHeight() / 2)) : btnData.y
+		};
+
 		if (isNew) {
-			buttons.push({
-				name: name,
-				iconName: iconName,
-				iconType: iconType,
-				noBackground: noBackground,
-				width: widthVal,
-				height: heightVal,
-				commands: commands,
-				enabled: enabled,
-				ips: ips,
-				x: btnData.x || (uiUtils.stageWidth() / 2),
-				y: btnData.y || (uiUtils.stageHeight() / 2)
-			});
+			buttons.push(targetObj);
 		} else {
-			buttons[index] = {
-				name: name,
-				iconName: iconName,
-				iconType: iconType,
-				noBackground: noBackground,
-				width: widthVal,
-				height: heightVal,
-				commands: commands,
-				enabled: enabled,
-				ips: ips,
-				x: btnData.x,
-				y: btnData.y
-			};
+			buttons[index] = targetObj;
 		}
 
 		saveButtons(buttons);
 		rebuildHUD();
 		d.hide();
 		showMainMenu();
-	}).size(150, 50);
+	}).size(170, 40).padRight(10);
 
+	actRow.button('Cancel', Icon.cancel, Styles.grayt, () => {
+		d.hide();
+	}).size(140, 40);
+
+	root.row();
+
+	let pane = new ScrollPane(root);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 640);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 520);
+	d.cont.add(pane).width(dw).height(dh);
 	d.show();
 }
 
@@ -761,3 +818,11 @@ Events.run(Trigger.update, () => {
 		}
 	});
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'ui/cbinds',
+	'Custom Screen Binds',
+	() => handleCommand([]),
+	{ menuSafe: true }
+);

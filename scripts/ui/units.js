@@ -516,21 +516,31 @@ function openSettingsDialog(defaultTab) {
 	dialog.addCloseButton();
 
 	let container = new Table();
-	container.top().left();
+	container.top().left().margin(10);
 
 	let activeTab = (defaultTab === 'filter' || defaultTab === 'blacklist') ? 'filter' : 'general';
 	let tabPane = new Table();
 
+	function createCard(parent, title, titleColor) {
+		let card = parent.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
+
 	let renderTabs = () => {
 		tabPane.clearChildren();
 		if (activeTab === 'general') {
-			buildGeneralSettings(tabPane, dialog);
+			buildGeneralSettings(tabPane, dialog, createCard);
 		} else {
-			buildFilterSettings(tabPane, dialog);
+			buildFilterSettings(tabPane, dialog, createCard);
 		}
 	};
 
-	let topBar = container.table().growX().padBottom(10).get();
+	let topBar = container.table(Styles.black6).growX().padBottom(8).get();
+	topBar.margin(6);
 
 	let genBtn, filterBtn;
 	genBtn = topBar.button('General & Layout', Styles.clearTogglet, () => {
@@ -538,14 +548,14 @@ function openSettingsDialog(defaultTab) {
 		genBtn.setChecked(true);
 		filterBtn.setChecked(false);
 		renderTabs();
-	}).size(180, 42).padRight(6).get();
+	}).size(180, 38).padRight(6).get();
 
-	filterBtn = topBar.button('Blacklist (Units)', Styles.clearTogglet, () => {
+	filterBtn = topBar.button('Unit Blacklist', Styles.clearTogglet, () => {
 		activeTab = 'filter';
 		genBtn.setChecked(false);
 		filterBtn.setChecked(true);
 		renderTabs();
-	}).size(200, 42).get();
+	}).size(180, 38).get();
 
 	if (activeTab === 'general') {
 		genBtn.setChecked(true);
@@ -557,51 +567,60 @@ function openSettingsDialog(defaultTab) {
 	container.row();
 
 	tabPane.top().left();
-	container.add(tabPane).grow().row();
+	container.add(tabPane).growX().row();
 
-	dialog.cont.add(new ScrollPane(container)).width(550).height(460);
+	let pane = new ScrollPane(container);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 760);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 540);
+	dialog.cont.add(pane).width(dw).height(dh);
 
 	renderTabs();
 	dialog.show();
 }
 
-function buildGeneralSettings(table, dialog) {
+function buildGeneralSettings(table, dialog, createCard) {
 	table.top().left();
 
-	table.check('Show Units HUD', cfg.enabled, (b) => {
+	// 1. Display & Interaction Card
+	let c1 = createCard(table, 'Display & Interaction', '50fa7b');
+
+	c1.check('Show Units HUD', cfg.enabled, (b) => {
 		cfg.enabled = b;
 		saveCfg();
 		if (hudTable) hudTable.visible = b;
-	}).left().padBottom(6).row();
+	}).left().pad(3).row();
 
-	table.check('Hide Empty Teams', cfg.hideEmpty, (b) => {
+	c1.check('Hide Empty Teams', cfg.hideEmpty, (b) => {
 		cfg.hideEmpty = b;
 		saveCfg();
 		lastFingerprint = '';
 		rebuildContent(getTeamsUnitsData());
-	}).left().padBottom(6).row();
+	}).left().pad(3).row();
 
-	table.check('Draw Lines to Units on Hover', cfg.showLines, (b) => {
+	c1.check('Draw Lines to Units on Hover', cfg.showLines, (b) => {
 		cfg.showLines = b;
 		saveCfg();
-	}).left().padBottom(6).row();
+	}).left().pad(3).row();
 
-	table.check('Show +/- Count Changes (Deltas)', cfg.showDeltas, (b) => {
+	c1.check('Show +/- Count Changes (Deltas)', cfg.showDeltas, (b) => {
 		cfg.showDeltas = b;
 		saveCfg();
 		lastFingerprint = '';
 		rebuildContent(getTeamsUnitsData());
-	}).left().padBottom(6).row();
+	}).left().pad(3).row();
 
-	table.check('Select in RTS on Click (Friendly)', cfg.rtsOnClick, (b) => {
+	c1.check('Select in RTS on Click (Friendly)', cfg.rtsOnClick, (b) => {
 		cfg.rtsOnClick = b;
 		saveCfg();
-	}).left().padBottom(6).row();
+	}).left().pad(3).row();
 
-	table.check('Possess Unit on Double-Click', cfg.doubleClickPossess, (b) => {
+	c1.check('Possess Unit on Double-Click', cfg.doubleClickPossess, (b) => {
 		cfg.doubleClickPossess = b;
 		saveCfg();
-	}).left().padBottom(10).row();
+	}).left().pad(3).row();
 
 	let sortBtn;
 	let getSortLabel = () => {
@@ -609,7 +628,7 @@ function buildGeneralSettings(table, dialog) {
 		if (cfg.sortBy === 'name') return 'Sort Units: [accent]Alphabetical[]';
 		return 'Sort Units: [accent]Threat (Max HP)[]';
 	};
-	sortBtn = table.button(getSortLabel(), Styles.cleart, () => {
+	sortBtn = c1.button(getSortLabel(), Styles.grayt, () => {
 		if (cfg.sortBy === 'threat') cfg.sortBy = 'count';
 		else if (cfg.sortBy === 'count') cfg.sortBy = 'name';
 		else cfg.sortBy = 'threat';
@@ -617,50 +636,61 @@ function buildGeneralSettings(table, dialog) {
 		sortBtn.setText(getSortLabel());
 		lastFingerprint = '';
 		rebuildContent(getTeamsUnitsData());
-	}).size(280, 40).left().padBottom(12).get();
+	}).size(280, 36).left().pad(4).get();
+
 	table.row();
 
-	let iconSizeLbl = table.add('Icon Size: [accent]' + cfg.iconSize + 'px[]').left().get();
-	table.row();
-	table.slider(14, 40, 2, cfg.iconSize, (v) => {
+	// 2. Layout & Dimensions Card
+	let c2 = createCard(table, 'Layout & Dimensions', '8be9fd');
+
+	let iconSizeLbl = c2.add('[lightgray]Icon Size: [accent]' + cfg.iconSize + 'px[]').left().pad(2).get();
+	c2.row();
+	c2.slider(14, 40, 2, cfg.iconSize, (v) => {
 		cfg.iconSize = Math.round(v);
-		iconSizeLbl.setText('Icon Size: [accent]' + cfg.iconSize + 'px[]');
+		iconSizeLbl.setText('[lightgray]Icon Size: [accent]' + cfg.iconSize + 'px[]');
 		saveCfg();
 		lastFingerprint = '';
 		rebuildContent(getTeamsUnitsData());
-	}).width(280).left().padBottom(10).row();
+	}).growX().padBottom(6).row();
 
-	let fontScaleLbl = table.add('Font Scale: [accent]' + cfg.fontScale.toFixed(2) + '[]').left().get();
-	table.row();
-	table.slider(0.5, 1.4, 0.05, cfg.fontScale, (v) => {
+	let fontScaleLbl = c2.add('[lightgray]Font Scale: [accent]' + cfg.fontScale.toFixed(2) + '[]').left().pad(2).get();
+	c2.row();
+	c2.slider(0.5, 1.4, 0.05, cfg.fontScale, (v) => {
 		cfg.fontScale = Math.round(v * 100) / 100;
-		fontScaleLbl.setText('Font Scale: [accent]' + cfg.fontScale.toFixed(2) + '[]');
+		fontScaleLbl.setText('[lightgray]Font Scale: [accent]' + cfg.fontScale.toFixed(2) + '[]');
 		saveCfg();
 		lastFingerprint = '';
 		rebuildContent(getTeamsUnitsData());
-	}).width(280).left().padBottom(10).row();
+	}).growX().padBottom(6).row();
 
-	let colsLbl = table.add('Max Columns (per row): [accent]' + cfg.maxCols + '[]').left().get();
-	table.row();
-	table.slider(3, 12, 1, cfg.maxCols, (v) => {
+	let colsLbl = c2.add('[lightgray]Max Columns (per row): [accent]' + cfg.maxCols + '[]').left().pad(2).get();
+	c2.row();
+	c2.slider(3, 12, 1, cfg.maxCols, (v) => {
 		cfg.maxCols = Math.round(v);
-		colsLbl.setText('Max Columns (per row): [accent]' + cfg.maxCols + '[]');
+		colsLbl.setText('[lightgray]Max Columns (per row): [accent]' + cfg.maxCols + '[]');
 		saveCfg();
 		lastFingerprint = '';
 		rebuildContent(getTeamsUnitsData());
-	}).width(280).left().padBottom(10).row();
+	}).growX().padBottom(6).row();
 
 	let intervalSec = (cfg.interval / 60).toFixed(1);
-	let intervalLbl = table.add('Update Interval: [accent]' + cfg.interval + ' ticks (' + intervalSec + 's)[]').left().get();
-	table.row();
-	table.slider(15, 180, 15, cfg.interval, (v) => {
+	let intervalLbl = c2.add('[lightgray]Update Interval: [accent]' + cfg.interval + ' ticks (' + intervalSec + 's)[]').left().pad(2).get();
+	c2.row();
+	c2.slider(15, 180, 15, cfg.interval, (v) => {
 		cfg.interval = Math.round(v);
 		let s = (cfg.interval / 60).toFixed(1);
-		intervalLbl.setText('Update Interval: [accent]' + cfg.interval + ' ticks (' + s + 's)[]');
+		intervalLbl.setText('[lightgray]Update Interval: [accent]' + cfg.interval + ' ticks (' + s + 's)[]');
 		saveCfg();
-	}).width(280).left().padBottom(14).row();
+	}).growX().padBottom(6).row();
 
-	table.button('Reset Window Position', Styles.cleart, () => {
+	table.row();
+
+	// 3. Quick Actions Card
+	let actCard = table.table(Styles.black6).growX().padBottom(2).get();
+	actCard.margin(8);
+	let actRow = actCard.table().center().get();
+
+	actRow.button('[accent]Reset Window Position[]', Styles.grayt, () => {
 		let sw = uiUtils.stageWidth();
 		let sh = uiUtils.stageHeight();
 		cfg.anchorX = 'free';
@@ -672,26 +702,51 @@ function buildGeneralSettings(table, dialog) {
 		saveCfg();
 		if (hudTable) hudTable.setPosition(cfg.x, cfg.y);
 		notify('[lightgray]Window position [green]reset');
-	}).size(220, 38).left().row();
+	}).size(220, 36);
 }
 
-function buildFilterSettings(table, dialog) {
+function buildFilterSettings(table, dialog, createCard) {
 	table.top().left();
 
-	table.add('[lightgray]Click unit to toggle blacklist: [green]Active[] / [scarlet]Disabled[]').left().padBottom(8).row();
+	let card = createCard(table, 'Unit Blacklist Filter', 'ff5555');
+	card.add('[lightgray]Click any unit icon below to toggle visibility in HUD: [green]Shown[] / [scarlet]Hidden[]').left().padBottom(8).row();
 
-	let gridTable = new Table();
-	gridTable.top().left();
+	let actRow = card.table().left().padBottom(8).get();
+	actRow.button('[#73d216]Show All Units[]', Styles.grayt, () => {
+		cfg.ignored = {};
+		saveCfg();
+		lastFingerprint = '';
+		rebuildContent(getTeamsUnitsData());
+		buildFilterSettings(table, dialog, createCard);
+	}).size(160, 34).padRight(8);
+
+	actRow.button('[#ff5555]Blacklist All Units[]', Styles.grayt, () => {
+		if (Vars.content) {
+			Vars.content.getBy(ContentType.unit).each(cons((u) => {
+				if (u && u.name) cfg.ignored[String(u.name)] = true;
+			}));
+			saveCfg();
+			lastFingerprint = '';
+			rebuildContent(getTeamsUnitsData());
+			buildFilterSettings(table, dialog, createCard);
+		}
+	}).size(170, 34);
+
+	card.row();
+
+	let gridTable = card.table().top().left().padBottom(4).get();
 
 	let allUnits = [];
-	Vars.content.getBy(ContentType.unit).each(cons((u) => {
-		if (!u || !u.uiIcon || u.uiIcon === Core.atlas.find('error') || u.uiIcon === Core.atlas.find('clear')) return;
-		allUnits.push(u);
-	}));
+	if (Vars.content) {
+		Vars.content.getBy(ContentType.unit).each(cons((u) => {
+			if (!u || !u.uiIcon || u.uiIcon === Core.atlas.find('error') || u.uiIcon === Core.atlas.find('clear')) return;
+			allUnits.push(u);
+		}));
+	}
 
 	allUnits.sort((a, b) => (b.health || 0) - (a.health || 0));
 
-	let cols = 8;
+	let cols = 10;
 	for (let i = 0; i < allUnits.length; i++) {
 		let u = allUnits[i];
 		let uName = String(u.name);
@@ -727,8 +782,6 @@ function buildFilterSettings(table, dialog) {
 			gridTable.row();
 		}
 	}
-
-	table.add(new ScrollPane(gridTable)).width(510).height(380).row();
 }
 
 if (Vars.ui && Vars.ui.hudGroup) initUI();
@@ -829,3 +882,11 @@ interceptor.add('units', (args) => {
 		notify('[lightgray]Units HUD ' + (cfg.enabled ? '[green]ON' : '[scarlet]OFF'));
 	}
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'ui/units',
+	'Team Units HUD',
+	() => openSettingsDialog('general'),
+	{ menuSafe: true }
+);

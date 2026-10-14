@@ -24,6 +24,11 @@ var saveCfg = () => {
 	Core.settings.put('qol-schem-slots', JSON.stringify(cfg.slots));
 };
 
+// The settings window needs the live HUD table, so it is defined inside the
+// client-load closure below. The registry is filled at module scope (before
+// that closure runs) and gets this forwarder instead of the real function.
+let tableSettingsOpener = null;
+
 var getIcon = (name, typeStr) => {
 	if (!name) return Icon.add.getRegion();
 
@@ -432,36 +437,104 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		uiTable.pack();
 	};
 
-	interceptor.add('table', (args) => {
-		let sub = args[1] ? args[1].toLowerCase() : '';
-		let val = args[2] ? parseInt(args[2]) : 0;
+	// The settings window. Built once per open: sliders must not be recreated
+	// while dragging, so changing a value never rebuilds this dialog.
+	function showTableSettingsDialog() {
+		let d = new BaseDialog('Schematic Table Config');
+		d.addCloseButton();
 
-		if (sub === 'rows' && val > 0) {
-			cfg.rows = val;
+		let root = new Table();
+		root.top().left().margin(10);
+
+		function createCard(title, titleColor) {
+			let card = root.table(Styles.black6).growX().padBottom(8).get();
+			card.margin(8);
+			card.top().left();
+			card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+			card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+			return card;
+		}
+
+		// 1. General Card
+		let c1 = createCard('General Display', '50fa7b');
+
+		c1.check('Show Schematic Table HUD', cfg.enabled, (b) => {
+			cfg.enabled = b;
 			saveCfg();
-			rebuildGrid();
-			notify('[lightgray]Rows set to [accent]' + val);
-		} else if (sub === 'cols' && val > 0) {
-			cfg.cols = val;
-			saveCfg();
-			rebuildGrid();
-			notify('[lightgray]Columns set to [accent]' + val);
-		} else if (sub === 'size' && val > 0) {
-			cfg.size = val;
-			saveCfg();
-			rebuildGrid();
-			notify('[lightgray]Size set to [accent]' + val);
-		} else if (sub === 'reset') {
+			notify('[lightgray]Table ' + (b ? '[green]ON' : '[scarlet]OFF'));
+		}).pad(3).left().row();
+
+		root.row();
+
+		// 2. Grid Dimensions Card
+		let c2 = createCard('Grid Dimensions & Slots', 'ffd37f');
+
+		let rowsCtrl = uiUtils.sliderField(c2, '[lightgray]Rows:[]', {
+			min: 1,
+			max: 10,
+			step: 1,
+			value: cfg.rows,
+			onChange: (v) => {
+				cfg.rows = Math.round(v);
+				saveCfg();
+				rebuildGrid();
+			},
+		});
+
+		let colsCtrl = uiUtils.sliderField(c2, '[lightgray]Columns:[]', {
+			min: 1,
+			max: 10,
+			step: 1,
+			value: cfg.cols,
+			onChange: (v) => {
+				cfg.cols = Math.round(v);
+				saveCfg();
+				rebuildGrid();
+			},
+		});
+
+		let sizeCtrl = uiUtils.sliderField(c2, '[lightgray]Button size (px):[]', {
+			min: 16,
+			max: 96,
+			step: 4,
+			value: cfg.size,
+			onChange: (v) => {
+				cfg.size = Math.round(v);
+				saveCfg();
+				rebuildGrid();
+			},
+		});
+
+		c2.add('[gray]Drag the slider or type an exact value.\nThe table itself is dragged with [accent]RMB[] on the HUD.[]')
+			.fontScale(0.85)
+			.left()
+			.padTop(6)
+			.row();
+
+		root.row();
+
+		// 3. Quick Actions Card
+		let actCard = root.table(Styles.black6).growX().padBottom(2).get();
+		actCard.margin(8);
+		let actRow = actCard.table().center().get();
+
+		actRow.button('[accent]Reset Table & Position[]', Icon.refresh, Styles.grayt, () => {
 			cfg.rows = 4;
 			cfg.cols = 4;
 			cfg.size = 32;
 			cfg.slots = {};
 			saveCfg();
 			rebuildGrid();
+			rowsCtrl.set(4);
+			colsCtrl.set(4);
+			sizeCtrl.set(32);
+
 			let sw = getStageW();
 			let sh = getStageH();
-			tableX = Math.max(0, (sw - uiTable.getWidth()) / 2);
-			tableY = Math.max(0, (sh - uiTable.getHeight()) / 2);
+			let tw = uiTable ? uiTable.getWidth() : 200;
+			let th = uiTable ? uiTable.getHeight() : 200;
+			tableX = Math.max(0, (sw - tw) / 2);
+			tableY = Math.max(0, (sh - th) / 2);
 			if (dragHandler && dragHandler.state) {
 				dragHandler.state.anchorX = 'free';
 				dragHandler.state.anchorY = 'free';
@@ -473,26 +546,55 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 				Core.settings.put('qol-schem-x', new java.lang.Float(tableX));
 				Core.settings.put('qol-schem-y', new java.lang.Float(tableY));
 			}
-			uiTable.setPosition(tableX, tableY);
+			if (uiTable) uiTable.setPosition(tableX, tableY);
 			notify('[lightgray]Table [green]RESET');
-		} else if (sub === 'help') {
-			notify(
-				'[lightgray]!table\n!table <1/0?>\n!table rows <val>\n!table cols <val>\n!table size <val>\n!table reset\n\n[accent]Shift+LMB[] on a filled slot — drag the icon: drop on an empty slot to move it, on another icon to swap. Drop outside to cancel.\n[accent]RMB[] — moves the whole panel (anywhere, as before).\nLMB / double click — place schematic / open the slot config.'
-			);
-		} else {
-			if (sub && !interceptor.isBooleanArg(sub)) {
-				notify(
-					'[scarlet]Unknown command option\n[lightgray]!table <1/0?> or !table rows/cols/size/reset'
-				);
-				return;
-			}
-			cfg.enabled = interceptor.parseToggle(cfg.enabled, args[1]);
-			saveCfg();
-			notify(
-				'[lightgray]Table ' +
-					(cfg.enabled ? '[green]ON' : '[scarlet]OFF')
-			);
+		}).size(220, 36);
+
+		root.row();
+
+		let scroll = new ScrollPane(root);
+		scroll.setScrollingDisabled(true, false);
+		scroll.setOverscroll(false, true);
+
+		let dw = Math.min(Core.scene.getWidth() * 0.95, 680);
+		let dh = Math.min(Core.scene.getHeight() * 0.85, 480);
+		d.cont.add(scroll).width(dw).height(dh).row();
+		d.show();
+	}
+
+	tableSettingsOpener = showTableSettingsDialog;
+
+	// Only three jobs left in chat: show/hide, open the window, help. Layout
+	// (rows / columns / button size / reset) lives in the window now.
+	interceptor.add('table', (args) => {
+		let sub = args[1] ? args[1].toLowerCase() : '';
+
+		if (sub === 's' || sub === 'settings' || sub === 'ui') {
+			showTableSettingsDialog();
+			return;
 		}
+
+		if (sub === 'help') {
+			notify(
+				'[lightgray]!table - toggle the table\n' +
+					'[accent]!table settings[lightgray] (or [accent]!table s[lightgray]) - open the settings window\n\n' +
+					'[accent]Shift+LMB[] on a filled slot - drag the icon: drop on an empty slot to move it, on another icon to swap. Drop outside to cancel.\n' +
+					'[accent]RMB[] - moves the whole panel.\n' +
+					'LMB / double click - place schematic / open the slot config.'
+			);
+			return;
+		}
+
+		if (sub && !interceptor.isBooleanArg(sub)) {
+			notify(
+				'[scarlet]Unknown command option\n[lightgray]Use [accent]!table settings[lightgray] for the settings window.'
+			);
+			return;
+		}
+
+		cfg.enabled = interceptor.parseToggle(cfg.enabled, args[1]);
+		saveCfg();
+		notify('[lightgray]Table ' + (cfg.enabled ? '[green]ON' : '[scarlet]OFF'));
 	});
 
 	rebuildGrid();
@@ -537,3 +639,19 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		tableY = dragHandler.state.y;
 	});
 });
+
+// Expose the module's settings window to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'ui/table',
+	'Schematic Table',
+	() => {
+		if (!tableSettingsOpener) {
+			notify(
+				'[scarlet]The table is not ready yet - reload the game after enabling the module.'
+			);
+			return;
+		}
+		tableSettingsOpener();
+	},
+	{ menuSafe: true }
+);

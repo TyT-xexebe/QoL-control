@@ -434,88 +434,127 @@ Events.on(WorldLoadEvent, () => {
 	);
 });
 
-interceptor.add('cmap', () => {
-	let dialog = new BaseDialog('Minimap Settings');
+function openSettingsDialog() {
+	let dialog = new BaseDialog('Minimap HUD Config');
 	dialog.addCloseButton();
-	let cont = dialog.cont;
 
-	cont.check('Enable Minimap', mapEnabled, (b) => {
+	let root = new Table();
+	root.top().left().margin(10);
+
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
+
+	// 1. Display Card
+	let c1 = createCard('Minimap Display', '84c8ff');
+
+	c1.check('Enable Minimap', mapEnabled, (b) => {
 		mapEnabled = b;
 		Core.settings.put('map-enabled', new java.lang.Boolean(b));
-	})
-		.pad(4)
-		.row();
+		if (mapTable) mapTable.visible = b;
+	}).pad(3).left().row();
 
-	cont.check('Unit Outlines', unitOutline, (b) => {
+	c1.check('Unit Outlines', unitOutline, (b) => {
 		unitOutline = b;
 		Core.settings.put('cmap-unit-outline', new java.lang.Boolean(b));
-	})
-		.pad(4)
-		.row();
+	}).pad(3).left().row();
 
-	cont.check(
-		'Sort Units by HP (disable on low-end devices)',
-		sortByHp,
-		(b) => {
-			sortByHp = b;
-			Core.settings.put('cmap-sort-hp', new java.lang.Boolean(b));
-		}
-	)
-		.pad(4)
-		.row();
+	c1.check('Sort Units by HP (disable on low-end devices)', sortByHp, (b) => {
+		sortByHp = b;
+		Core.settings.put('cmap-sort-hp', new java.lang.Boolean(b));
+	}).pad(3).left().row();
 
 	let modeBtn;
-	modeBtn = cont
-		.button(
-			'Player Display: ' + (playerMode === 0 ? 'Icon' : 'Name'),
-			() => {
-				playerMode = playerMode === 0 ? 1 : 0;
-				modeBtn
-					.get()
-					.setText(
-						'Player Display: ' +
-							(playerMode === 0 ? 'Icon' : 'Name')
-					);
-				Core.settings.put(
-					'cmap-player-mode',
-					new java.lang.Integer(playerMode)
-				);
-			}
-		)
-		.size(240, 50)
-		.pad(4);
-	cont.row();
+	let getModeLabel = () => 'Player Display: [accent]' + (playerMode === 0 ? 'Icon' : 'Name') + '[]';
+	modeBtn = c1.button(getModeLabel(), Styles.grayt, () => {
+		playerMode = playerMode === 0 ? 1 : 0;
+		modeBtn.setText(getModeLabel());
+		Core.settings.put('cmap-player-mode', new java.lang.Integer(playerMode));
+	}).size(260, 36).pad(4).left().row();
 
-	cont.label(() => 'Map Size: ' + mapSize)
-		.padTop(10)
-		.row();
-	cont.slider(50, 1000, 10, mapSize, (s) => {
-		mapSize = s;
-		Core.settings.put('map-size', new java.lang.Integer(s));
+	root.row();
+
+	// 2. Size & Dimensions Card
+	let c2 = createCard('Size & Dimensions', 'ffd37f');
+
+	let sizeLabel = c2.add('[lightgray]Map Size: [accent]' + mapSize + 'px[]').growX().left().pad(2).get();
+	c2.row();
+	c2.slider(50, 1000, 10, mapSize, (s) => {
+		mapSize = Math.round(s);
+		sizeLabel.setText('[lightgray]Map Size: [accent]' + mapSize + 'px[]');
+		Core.settings.put('map-size', new java.lang.Integer(mapSize));
 		if (mapTable && mapElem) {
 			mapTable.clearChildren();
 			mapTable.add(mapElem).size(mapSize).row();
 			mapTable.add(coordsLabel).width(mapSize).padTop(2);
 			mapTable.pack();
 		}
-	})
-		.width(240)
-		.pad(4)
-		.row();
+	}).growX().padBottom(6).row();
 
-	cont.label(() => 'Unit Size: ' + Math.floor(unitSize))
-		.padTop(10)
-		.row();
-	cont.slider(10, 60, 1, unitSize, (s) => {
-		unitSize = s;
-		Core.settings.put('cmap-unit-size', new java.lang.Float(s));
-	})
-		.width(240)
-		.pad(4)
-		.row();
+	let unitLabel = c2.add('[lightgray]Unit Size: [accent]' + Math.floor(unitSize) + 'px[]').growX().left().pad(2).get();
+	c2.row();
+	c2.slider(10, 60, 1, unitSize, (s) => {
+		unitSize = Math.round(s);
+		unitLabel.setText('[lightgray]Unit Size: [accent]' + Math.floor(unitSize) + 'px[]');
+		Core.settings.put('cmap-unit-size', new java.lang.Float(unitSize));
+	}).growX().padBottom(6).row();
 
+	root.row();
+
+	// 3. Quick Actions Card
+	let actCard = root.table(Styles.black6).growX().padBottom(2).get();
+	actCard.margin(8);
+	let actRow = actCard.table().center().get();
+
+	actRow.button('[accent]Reset Position[]', Styles.grayt, () => {
+		Core.settings.remove('map-x');
+		Core.settings.remove('map-y');
+		Core.settings.remove('map-anchorX');
+		Core.settings.remove('map-anchorY');
+		Core.settings.remove('map-offsetX');
+		Core.settings.remove('map-offsetY');
+		Core.settings.remove('cmap-x');
+		Core.settings.remove('cmap-y');
+		Core.settings.remove('cmap-anchorX');
+		Core.settings.remove('cmap-anchorY');
+		Core.settings.remove('cmap-offsetX');
+		Core.settings.remove('cmap-offsetY');
+		anchorX = 'right';
+		anchorY = 'bottom';
+		posOffsetX = 10;
+		posOffsetY = 10;
+		if (typeof applyAnchoredPosition === 'function') {
+			applyAnchoredPosition();
+		}
+		notify('[lightgray]Minimap position [green]reset');
+	}).size(180, 36);
+
+	root.row();
+
+	let pane = new ScrollPane(root);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 660);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 480);
+	dialog.cont.add(pane).width(dw).height(dh);
 	dialog.show();
-});
+}
+
+interceptor.add('cmap', openSettingsDialog);
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'ui/map',
+	'Minimap',
+	openSettingsDialog,
+	{ menuSafe: true }
+);
 
 Events.run(Trigger.update, () => {
 	if (!setup || !mapTable) return;

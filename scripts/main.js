@@ -68,6 +68,7 @@ if (oldExtend) {
 }
 
 const logger = require('qol-control/core/logger');
+const settingsUI = require('qol-control/core/settings-ui');
 
 let defaultSettings = {};
 
@@ -98,7 +99,6 @@ for (let modName in defaultSettings) {
 
 global.qolActiveModules = activeModules;
 
-require('qol-control/core/help');
 require('qol-control/core/welcome');
 
 for (let module of activeModules) {
@@ -158,6 +158,24 @@ if (activeModules.indexOf('features/autopath') === -1) {
 	});
 }
 
+if (activeModules.indexOf('features/goto') === -1) {
+	const interceptor = require('qol-control/core/interceptor');
+	let gotoLoaded = false;
+	let dynamicLoadGoto = (args) => {
+		if (gotoLoaded) return;
+		try {
+			require('qol-control/features/goto');
+			gotoLoaded = true;
+			logger.info('Dynamically loaded qol-control/features/goto');
+			if (args) interceptor.trigger('goto', args);
+		} catch (err) {
+			logger.err('Failed to dynamic load features/goto: ' + err);
+		}
+	};
+	interceptor.add('goto', (args) => {
+		dynamicLoadGoto(args);
+	});
+}
 const toggleableFeatures = require('qol-control/core/toggleable-features');
 
 Events.on(WorldLoadEvent, cons((e) => {
@@ -250,22 +268,37 @@ if (!Vars.headless) {
 
 										row.add().growX();
 
+										// Gear button, only for modules that registered
+										// a settings UI at load time.
+										if (settingsUI.has(mName)) {
+											row.button(Icon.settings, Styles.clearNonei, () => {
+												settingsUI.open(mName);
+											})
+												.size(40, 40)
+												.right()
+												.padLeft(6);
+										}
+
 										row.button('?', Styles.cleart, () => {
-											let desc =
+											let raw =
 												moduleDescriptions[mName] ||
 												'No description available for ' +
 													mName;
+											let desc = String(raw).replace(/\\n/g, '\n');
 											let d = new BaseDialog(displayName);
 											let t = new Table();
+											let textW = Math.min(Core.scene.getWidth() * 0.85, 780);
 											t.add(desc)
-												.width(450)
+												.width(textW)
 												.wrap()
 												.left();
 											let p = new ScrollPane(t);
+											let dw = Math.min(Core.scene.getWidth() * 0.92, 860);
+											let dh = Math.min(Core.scene.getHeight() * 0.82, 560);
 											d.cont
 												.add(p)
-												.width(1200)
-												.height(600)
+												.width(dw)
+												.height(dh)
 												.row();
 											d.addCloseButton();
 											d.show();
@@ -294,7 +327,7 @@ if (!Vars.headless) {
 									.left()
 									.padRight(10);
 
-								prefTable
+								let prefField = prefTable
 									.field(currentPrefix, (text) => {
 										let val = ('' + text).trim();
 										if (!val) val = '!';
@@ -310,7 +343,19 @@ if (!Vars.headless) {
 										}
 									})
 									.size(140, 40)
-									.left();
+									.left()
+									.get();
+
+								prefTable.update(() => {
+									try {
+										let fresh = Core.settings.get(prefixKey, '!');
+										fresh = ('' + (fresh || '!')).trim();
+										if (!fresh) fresh = '!';
+										if (prefField && !prefField.hasKeyboard() && prefField.getText() !== fresh) {
+											prefField.setText(fresh);
+										}
+									} catch (e) {}
+								});
 
 								prefTable
 									.button('?', Styles.cleart, () => {

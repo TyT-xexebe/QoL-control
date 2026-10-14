@@ -451,3 +451,15 @@ interceptor.add('server', () => {
 	else showMainMenu();
 	dialog.show();
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'features/server',
+	'Servers',
+	() => {
+		if (!dialog) buildUI();
+		else showMainMenu();
+		dialog.show();
+	},
+	{ menuSafe: true }
+);

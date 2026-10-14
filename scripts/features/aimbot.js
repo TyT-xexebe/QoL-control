@@ -157,96 +157,106 @@ var targetFilters = [
 ];
 
 function openSettings() {
-	let dialog = new BaseDialog('Aimbot Settings');
+	let dialog = new BaseDialog('Aimbot Config & Presets');
 	dialog.addCloseButton();
 
 	let build = function () {
 		dialog.cont.clear();
 
-		let modeNames = ['[red]off', '[green]unit center', '[cyan]each gun'];
-		let settingTable = new Table(Styles.black5);
-		settingTable.margin(8);
-		settingTable
-			.add('Prediction styles: ')
-			.color(Color.lightGray)
-			.padRight(8);
+		let root = new Table();
+		root.top().left().margin(10);
 
-		let modeBtn = settingTable
-			.button(
-				modeNames[predictLineMode],
-				Styles.flatTogglet,
-				function () {
-					predictLineMode = (predictLineMode + 1) % 3;
-					save();
-					modeBtn.setText(modeNames[predictLineMode]);
-				}
-			)
-			.size(180, 40)
-			.get();
+		function createCard(title, titleColor) {
+			let card = root.table(Styles.black6).growX().padBottom(8).get();
+			card.margin(8);
+			card.top().left();
+			card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+			card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+			return card;
+		}
 
-		dialog.cont.add(settingTable).fillX().padBottom(10).row();
+		// 1. Global Settings Card
+		let c1 = createCard('Global Targeting & Prediction', '50fa7b');
 
-		let ignoreTable = new Table(Styles.black5);
-		ignoreTable.margin(8);
-		ignoreTable
-			.add('Ignored Targets (CSV): ')
-			.color(Color.lightGray)
-			.padRight(8);
+		let modeNames = ['[red]Off', '[green]Unit Center', '[cyan]Each Gun'];
+		let modeRow = c1.table().growX().pad(2).get();
+		modeRow.add('[lightgray]Prediction Style: []').left().padRight(8);
+		let modeBtn = modeRow.button(modeNames[predictLineMode], Styles.grayt, function () {
+			predictLineMode = (predictLineMode + 1) % 3;
+			save();
+			modeBtn.setText(modeNames[predictLineMode]);
+		}).size(180, 36).get();
+		c1.row();
 
+		let ignoreRow = c1.table().growX().pad(2).get();
+		ignoreRow.add('[lightgray]Ignored (CSV): []').left().padRight(8);
 		let ignoreField = new TextField(ignoredTargets);
 		ignoreField.changed(function () {
 			ignoredTargets = ignoreField.getText();
 			updateIgnored();
 			save();
 		});
-		ignoreTable.add(ignoreField).width(350).get();
-		dialog.cont.add(ignoreTable).fillX().padBottom(10).row();
+		ignoreRow.add(ignoreField).growX().height(36).get();
+		c1.row();
 
-		dialog.cont
-			.button('Add Preset', Icon.add, function () {
-				presets.push({
-					name: 'New Preset',
-					units: [],
-					attackEnemyUnits: true,
-					attackEnemyBlocks: true,
-					healFriendlyBlocks: false,
-					priorities: ['heal', 'units', 'blocks'],
-					predictFire: true,
-					predictTiles: 20,
-					constantFire: false,
-					targetPriority: 'Nearest',
-					disableShootingOnReload: false,
-					targetTypeFilter: 'Default',
-				});
-				save();
-				openPreset(
-					presets[presets.length - 1],
-					presets.length - 1,
-					dialog,
-					build
-				);
-			})
-			.size(250, 45)
-			.padBottom(10)
-			.row();
+		root.row();
 
-		let pTable = new Table();
-		presets.forEach(function (p, i) {
-			let tr = pTable.table(Styles.black5).padBottom(4).get();
-			tr.add(p.name).width(200).left().padLeft(10);
-			tr.button(Icon.edit, Styles.clearNonei, 30, function () {
-				openPreset(p, i, dialog, build);
-			}).size(40);
-			tr.button(Icon.cancel, Styles.clearNonei, 30, function () {
-				presets.splice(i, 1);
-				save();
-				build();
-			}).size(40);
-			pTable.row();
-		});
+		// 2. Presets Card
+		let c2 = createCard('Unit Presets (' + presets.length + ')', 'ffd37f');
 
-		let pane = new ScrollPane(pTable);
-		dialog.cont.add(pane).size(420, 320);
+		let addRow = c2.table().growX().padBottom(6).get();
+		addRow.button('[#73d216]Add New Preset[]', Icon.add, Styles.grayt, function () {
+			presets.push({
+				name: 'New Preset',
+				units: [],
+				attackEnemyUnits: true,
+				attackEnemyBlocks: true,
+				healFriendlyBlocks: false,
+				priorities: ['heal', 'units', 'blocks'],
+				predictFire: true,
+				predictTiles: 20,
+				constantFire: false,
+				targetPriority: 'Nearest',
+				disableShootingOnReload: false,
+				targetTypeFilter: 'Default',
+			});
+			save();
+			openPreset(
+				presets[presets.length - 1],
+				presets.length - 1,
+				dialog,
+				build
+			);
+		}).size(220, 38).left();
+		c2.row();
+
+		if (presets.length === 0) {
+			c2.add('[lightgray]No presets created yet.[]').pad(6).left().row();
+		} else {
+			presets.forEach(function (p, i) {
+				let tr = c2.table().growX().pad(2).get();
+				tr.add('[white]' + p.name).left().growX().padLeft(4).minWidth(0).get().setEllipsis(true);
+				tr.button(Icon.edit, Styles.cleari, function () {
+					openPreset(p, i, dialog, build);
+				}).size(40, 40).padRight(4);
+				tr.button(Icon.cancel, Styles.cleari, function () {
+					presets.splice(i, 1);
+					save();
+					build();
+				}).size(40, 40);
+				c2.row();
+			});
+		}
+
+		root.row();
+
+		let pane = new ScrollPane(root);
+		pane.setScrollingDisabled(true, false);
+		pane.setOverscroll(false, true);
+
+		let dw = Math.min(Core.scene.getWidth() * 0.95, 680);
+		let dh = Math.min(Core.scene.getHeight() * 0.85, 500);
+		dialog.cont.add(pane).width(dw).height(dh);
 	};
 
 	build();
@@ -254,166 +264,153 @@ function openSettings() {
 }
 
 function openPreset(pre, id, parentDialog, parentRebuild) {
-	let pd = new BaseDialog('Edit Preset');
+	let pd = new BaseDialog('Edit Aimbot Preset');
+	pd.addCloseButton();
+
+	let root = new Table();
+	root.top().left().margin(10);
+
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
 
 	function render() {
-		pd.cont.clear();
-		let cont = new Table(Styles.black5);
-		pd.cont.add(cont).pad(15);
+		root.clearChildren();
 
-		function addRow(label, element) {
-			let t = new Table();
-			let l = t.add(label).left().padRight(12).get();
-			if (l.setColor) l.setColor(Color.lightGray);
-			t.add(element).right();
-			cont.add(t).fillX().padBottom(6).row();
-		}
+		// 1. Identity Card
+		let c1 = createCard('Preset Identity', '50fa7b');
 
-		let nameField = new TextField(pre.name);
-		nameField.changed(function () {
-			pre.name = nameField.getText();
+		let nameRow = c1.table().growX().pad(2).get();
+		nameRow.add('[lightgray]Preset Name: []').left().padRight(8);
+		let nameField = nameRow.field(pre.name, function (t) {
+			pre.name = t;
 			save();
-		});
-		addRow('Name:', nameField);
+		}).height(36).growX().get();
+		c1.row();
 
-		let unitsField = new TextField(pre.units.join(','));
-		unitsField.changed(function () {
-			pre.units = unitsField
-				.getText()
-				.split(',')
-				.map(function (s) {
-					return s.trim();
-				})
-				.filter(function (s) {
-					return s.length > 0;
-				});
+		let unitsRow = c1.table().growX().pad(2).get();
+		unitsRow.add('[lightgray]Assigned Units (CSV): []').left().padRight(8);
+		let unitsField = unitsRow.field(pre.units.join(','), function (t) {
+			pre.units = t.split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
 			save();
-		});
-		addRow('Units (CSV/all):', unitsField);
+		}).height(36).growX().get();
+		c1.row();
+		c1.add('[gray]Leave blank for default/all units, or specify unit IDs (e.g. flare, zenith)[]').fontScale(0.85).left().padTop(2).row();
 
-		cont.check('Attack Units', pre.attackEnemyUnits, function (b) {
+		root.row();
+
+		// 2. Targets Card
+		let c2 = createCard('Target Types', 'ff79c6');
+		c2.check('Attack Enemy Units', pre.attackEnemyUnits, function (b) {
 			pre.attackEnemyUnits = b;
 			save();
-		})
-			.left()
-			.padBottom(4)
-			.row();
-		cont.check('Attack Blocks', pre.attackEnemyBlocks, function (b) {
+		}).left().pad(3).row();
+
+		c2.check('Attack Enemy Blocks / Buildings', pre.attackEnemyBlocks, function (b) {
 			pre.attackEnemyBlocks = b;
 			save();
-		})
-			.left()
-			.padBottom(4)
-			.row();
-		cont.check('Heal Blocks', pre.healFriendlyBlocks, function (b) {
+		}).left().pad(3).row();
+
+		c2.check('Heal Friendly Damaged Blocks', pre.healFriendlyBlocks, function (b) {
 			pre.healFriendlyBlocks = b;
 			save();
-		})
-			.left()
-			.padBottom(4)
-			.row();
-		cont.check('Predict Fire', pre.predictFire, function (b) {
+		}).left().pad(3).row();
+
+		root.row();
+
+		// 3. Ballistics Card
+		let c3 = createCard('Ballistics & Firing', '8be9fd');
+
+		c3.check('Predictive Aim (Lead Target)', pre.predictFire, function (b) {
 			pre.predictFire = b;
 			save();
-		})
-			.left()
-			.padBottom(4)
-			.row();
-		cont.check('Constant Fire', pre.constantFire, function (b) {
+		}).left().pad(3).row();
+
+		let predTiles = pre.predictTiles || 20;
+		let predLbl = c3.add('[lightgray]Predict Distance: [accent]' + predTiles + ' tiles[]').left().pad(2).get();
+		c3.row();
+		c3.slider(5, 50, 1, predTiles, function (v) {
+			pre.predictTiles = Math.round(v);
+			predLbl.setText('[lightgray]Predict Distance: [accent]' + pre.predictTiles + ' tiles[]');
+			save();
+		}).growX().padBottom(6).row();
+
+		c3.check('Constant Fire (Hold Trigger Continuously)', pre.constantFire, function (b) {
 			pre.constantFire = b;
 			if (b) pre.disableShootingOnReload = false;
 			save();
 			render();
-		})
-			.left()
-			.padBottom(4)
-			.row();
-		cont.check(
-			'Disable Shoot on Reload',
-			pre.disableShootingOnReload !== undefined
-				? pre.disableShootingOnReload
-				: false,
-			function (b) {
-				pre.disableShootingOnReload = b;
-				if (b) pre.constantFire = false;
-				save();
-				render();
-			}
-		)
-			.left()
-			.padBottom(8)
-			.row();
+		}).left().pad(3).row();
 
-		let predictField = new TextField(String(pre.predictTiles || 20));
-		predictField.changed(function () {
-			pre.predictTiles = parseInt(predictField.getText()) || 20;
+		c3.check('Disable Shooting While Reloading', pre.disableShootingOnReload !== undefined ? pre.disableShootingOnReload : false, function (b) {
+			pre.disableShootingOnReload = b;
+			if (b) pre.constantFire = false;
 			save();
-		});
-		addRow('Predict Tiles:', predictField);
+			render();
+		}).left().pad(3).row();
 
-		let priorityBtn = new TextButton(
-			pre.targetPriority,
-			Styles.flatTogglet
-		);
-		priorityBtn.clicked(function () {
-			let nextIdx =
-				(prioritiesArr.indexOf(pre.targetPriority) + 1) %
-				prioritiesArr.length;
+		root.row();
+
+		// 4. Priorities & Filters Card
+		let c4 = createCard('Priorities & Filters', 'ffd37f');
+
+		let priRow = c4.table().growX().pad(2).get();
+		priRow.add('[lightgray]Target Priority: []').left().padRight(8);
+		let priorityBtn = priRow.button(pre.targetPriority, Styles.grayt, function () {
+			let nextIdx = (prioritiesArr.indexOf(pre.targetPriority) + 1) % prioritiesArr.length;
 			pre.targetPriority = prioritiesArr[nextIdx];
 			save();
 			priorityBtn.setText(pre.targetPriority);
-		});
+		}).size(180, 36).get();
+		c4.row();
 
-		let t1 = new Table();
-		let l1 = t1.add('Priority:').left().padRight(12).get();
-		if (l1.setColor) l1.setColor(Color.lightGray);
-		t1.add(priorityBtn).size(140, 34).right();
-		cont.add(t1).fillX().padBottom(6).row();
-
-		let orderBtn = new TextButton(
-			pre.priorities.join(' > '),
-			Styles.flatTogglet
-		);
-		orderBtn.clicked(function () {
+		let orderRow = c4.table().growX().pad(2).get();
+		orderRow.add('[lightgray]Target Order: []').left().padRight(8);
+		let orderBtn = orderRow.button(pre.priorities.join(' > '), Styles.grayt, function () {
 			let p0 = pre.priorities[0];
 			pre.priorities[0] = pre.priorities[1];
 			pre.priorities[1] = pre.priorities[2];
 			pre.priorities[2] = p0;
 			save();
 			orderBtn.setText(pre.priorities.join(' > '));
-		});
+		}).size(220, 36).get();
+		c4.row();
 
-		let t2 = new Table();
-		let l2 = t2.add('Type Order:').left().padRight(12).get();
-		if (l2.setColor) l2.setColor(Color.lightGray);
-		t2.add(orderBtn).size(220, 34).right();
-		cont.add(t2).fillX().padBottom(6).row();
-
-		let typeFilterBtn = new TextButton(
-			pre.targetTypeFilter || 'Default',
-			Styles.flatTogglet
-		);
-		typeFilterBtn.clicked(function () {
+		let filterRow = c4.table().growX().pad(2).get();
+		filterRow.add('[lightgray]Target Filter: []').left().padRight(8);
+		let typeFilterBtn = filterRow.button(pre.targetTypeFilter || 'Default', Styles.grayt, function () {
 			let idx = targetFilters.indexOf(pre.targetTypeFilter || 'Default');
 			let nextIdx = (idx + 1) % targetFilters.length;
 			pre.targetTypeFilter = targetFilters[nextIdx];
 			save();
 			typeFilterBtn.setText(pre.targetTypeFilter);
-		});
+		}).size(180, 36).get();
+		c4.row();
 
-		let t3 = new Table();
-		let l3 = t3.add('Target Filter:').left().padRight(12).get();
-		if (l3.setColor) l3.setColor(Color.lightGray);
-		t3.add(typeFilterBtn).size(180, 34).right();
-		cont.add(t3).fillX().padBottom(6).row();
-	}
+		root.row();
 
-	pd.buttons
-		.button('@back', Icon.left, function () {
+		// 5. Done Action Card
+		let actCard = root.table(Styles.black6).growX().padBottom(2).get();
+		actCard.margin(8);
+		let actRow = actCard.table().center().get();
+		actRow.button('[#73d216]Done & Save[]', Icon.ok, Styles.grayt, function () {
 			pd.hide();
 			parentRebuild();
-		})
-		.size(150, 50);
+		}).size(180, 38);
+	}
+
+	let pane = new ScrollPane(root);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 680);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 520);
+	pd.cont.add(pane).width(dw).height(dh);
 
 	render();
 	pd.show();
@@ -1550,3 +1547,11 @@ interceptor.add('aim', function (args) {
 	rebuildUI();
 	notify('Aimbot UI ' + (showUI ? '[green]enabled' : '[red]disabled'));
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'features/aimbot',
+	'Aimbot',
+	openSettings,
+	{ menuSafe: true }
+);

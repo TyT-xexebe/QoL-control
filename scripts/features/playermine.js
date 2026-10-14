@@ -253,3 +253,11 @@ interceptor.add('mine', (args) => {
 
 	notify('[lightgray]Player Auto-Mine:[] ' + (state.enabled ? '[green]ON[]' : '[scarlet]OFF[]'));
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'features/playermine',
+	'Player Auto-Mine',
+	showSettingsDialog,
+	{ menuSafe: true }
+);

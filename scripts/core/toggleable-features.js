@@ -1,7 +1,4 @@
-// Settings keys for every feature that shows a status line on world load
-// and in `/qol status`. Was duplicated between main.js and core/help.js,
-// and had already drifted — main.js had qol-units-enabled, help.js didn't,
-// so !qol status silently omitted the Units HUD.
+// Settings keys for every feature that shows a status line on world load.
 module.exports = [
 	{ key: 'qol-assist-enabled', def: false, msg: '[lightgrey]Assist [green]ON' },
 	{ key: 'qol-track-enabled', def: false, msg: '[lightgray]Tracking [green]ON' },

@@ -323,29 +323,30 @@ Events.on(WorldLoadEvent, () => {
 });
 
 function showMiningSettingsDialog() {
-	let d = new BaseDialog('Mining Controller Settings');
-	let scroll = null;
-	let lastScrollY = 0;
+	let d = new BaseDialog('Mining Controller Config');
+	d.addCloseButton();
 
-	let rebuild = () => {
-		if (scroll) {
-			lastScrollY = scroll.getScrollY();
-		}
-		d.cont.clear();
+	let root = new Table();
+	root.top().left().margin(10);
 
-		let mainTable = new Table();
-		mainTable.top();
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
 
-		let leftTable = new Table();
-		leftTable.top().left();
+	function render() {
+		root.clearChildren();
 
-		let rightTable = new Table();
-		rightTable.top().left();
+		// 1. Status & Timing Card
+		let c1 = createCard('Mining Status & Execution', '73d216');
 
-		leftTable.add('[accent]=== GENERAL ===[]').colspan(2).left().padBottom(10).row();
-
-		leftTable.add('[lightgray]Mining Algorithm:[]').left().padRight(10);
-		leftTable.button(miningTask ? '[green]RUNNING' : '[scarlet]STOPPED', () => {
+		let statusRow = c1.table().growX().pad(2).get();
+		statusRow.add('[lightgray]Mining Engine: []').left().padRight(8);
+		let statusBtn = statusRow.button(miningTask ? '[#73d216]● RUNNING[]' : '[#ff5555]■ STOPPED[]', Styles.grayt, () => {
 			if (miningTask) {
 				miningTask.cancel();
 				miningTask = null;
@@ -367,29 +368,17 @@ function showMiningSettingsDialog() {
 				startIdleTracker();
 				notify('[green]Mining started ([accent]' + interval + '[green]s)');
 			}
-			rebuild();
-		}).size(150, 45);
-		leftTable.row();
+			render();
+		}).size(180, 36).get();
+		c1.row();
 
-		leftTable.add('[lightgray]Interval (sec):[]').left().padTop(10).padRight(10);
-		let intervalTable = new Table();
-		intervalTable.button('-', Styles.cleart, () => {
-			if (state.interval > 1) {
-				state.interval = Math.max(1, state.interval - 1);
-				if (miningTask) {
-					miningTask.cancel();
-					miningTask = Timer.schedule(() => {
-						try { runMining(); } catch(e) { if (miningTask) miningTask.cancel(); miningTask = null; stopIdleTracker(); }
-					}, 0, state.interval);
-				}
-				rebuild();
-			}
-		}).size(40, 40).padRight(5);
-		
-		intervalTable.field(String(state.interval || 5), txt => {
-			let n = parseFloat(txt);
-			if (!isNaN(n) && n > 0) {
-				state.interval = n;
+		let ivLabel = c1.add('[lightgray]Update Interval: [accent]' + state.interval + ' sec[]').left().pad(2).get();
+		c1.row();
+		c1.slider(1, 30, 1, state.interval, (v) => {
+			let val = Math.round(v);
+			if (val !== state.interval) {
+				state.interval = val;
+				ivLabel.setText('[lightgray]Update Interval: [accent]' + val + ' sec[]');
 				if (miningTask) {
 					miningTask.cancel();
 					miningTask = Timer.schedule(() => {
@@ -397,90 +386,123 @@ function showMiningSettingsDialog() {
 					}, 0, state.interval);
 				}
 			}
-		}).width(60).padRight(5);
+		}).growX().padBottom(6).row();
 
-		intervalTable.button('+', Styles.cleart, () => {
-			state.interval = (state.interval || 5) + 1;
-			if (miningTask) {
-				miningTask.cancel();
-				miningTask = Timer.schedule(() => {
-					try { runMining(); } catch(e) { if (miningTask) miningTask.cancel(); miningTask = null; stopIdleTracker(); }
-				}, 0, state.interval);
-			}
-			rebuild();
-		}).size(40, 40);
+		let freeLabel = c1.add('[lightgray]Reserve Free Units: [accent]' + state.freePercent + '%[]').left().pad(2).get();
+		c1.row();
+		c1.slider(0, 90, 5, state.freePercent, (v) => {
+			let val = Math.round(v);
+			state.freePercent = val;
+			freeLabel.setText('[lightgray]Reserve Free Units: [accent]' + val + '%[]');
+		}).growX().padBottom(6).row();
 
-		leftTable.add(intervalTable).padTop(10).left().row();
+		root.row();
 
-		leftTable.add('[lightgray]Free Units (%):[]').left().padTop(10).padRight(10);
-		let freeTable = new Table();
-		freeTable.button('-10', Styles.cleart, () => {
-			state.freePercent = Math.max(0, state.freePercent - 10);
-			rebuild();
-		}).size(50, 40).padRight(5);
-
-		freeTable.field(String(state.freePercent), txt => {
-			let n = parseInt(txt);
-			if (!isNaN(n) && n >= 0 && n <= 100) {
-				state.freePercent = n;
-			}
-		}).width(60).padRight(5);
-
-		freeTable.button('+10', Styles.cleart, () => {
-			state.freePercent = Math.min(100, state.freePercent + 10);
-			rebuild();
-		}).size(50, 40);
-
-		leftTable.add(freeTable).padTop(10).left().row();
-
-		leftTable.add('[accent]=== ACTIVE UNITS ===[]').colspan(2).left().padTop(20).padBottom(10).row();
+		// 2. Mining Fleet Units Card
+		let c2 = createCard('Mining Fleet Units', '8be9fd');
+		let unitGrid = c2.table().growX().padBottom(4).get();
+		let col = 0;
 		for (let uName in state.units) {
 			let currentUnit = uName;
-			leftTable.check(currentUnit.toUpperCase(), state.units[currentUnit], b => {
+			let uObj = Vars.content ? Vars.content.unit(currentUnit) : null;
+			let cell = unitGrid.table().pad(2).left().get();
+			if (uObj && uObj.uiIcon) {
+				cell.image(uObj.uiIcon).size(24).padRight(4);
+			}
+			cell.check(currentUnit.toUpperCase(), state.units[currentUnit], b => {
 				state.units[currentUnit] = b;
-			}).colspan(2).left().padBottom(5).row();
-		}
+			}).padRight(12);
 
-		rightTable.add('[accent]=== RESOURCES TO MINE ===[]').colspan(2).left().padBottom(10).row();
+			col++;
+			if (col % 3 === 0) unitGrid.row();
+		}
+		c2.row();
+
+		let unitActRow = c2.table().left().padTop(4).get();
+		unitActRow.button('Enable All', Styles.grayt, () => {
+			for (let u in state.units) state.units[u] = true;
+			render();
+		}).size(120, 32).padRight(8);
+		unitActRow.button('Disable All', Styles.grayt, () => {
+			for (let u in state.units) state.units[u] = false;
+			render();
+		}).size(120, 32);
+
+		root.row();
+
+		// 3. Target Resources Card
+		let c3 = createCard('Target Resources to Mine', 'ffd37f');
+		let itemGrid = c3.table().growX().padBottom(4).get();
+		let iCol = 0;
 		for (let iName in state.items) {
 			let currentItem = iName;
 			let color = itemColors[currentItem] || '[white]';
-			rightTable.check(color + currentItem.toUpperCase() + '[]', state.items[currentItem], b => {
+			let itObj = Vars.content ? Vars.content.item(currentItem) : null;
+			let cell = itemGrid.table().pad(2).left().get();
+			if (itObj && itObj.uiIcon) {
+				cell.image(itObj.uiIcon).size(24).padRight(4);
+			}
+			cell.check(color + currentItem.toUpperCase() + '[]', state.items[currentItem], b => {
 				state.items[currentItem] = b;
-				rebuild();
-			}).colspan(2).left().padBottom(5).row();
-		}
+				render();
+			}).padRight(12);
 
-		rightTable.add('[accent]=== UNIT RESOURCE IGNORES ===[]').colspan(2).left().padTop(15).padBottom(10).row();
-		
-		let ignoreTable = new Table();
+			iCol++;
+			if (iCol % 3 === 0) itemGrid.row();
+		}
+		c3.row();
+
+		let itemActRow = c3.table().left().padTop(4).get();
+		itemActRow.button('Select All', Styles.grayt, () => {
+			for (let it in state.items) state.items[it] = true;
+			render();
+		}).size(120, 32).padRight(8);
+		itemActRow.button('Deselect All', Styles.grayt, () => {
+			for (let it in state.items) state.items[it] = false;
+			render();
+		}).size(120, 32);
+
+		root.row();
+
+		// 4. Exclusion Matrix Card
+		let c4 = createCard('Unit Resource Exclusion Matrix', 'ff79c6');
+		let ignoreTable = c4.table().growX().padBottom(4).get();
 		ignoreTable.left();
-		
-		ignoreTable.add('').padRight(10);
+
+		ignoreTable.add('').padRight(8);
 		for (let iName in state.items) {
 			let color = itemColors[iName] || '[white]';
-			ignoreTable.add(color + iName.substring(0, 3).toUpperCase() + '[]').padRight(10).center();
+			let itObj = Vars.content ? Vars.content.item(iName) : null;
+			let headerCell = ignoreTable.table().padRight(4).center().get();
+			if (itObj && itObj.uiIcon) {
+				headerCell.image(itObj.uiIcon).size(18).padRight(2);
+			}
+			headerCell.add(color + iName.substring(0, 3).toUpperCase() + '[]').fontScale(0.85);
 		}
 		ignoreTable.row();
 
 		for (let uName in state.units) {
 			let currentUnit = uName;
-			ignoreTable.add('[lightgray]' + currentUnit.toUpperCase() + '[]').padRight(10).left();
-			
+			ignoreTable.add('[lightgray]' + currentUnit.toUpperCase() + '[]').padRight(8).left();
+
 			for (let iName in state.items) {
 				let currentItem = iName;
 				let isGlobalEnabled = state.items[currentItem];
 
-				let uType = Vars.content.unit(currentUnit);
+				let uType = Vars.content ? Vars.content.unit(currentUnit) : null;
 				let unitMineTier = uType ? uType.mineTier : ({ mono: 1, poly: 2, pulsar: 2, mega: 3, quasar: 3 }[currentUnit] || 1);
 				let itemTier = state.itemTiers[currentItem] || 1;
 
 				if (!isGlobalEnabled || unitMineTier < itemTier) {
-					ignoreTable.add('[gray]-[]').size(42, 35).padRight(10).center();
+					ignoreTable.add('[gray]-[]').size(32, 22).padRight(4).center();
 				} else {
 					let isIgnored = state.ignored[currentUnit] && state.ignored[currentUnit][currentItem];
-					
-					ignoreTable.button(isIgnored ? '[scarlet]IG[]' : '[green]OK[]', Styles.cleart, () => {
+
+					let fillColor = isIgnored ? Color.valueOf('e53935') : Color.valueOf('43a047');
+					let btn = new Button(Styles.cleart);
+					btn.margin(0);
+					btn.image(Tex.whiteui).color(fillColor).grow();
+					btn.clicked(run(() => {
 						if (!state.ignored[currentUnit]) state.ignored[currentUnit] = {};
 						if (isIgnored) {
 							delete state.ignored[currentUnit][currentItem];
@@ -490,51 +512,48 @@ function showMiningSettingsDialog() {
 						} else {
 							state.ignored[currentUnit][currentItem] = true;
 						}
-						rebuild();
-					}).size(42, 35).padRight(10);
+						render();
+					}));
+					ignoreTable.add(btn).size(32, 22).padRight(4);
 				}
 			}
 			ignoreTable.row();
 		}
-		rightTable.add(ignoreTable).colspan(2).left().row();
+		root.row();
 
-		mainTable.add(leftTable).top().padRight(40);
-		mainTable.add(rightTable).top();
+		// 5. Quick Actions & Save Card
+		let actCard = root.table(Styles.black6).growX().padBottom(2).get();
+		actCard.margin(8);
+		let actRow = actCard.table().center().get();
 
-		scroll = new ScrollPane(mainTable);
-		scroll.setScrollY(lastScrollY);
-		d.cont.add(scroll).grow().row();
-
-		let bottomTable = new Table();
-		bottomTable.button('Save Defaults', Icon.save, () => {
+		actRow.button('[#73d216]Save Defaults[]', Icon.save, Styles.grayt, () => {
 			try {
 				Core.settings.put('qol-mining-units', String(JSON.stringify(state.units)));
 				Core.settings.put('qol-mining-items', String(JSON.stringify(state.items)));
 				Core.settings.put('qol-mining-ignored', String(JSON.stringify(state.ignored)));
-				try {
-					Core.settings.put('qol-mining-free', new java.lang.Integer(state.freePercent));
-					Core.settings.put('qol-mining-interval', new java.lang.Integer(state.interval));
-				} catch (e) {
-					Core.settings.put('qol-mining-free', state.freePercent);
-					Core.settings.put('qol-mining-interval', state.interval);
-				}
-				if (typeof Core.settings.forceSave === 'function') {
-					Core.settings.forceSave();
-				}
+				Core.settings.put('qol-mining-free', new java.lang.Integer(state.freePercent));
+				Core.settings.put('qol-mining-interval', new java.lang.Integer(state.interval));
+				if (typeof Core.settings.forceSave === 'function') Core.settings.forceSave();
 				notify('[green]Mining settings saved');
 			} catch (err) {
 				notify('[scarlet]Save error: ' + err);
 			}
-		}).size(220, 50).padRight(15);
+		}).size(180, 38).padRight(10);
 
-		bottomTable.button('Close', Icon.cancel, () => {
+		actRow.button('Close', Icon.cancel, Styles.grayt, () => {
 			d.hide();
-		}).size(220, 50);
+		}).size(140, 38);
+	}
 
-		d.cont.add(bottomTable).padTop(15);
-	};
+	let pane = new ScrollPane(root);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
 
-	rebuild();
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 780);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 540);
+	d.cont.add(pane).width(dw).height(dh);
+
+	render();
 	d.show();
 }
 
@@ -774,3 +793,11 @@ const miningHandler = (args) => {
 
 interceptor.add('mining', miningHandler);
 interceptor.add('m', miningHandler);
+
+// Expose the config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'features/mining',
+	'Mining',
+	showMiningSettingsDialog,
+	{ menuSafe: true }
+);

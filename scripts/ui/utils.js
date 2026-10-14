@@ -401,8 +401,94 @@ function setupDrag(settingsKeyX, settingsKeyY, defaultX, defaultY, onDragUpdate,
 	};
 }
 
+// ---------------------------------------------------------------------------
+// Slider + text field, bound to one value
+//
+// Two ways to set the same number: drag the slider, or type an exact value.
+// Both go through one setter, so they can never disagree. Arc fires the change
+// callback even when we set the widget programmatically, hence the `syncing`
+// guard - without it typing 40 would bounce slider -> field -> slider.
+//
+// options: min, max, step, value, decimals, sliderWidth, fieldWidth, onChange
+// ---------------------------------------------------------------------------
+function clampNum(v, min, max) {
+	let n = Number(v);
+	if (isNaN(n)) n = min;
+	return Math.max(min, Math.min(max, n));
+}
+
+function sliderField(parent, label, options) {
+	let o = options || {};
+	let min = o.min != null ? o.min : 0;
+	let max = o.max != null ? o.max : 100;
+	let step = o.step != null ? o.step : 1;
+	let decimals = o.decimals || 0;
+	let value = clampNum(o.value != null ? o.value : min, min, max);
+	let onChange = o.onChange || function () {};
+
+	let slider = null;
+	let field = null;
+	let syncing = false;
+
+	let fmt = function (v) {
+		return decimals > 0 ? v.toFixed(decimals) : String(Math.round(v));
+	};
+
+	// `source` is the widget the change came from: it must not be written back
+	// to, or the round trip would fight the user's cursor.
+	let apply = function (v, source) {
+		v = clampNum(v, min, max);
+		value = v;
+		syncing = true;
+		try {
+			if (source !== 'slider' && slider) slider.setValue(v);
+			if (source !== 'field' && field) field.setText(fmt(v));
+		} catch (e) {
+		} finally {
+			syncing = false;
+		}
+		onChange(v);
+		return v;
+	};
+
+	let row = new Table();
+	if (label) row.add(label).left().padRight(12);
+
+	slider = row
+		.slider(min, max, step, value, function (v) {
+			if (syncing) return;
+			apply(v, 'slider');
+		})
+		.width(o.sliderWidth || 240)
+		.get();
+
+	row.add().width(10);
+
+	field = row
+		.field(fmt(value), function (txt) {
+			if (syncing) return;
+			let n = parseFloat(('' + txt).replace(',', '.'));
+			if (isNaN(n)) return;
+			apply(n, 'field');
+		})
+		.width(o.fieldWidth || 90)
+		.get();
+
+	parent.add(row).left().padTop(6).row();
+
+	return {
+		set: function (v) {
+			return apply(v);
+		},
+		get: function () {
+			return value;
+		},
+	};
+}
+
 module.exports = {
 	formatNum: formatNum,
+	sliderField: sliderField,
 	setupDrag: setupDrag,
 	isDragButton: isDragButton,
 	stageWidth: stageWidth,

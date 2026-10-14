@@ -272,8 +272,129 @@ Events.run(Trigger.update, () => {
 	}
 });
 
+function showTrackSettingsDialog() {
+	let d = new BaseDialog('Player & RTS Tracker Config');
+	d.addCloseButton();
+
+	let root = new Table();
+	root.top().left().margin(10);
+
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
+
+	// 1. Modules Card
+	let c1 = createCard('Tracking Features', '50fa7b');
+
+	c1.check('Enable Player Cursor Tracking', trackEnabled, (b) => {
+		trackEnabled = b;
+		Core.settings.put('qol-track-enabled', b);
+		if (!b) {
+			trackedPlayer = null;
+			unitCommanders = {};
+			rallyPoints = [];
+		}
+		notify('[lightgray]Tracking ' + (b ? '[green]ON' : '[scarlet]OFF'));
+	}).pad(3).left().row();
+
+	c1.check('RTS Command Tracking (draw lines to orders)', trackRtsEnabled, (b) => {
+		trackRtsEnabled = b;
+		Core.settings.put('qol-track-rts', b);
+		if (!b) {
+			unitCommanders = {};
+			rtsHistory = {};
+		}
+		notify('[lightgray]RTS Tracking ' + (b ? '[green]ON' : '[scarlet]OFF'));
+	}).pad(3).left().row();
+
+	c1.check('Reconstructor Rally Tracking', trackRecEnabled, (b) => {
+		trackRecEnabled = b;
+		Core.settings.put('qol-track-rec', b);
+		if (!b) rallyPoints = [];
+		notify('[lightgray]Rally Tracking ' + (b ? '[green]ON' : '[scarlet]OFF'));
+	}).pad(3).left().row();
+
+	c1.check('Notify On New RTS Commands', trackRtsNotify, (b) => {
+		trackRtsNotify = b;
+		Core.settings.put('qol-track-rts-notify', b);
+		if (!b) {
+			rtsHistory = {};
+			lastRallyPoints = {};
+		}
+		notify('[lightgray]RTS Notify ' + (b ? '[green]ON' : '[scarlet]OFF'));
+	}).pad(3).left().row();
+
+	root.row();
+
+	// 2. Tracked Player Card
+	let c2 = createCard('Tracked Target', 'ffd37f');
+	let pName = trackedPlayer ? ('[accent]' + trackedPlayer.name + '[]') : '[gray]None (no active target)[]';
+	c2.add('[lightgray]Current Target: ' + pName).left().padBottom(6).row();
+
+	let hasOtherPlayers = false;
+	if (Vars.state && Vars.state.isGame() && Groups.player) {
+		let pTable = c2.table().growX().padBottom(4).get();
+		Groups.player.each(cons(p => {
+			if (p === Vars.player) return;
+			hasOtherPlayers = true;
+			let pRow = pTable.table().growX().pad(2).get();
+			let pLabel = pRow.add('[white]' + p.name).left().growX().minWidth(0);
+			pLabel.get().setEllipsis(true);
+
+			let isCurrent = (trackedPlayer === p);
+			pRow.button(isCurrent ? '[#ff5555]Untrack[]' : '[#73d216]Track[]', Styles.grayt, () => {
+				if (isCurrent) {
+					trackedPlayer = null;
+					notify('[lightgray]Stopped tracking player');
+				} else {
+					trackedPlayer = p;
+					notify('[green]Now tracking [accent]' + p.name);
+				}
+				d.hide();
+				showTrackSettingsDialog();
+			}).size(100, 32);
+			pTable.row();
+		}));
+	}
+
+	if (!hasOtherPlayers) {
+		c2.add('[gray]No other players on server. In multiplayer, players will appear here for 1-click tracking.[]').fontScale(0.85).left().growX().wrap().padBottom(4).row();
+	}
+
+	if (trackedPlayer) {
+		let stopBtn = c2.button('[#ff5555]Stop Tracking[]', Styles.grayt, () => {
+			trackedPlayer = null;
+			notify('[lightgray]Stopped tracking player');
+			d.hide();
+			showTrackSettingsDialog();
+		}).size(160, 34).left().padTop(4).get();
+		c2.row();
+	}
+
+	root.row();
+
+	let scroll = new ScrollPane(root);
+	scroll.setScrollingDisabled(true, false);
+	scroll.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 680);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 480);
+	d.cont.add(scroll).width(dw).height(dh).row();
+	d.show();
+}
+
 interceptor.add('track', (args) => {
 	let arg1 = args[1] ? args[1].toLowerCase() : '';
+
+	if (arg1 === 'ui' || arg1 === 'settings') {
+		showTrackSettingsDialog();
+		return;
+	}
 
 	if (arg1 === 'notify' || arg1 === 'n') {
 		trackRtsNotify = interceptor.parseToggle(trackRtsNotify, args[2]);
@@ -409,3 +530,11 @@ Events.run(Trigger.draw, () => {
 		Draw.reset();
 	}
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'features/track',
+	'Tracking',
+	showTrackSettingsDialog,
+	{ menuSafe: true }
+);

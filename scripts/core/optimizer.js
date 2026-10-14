@@ -175,41 +175,113 @@ Events.on(ClientLoadEvent, cons(() => {
 }));
 
 function _openOptDialog() {
-	let d = new BaseDialog('[accent]Optimizer Settings[]');
+	let d = new BaseDialog('Optimizer Config');
 	d.addCloseButton();
 
-	let items = [
-		{ id: 'gfxFlags',   restart: false },
+	let root = new Table();
+	root.top().left().margin(10);
+
+	function createCard(title, titleColor) {
+		let card = root.table(Styles.black6).growX().padBottom(8).get();
+		card.margin(8);
+		card.top().left();
+		card.add('[#' + (titleColor || 'ffd37f') + ']' + title + '[]').style(Styles.outlineLabel).fontScale(0.90).left().padBottom(4).row();
+		card.image().color(Color.valueOf('3a3a46')).height(1.5).growX().padBottom(6).row();
+		return card;
+	}
+
+	let fxGroup = [
 		{ id: 'blockFx',    restart: true  },
 		{ id: 'bulletFx',   restart: true  },
 		{ id: 'unitFx',     restart: true  },
 		{ id: 'liquidFx',   restart: true  },
-		{ id: 'blockLight', restart: true  },
-		{ id: 'blockSound', restart: true  },
-		{ id: 'vegetation', restart: true  },
-		{ id: 'shadows',    restart: true  },
 		{ id: 'fxLifetime', restart: true  },
-		{ id: 'floorAnim',  restart: true  },
 	];
 
-	let infoTable = new Table();
-	let note = infoTable.add('[gray]* = needs restart to un-apply[]').left().padBottom(8).get();
-	note.setWrap(true);
-	infoTable.row();
+	let envGroup = [
+		{ id: 'vegetation', restart: true  },
+		{ id: 'shadows',    restart: true  },
+		{ id: 'floorAnim',  restart: true  },
+		{ id: 'blockLight', restart: true  },
+		{ id: 'blockSound', restart: true  },
+	];
 
-	let listTable = new Table();
-	items.forEach(function(item) {
+	let sysGroup = [
+		{ id: 'gfxFlags',   restart: false },
+	];
+
+	// 1. Particle & Visual Effects Card
+	let c1 = createCard('Effects & Particles', 'ff79c6');
+	fxGroup.forEach(function(item) {
 		let cfg = OPT[item.id];
 		let lbl = cfg.label + (item.restart ? ' [gray]*[]' : '');
-		listTable.check(lbl, optGet(item.id), (checked) => {
+		c1.check(lbl, optGet(item.id), (checked) => {
 			optSet(item.id, checked);
-		}).left().growX().pad(4).row();
+		}).left().growX().pad(3).row();
 	});
+	root.row();
 
-	let scroll = new ScrollPane(listTable);
-	infoTable.add(scroll).width(450).height(400).row();
+	// 2. Environment & Lighting Card
+	let c2 = createCard('Environment & Atmosphere', '50fa7b');
+	envGroup.forEach(function(item) {
+		let cfg = OPT[item.id];
+		let lbl = cfg.label + (item.restart ? ' [gray]*[]' : '');
+		c2.check(lbl, optGet(item.id), (checked) => {
+			optSet(item.id, checked);
+		}).left().growX().pad(3).row();
+	});
+	root.row();
 
-	d.cont.add(infoTable);
+	// 3. System Flags Card
+	let c3 = createCard('Graphics & System', '8be9fd');
+	sysGroup.forEach(function(item) {
+		let cfg = OPT[item.id];
+		let lbl = cfg.label + (item.restart ? ' [gray]*[]' : '');
+		c3.check(lbl, optGet(item.id), (checked) => {
+			optSet(item.id, checked);
+		}).left().growX().pad(3).row();
+	});
+	root.row();
+
+	// 4. Quick Actions Card
+	let actCard = root.table(Styles.black6).growX().padBottom(6).get();
+	actCard.margin(8);
+	let actRow = actCard.table().center().get();
+
+	actRow.button('[#73d216]Max Performance (All)[]', Styles.grayt, () => {
+		let allItems = fxGroup.concat(envGroup).concat(sysGroup);
+		allItems.forEach(function(item) {
+			optSet(item.id, true);
+		});
+		d.hide();
+		_openOptDialog();
+		notify('[green]Maximum FPS mode enabled (restart game for full effect)');
+	}).size(220, 36).padRight(8);
+
+	actRow.button('[accent]Reset Defaults[]', Styles.grayt, () => {
+		let allItems = fxGroup.concat(envGroup).concat(sysGroup);
+		allItems.forEach(function(item) {
+			optSet(item.id, false);
+		});
+		d.hide();
+		_openOptDialog();
+		notify('[lightgray]Optimizer settings reset to default');
+	}).size(170, 36);
+
+	root.row();
+
+	// Notice Note
+	let noteTable = root.table().growX().padBottom(4).get();
+	noteTable.add('[gray]* = settings marked with asterisk require game restart to take effect[]').fontScale(0.85).left();
+	root.row();
+
+	let pane = new ScrollPane(root);
+	pane.setScrollingDisabled(true, false);
+	pane.setOverscroll(false, true);
+
+	let dw = Math.min(Core.scene.getWidth() * 0.95, 700);
+	let dh = Math.min(Core.scene.getHeight() * 0.85, 520);
+	d.cont.add(pane).width(dw).height(dh);
 	d.show();
 }
 
@@ -283,3 +355,11 @@ Events.run(Trigger.update, () => {
 		_wpGuardEnd = Time.millis() + 400;
 	}
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'core/optimizer',
+	'Optimizer',
+	_openOptDialog,
+	{ menuSafe: true }
+);

@@ -371,3 +371,15 @@ interceptor.add('quickchat', () => {
 	else showMainMenu();
 	dialog.show();
 });
+
+// Expose this module's config dialog to the mod settings screen (gear button).
+require('qol-control/core/settings-ui').register(
+	'ui/quickchat',
+	'Quick Chat',
+	() => {
+		if (!dialog) buildUI();
+		else showMainMenu();
+		dialog.show();
+	},
+	{ menuSafe: true }
+);

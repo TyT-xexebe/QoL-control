@@ -68,7 +68,7 @@ const helpData = {
 	},
 	'ui/table': {
 		cmd: 'table',
-		desc: '[lightgrey]Schematic table\n\n[accent]!table <1/0?>[lightgrey] - on/off\n[accent]!table <rows | cols> <val>[lightgrey] - changes rows / collumns of table\n[accent]!table size <val>[lightgrey] - sets table buttoms size\n[accent]!table reset[lightgrey] - resets table to default',
+		desc: '[lightgrey]Schematic table\n\n[accent]!table <1/0?>[lightgrey] - on/off\n[accent]!table settings[lightgrey] (or !table s) - opens the settings window: rows, columns, button size (slider + type-in box), reset',
 	},
 	'features/logger': {
 		cmd: 'log',

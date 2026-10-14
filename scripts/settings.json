@@ -32,6 +32,7 @@
   "features/aimbot": false,
   "features/wave": false,
   "features/autopath": true,
+  "features/goto": true,
   "ui/render": false,
   "ui/camera": false,
   "ui/table": false,
