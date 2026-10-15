@@ -469,13 +469,16 @@ function openSettingsDialog() {
 		Core.settings.put('cmap-sort-hp', new java.lang.Boolean(b));
 	}).pad(3).left().row();
 
-	let modeBtn;
-	let getModeLabel = () => 'Player Display: [accent]' + (playerMode === 0 ? 'Icon' : 'Name') + '[]';
-	modeBtn = c1.button(getModeLabel(), Styles.grayt, () => {
-		playerMode = playerMode === 0 ? 1 : 0;
-		modeBtn.setText(getModeLabel());
-		Core.settings.put('cmap-player-mode', new java.lang.Integer(playerMode));
-	}).size(260, 36).pad(4).left().row();
+
+  let modeBtn;
+  let getModeLabel = () => 'Player Display: [accent]' + (playerMode === 0 ? 'Icon' : 'Name') + '[]';
+
+  modeBtn = c1.button(getModeLabel(), Styles.grayt, () => {
+    playerMode = playerMode === 0 ? 1 : 0;
+    Core.settings.put('cmap-player-mode', new java.lang.Integer(playerMode));
+    modeBtn.setText(getModeLabel());
+  }).size(260, 36).pad(4).left().get();
+  c1.row();
 
 	root.row();
 
