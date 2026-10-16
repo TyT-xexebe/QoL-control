@@ -166,10 +166,11 @@ Draggable HUD showing active unit counts and icons for all teams on the map.
 #### `!table`
 Draggable schematic palette HUD for one-click placement.
 - `!table [1/0?]` — toggle table display.
-- `!table settings` (or `!table s`) — configure rows, columns, button sizes, and resets.
+- `!table settings` (or `!table s`) — configure rows, columns, button sizes, hover preview (on/off + scale), and resets.
 - **Interactions:**
   - Left-Click: select and place schematic.
   - Double-Click: open slot configuration.
+  - Hover: schematic preview (toggleable and scalable in `!table settings`).
   - **Shift + Left-Click Drag:** drag and drop slot icons to reorder or swap schematics.
   - Right-Click Drag: move the entire table across the screen.
 
