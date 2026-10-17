@@ -648,7 +648,11 @@ function showEditDialog(index, btnData) {
 
 	let iconRow = c1.table().growX().pad(2).get();
 	iconRow.add('[lightgray]Icon: []').left().padRight(8);
-	let iconBtnCell = iconRow.button(cons(b => {
+	let iconLabel = null;
+	iconRow.button(cons(b => {
+		// b is the TextButton itself, not a Cell, so the label lives in a plain
+		// variable. Reaching back through .get() here crashed on icon change.
+		iconLabel = b;
 		b.left();
 		let drawable = getIconDrawable(iconName, iconType);
 		if (drawable) {
@@ -659,15 +663,18 @@ function showEditDialog(index, btnData) {
 		showIconPicker((selectedIcon) => {
 			iconName = selectedIcon.name;
 			iconType = selectedIcon.type;
-			iconBtnCell.get().clearChildren();
+			if (!iconLabel) return;
+			// TextButton.clearChildren() would also delete its internal label and
+			// leave the button unusable, so the contents are rebuilt through a
+			// fresh inner table instead.
+			iconLabel.clearChildren();
 			let drawable = getIconDrawable(iconName, iconType);
 			if (drawable) {
-				iconBtnCell.get().image(drawable).size(22).padRight(6);
+				iconLabel.image(drawable).size(22).padRight(6);
 			}
-			iconBtnCell.get().add('[accent]' + iconName + '[]');
+			iconLabel.add('[accent]' + iconName + '[]');
 		});
-	}).height(38).growX().get();
-	iconBtnCell.setStyle(Styles.grayt);
+	}).height(38).growX().get().setStyle(Styles.grayt);
 	c1.row();
 
 	c1.check('No Background (Transparent button)', noBackground, (b) => {
