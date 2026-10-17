@@ -290,12 +290,19 @@ function showEditBindDialog(index, existingBind) {
 	let keyRow = c1.table().growX().pad(2).get();
 	keyRow.add('[lightgray]Assigned Key: []').left().padRight(8);
 
-	let keyBtnCell = keyRow.button(key ? ('[accent]' + key + '[]') : '[gray]Click to record key...[]', Styles.grayt, () => {
-		showListeningDialog((res) => {
-			key = res;
-			keyBtnCell.get().setText('[accent]' + key + '[]');
-		});
-	}).height(40).growX().get();
+	// Keep the Cell, not the button: the callback below needs .get() to reach the
+	// TextButton and update its label. Calling .get() here too left a bare
+	// TextButton in the variable and crashed with
+	// "Cannot find function get in object TextButton" once a key was recorded.
+	let keyBtnCell = keyRow
+		.button(key ? '[accent]' + key + '[]' : '[gray]Click to record key...[]', Styles.grayt, () => {
+			showListeningDialog((res) => {
+				key = res;
+				keyBtnCell.get().setText('[accent]' + key + '[]');
+			});
+		})
+		.height(40)
+		.growX();
 	c1.row();
 
 	c1.check('Enable this bind', enabled, (b) => {
