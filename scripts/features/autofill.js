@@ -27,6 +27,16 @@ const ConsumeGeneratorClass = Packages.mindustry.world.blocks.power.ConsumeGener
 const ConsumeItemsClass = Packages.mindustry.world.consumers.ConsumeItems;
 const ConsumeItemFilterClass = Packages.mindustry.world.consumers.ConsumeItemFilter;
 
+// Generators accept any item that is flammable or radioactive, which is far
+// wider than we ever want to feed them: a combustion generator happily eats
+// blast-compound and spore-pod, and that burns through expensive stock while
+// coal sits in the core. These blocks get an explicit fuel whitelist instead of
+// whatever their consumers advertise.
+const FUEL_WHITELIST = {
+	'combustion-generator': ['coal'],
+	'rtg-generator': ['thorium'],
+};
+
 const EXCLUDED_BLOCKS = [
 	'heat-source', 'vent-condenser', 'cultivator', 'heat-reactor',
 	'slag-heater', 'electric-heater', 'atmospheric-concentrator',
@@ -98,6 +108,9 @@ function getBlockInfo(block) {
 	let isHeal = block instanceof MendProjectorClass;
 	let isShield = block instanceof ForceProjectorClass;
 	let isOverdrive = block instanceof OverdriveProjectorClass || name.indexOf('overdrive') !== -1 || name.indexOf('dome') !== -1;
+	// Any item-burning generator (combustion, RTG, differential...). Kept broad on
+	// purpose: the whitelist below decides what it is actually fed.
+	let isItemGenerator = block instanceof ConsumeGeneratorClass;
 	let isCombustionGenerator = name === 'combustion-generator';
 
 	let ammoTypes = [];
@@ -121,10 +134,17 @@ function getBlockInfo(block) {
 
 	let consumedItems = [];
 	try {
-		if (isCombustionGenerator) {
-			let coal = Vars.content ? Vars.content.item('coal') : null;
-			if (coal && consumedItems.indexOf(coal) === -1) {
-				consumedItems.push(coal);
+		// Item generators advertise every flammable or radioactive item as fuel,
+		// so nothing useful comes out of their consumers for our purpose; the
+		// whitelist below sets the real list. Only fall back to reading them for
+		// generators that have no whitelist entry.
+		if (isItemGenerator && !FUEL_WHITELIST[name] && !consumedItems.length) {
+			let allItems = Vars.content.items();
+			for (let gi = 0; gi < allItems.size; gi++) {
+				let it = allItems.get(gi);
+				try {
+					if (it.flammability > 0 || it.radioactivity > 0) consumedItems.push(it);
+				} catch (eFuel) {}
 			}
 		}
 		if (isUnit && block.plans && block.plans.size) {
@@ -165,6 +185,17 @@ function getBlockInfo(block) {
 		}
 	} catch (e) {}
 
+	// Whitelist wins over whatever the consumers report.
+	let whitelist = FUEL_WHITELIST[name];
+	if (whitelist) {
+		let filtered = [];
+		for (let i = 0; i < whitelist.length; i++) {
+			let it = Vars.content.item(whitelist[i]);
+			if (it) filtered.push(it);
+		}
+		consumedItems = filtered;
+	}
+
 	let eligible = false;
 	let isExcluded = false;
 	for (let i = 0; i < EXCLUDED_BLOCKS.length; i++) {
@@ -177,7 +208,7 @@ function getBlockInfo(block) {
 	if (!isExcluded) {
 		if (isTurret) {
 			eligible = ammoTypes.length > 0;
-		} else if (isCrafter || isUnit || isRecon || isHeal || isShield || isOverdrive || isCombustionGenerator) {
+		} else if (isCrafter || isUnit || isRecon || isHeal || isShield || isOverdrive || isCombustionGenerator || isItemGenerator) {
 			eligible = consumedItems.length > 0;
 		}
 	}
@@ -194,6 +225,8 @@ function getBlockInfo(block) {
 		isShield: isShield,
 		isOverdrive: isOverdrive,
 		isCombustionGenerator: isCombustionGenerator,
+		isItemGenerator: isItemGenerator,
+		fuelWhitelist: whitelist || null,
 		ammoTypes: ammoTypes,
 		consumedItems: consumedItems,
 		eligible: eligible
@@ -261,6 +294,7 @@ function initBlockSettings() {
 			else if (info.isRecon || info.isUnit) defaultPriority = 40;
 			else if (info.isCrafter) defaultPriority = 30;
 			else if (info.isCombustionGenerator) defaultPriority = 25;
+			else if (info.isItemGenerator) defaultPriority = 25;
 
 			state.blockSettings[name] = {
 				enabled: true,
