@@ -167,7 +167,13 @@ Events.run(Trigger.update, () => {
 		if (followTarget && followTarget.unit()) {
 			let l = followTarget.unit();
 			u.plans.clear();
-			l.plans.each((pl) => u.plans.add(pl));
+			// addBuild(), not a raw Queue.add(): the raw add skips plan
+			// initialisation, and a null sneaking into plans crashes the game's
+			// own plan quadtree with "because \"t\" is null"
+			// (InputHandler.update -> QuadTree.insert -> hitbox).
+			l.plans.each((pl) => {
+				if (pl && u.canBuild()) u.addBuild(pl.copy());
+			});
 			if (u.dst2(l) > 2500) u.vel.trns(u.angleTo(l), u.type.speed);
 			else u.vel.set(0, 0);
 			u.lookAt(l);
