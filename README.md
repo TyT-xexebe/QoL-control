@@ -53,7 +53,44 @@ Intelligent A* pathfinding for conveyors, ducts, conduits, and bridges.
 
 ---
 
-### 2. Unit & Resource Automation
+### 2. Match Analysis
+
+#### `!spec`
+PvP match tracer. Records a compact event log of the whole match and builds a self-contained HTML report with charts.
+
+- **Commands:**
+  - `!spec` — start / stop recording. Auto-saves on world change, kick or reload.
+  - `!spec ui` — recordings and triggers dialog.
+  - `!spec status` — current recording state.
+  - `!spec save [name]` — keep the current recording out of the rotation.
+  - `!spec open` — open the last report in the browser.
+  - `!spec units <name> [once|every]` — log every spawn of a unit type, or only the first one per team.
+  - `!spec blocks <name> [once|every]` — same for block placements.
+  - `!spec clear` — drop all triggers.
+- **Recorded:**
+  - Team list as of match start: team ids, names, core counts, player names (colours kept and converted to CSS in the report).
+  - Unit spawns and deaths, block placements, resource and power snapshots every second (delta-encoded, so only changed items are written).
+  - Peaks of live units/blocks per team with the exact timestamp the peak was reached.
+- **Storage:** `qol/spec/` inside the Mindustry data directory. The 3 newest `auto-*` matches are kept; renamed or saved copies are never rotated out.
+- **Report:** `<name>.html` next to the `.spec`. No internet needed; tables sort on click, resources and power are drawn as inline SVG.
+
+---
+
+### 2.1 Building Utilities
+
+#### Water Extractor Fix
+Replaces water extractors that would sit on liquid with 1x1 mechanical pumps while a schematic is held.
+- **No command.** It works whenever the module is enabled in the mod settings.
+- **What it does:** a water extractor (2x2) needs dry ground under it and is skipped when its footprint is flooded. The replacement depends on how much is wet:
+  - **all 4 cells dry** — the extractor is left alone;
+  - **exactly 1 cell wet** — a `rotary-pump` (also 2x2) goes on the same spot;
+  - **2, 3 or 4 cells wet** — a `mechanical-pump` goes on every wet cell.
+- **Reversible:** back over dry ground the extractor returns and the pumps disappear.
+- **What it leaves alone:** extractors on solid ground, mechanical pumps, and every other block.
+
+---
+
+### 3. Unit & Resource Automation
 
 #### `!mining` | `!m`
 Global autonomous distribution of unassigned friendly mining units across needed ores.
@@ -116,7 +153,7 @@ Mass RTS selection for specified unit types across the map.
 
 ---
 
-### 3. Combat, Aiming & Range Overlays
+### 4. Combat, Aiming & Range Overlays
 
 #### `!aim`
 Advanced combat aimbot with target priority filters, lead prediction, and heal targeting.
@@ -141,7 +178,7 @@ Advanced combat aimbot with target priority filters, lead prediction, and heal t
 
 ---
 
-### 4. HUD Panels & Widgets
+### 5. HUD Panels & Widgets
 
 #### `!core`
 Draggable real-time statistics panel showing core storage, dynamic income rates, and power balance.
@@ -194,7 +231,7 @@ Customizable on-screen macros and chat automation widget.
 
 ---
 
-### 5. Diagnostics, System & Utilities
+### 6. Diagnostics, System & Utilities
 
 #### `!opt`
 Visual Performance & FPS Optimizer dialog.
@@ -277,7 +314,7 @@ Lists all players on the current server running QoL-Control.
 
 ---
 
-### 6. Passive & Background Features
+### 7. Passive & Background Features
 
 - **Logic Processor Buffer (`core/logicfix`):** When placing processors, it placings empty and only then pastes the code? so it bypasses server bug when code is big.
 - **Research & Sandbox Unlocker (`core/unlocker`):** Removes research locks on items, units, and structures, and exposes sandbox blocks and hidden ones.

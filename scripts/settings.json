@@ -42,5 +42,7 @@
   "ui/quickchat": false,
   "ui/map": false,
   "ui/cbinds": false,
-  "ui/units": false
+  "ui/units": false,
+  "features/spec": true,
+  "features/pumpfix": true
 }
