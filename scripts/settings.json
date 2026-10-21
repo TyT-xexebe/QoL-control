@@ -44,5 +44,6 @@
   "ui/cbinds": false,
   "ui/units": false,
   "features/spec": true,
+  "features/plansaver": true,
   "features/pumpfix": true
 }

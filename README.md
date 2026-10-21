@@ -88,6 +88,13 @@ Replaces water extractors that would sit on liquid with 1x1 mechanical pumps whi
 - **Reversible:** back over dry ground the extractor returns and the pumps disappear.
 - **What it leaves alone:** extractors on solid ground, mechanical pumps, and every other block.
 
+#### Build Plan Keeper
+Restores the build plan that is lost when the player's unit dies and respawns at the core.
+- **No command.** It works whenever the module is enabled in the mod settings.
+- **The bug it fixes:** the build plan lives on the unit, so a unit that dies takes its plan with it. The unit that spawns at the core starts with an empty plan, and a queued layout is gone - sometimes only half of it, when the game hands the player a nearby unit of the same type that still carries a plan of its own.
+- **What it does:** a snapshot of the plan is kept while the player is alive and written back onto the new unit right after the respawn, replacing whatever plan that unit came with.
+- **What it leaves alone:** a plan the player edits by hand is never touched - the restore only fires for a unit that actually replaced the dead one.
+
 ---
 
 ### 3. Unit & Resource Automation
