@@ -30,11 +30,13 @@ const ConsumeItemFilterClass = Packages.mindustry.world.consumers.ConsumeItemFil
 // Generators accept any item that is flammable or radioactive, which is far
 // wider than we ever want to feed them: a combustion generator happily eats
 // blast-compound and spore-pod, and that burns through expensive stock while
-// coal sits in the core. These blocks get an explicit fuel whitelist instead of
-// whatever their consumers advertise.
-const FUEL_WHITELIST = {
+// coal sits in the core. Those blocks get a fuel list the player can edit -
+// the same priority order and on/off toggles the turrets use for their ammo.
+// The listed items are the ones enabled by default, everything else the block
+// could take is listed but switched off.
+const FUEL_DEFAULTS = {
 	'combustion-generator': ['coal'],
-	'rtg-generator': ['thorium'],
+	'rtg-generator': ['thorium', 'phase-fabric'],
 };
 
 const EXCLUDED_BLOCKS = [
@@ -133,20 +135,8 @@ function getBlockInfo(block) {
 	}
 
 	let consumedItems = [];
+	let hasFuelFilter = false;
 	try {
-		// Item generators advertise every flammable or radioactive item as fuel,
-		// so nothing useful comes out of their consumers for our purpose; the
-		// whitelist below sets the real list. Only fall back to reading them for
-		// generators that have no whitelist entry.
-		if (isItemGenerator && !FUEL_WHITELIST[name] && !consumedItems.length) {
-			let allItems = Vars.content.items();
-			for (let gi = 0; gi < allItems.size; gi++) {
-				let it = allItems.get(gi);
-				try {
-					if (it.flammability > 0 || it.radioactivity > 0) consumedItems.push(it);
-				} catch (eFuel) {}
-			}
-		}
 		if (isUnit && block.plans && block.plans.size) {
 			for (let i = 0; i < block.plans.size; i++) {
 				let plan = block.plans.get(i);
@@ -173,6 +163,8 @@ function getBlockInfo(block) {
 						if (it && consumedItems.indexOf(it) === -1) consumedItems.push(it);
 					}
 				} else if (c instanceof ConsumeItemFilterClass) {
+					// Flammable/radioactive filters: this is the fuel list of a generator.
+					hasFuelFilter = true;
 					let allItems = Vars.content.items();
 					for (let itIdx = 0; itIdx < allItems.size; itIdx++) {
 						let it = allItems.get(itIdx);
@@ -185,16 +177,10 @@ function getBlockInfo(block) {
 		}
 	} catch (e) {}
 
-	// Whitelist wins over whatever the consumers report.
-	let whitelist = FUEL_WHITELIST[name];
-	if (whitelist) {
-		let filtered = [];
-		for (let i = 0; i < whitelist.length; i++) {
-			let it = Vars.content.item(whitelist[i]);
-			if (it) filtered.push(it);
-		}
-		consumedItems = filtered;
-	}
+	// A generator whose fuel comes from a filter (flammable, radioactive) is
+	// the one the player gets to configure: priority order and on/off per fuel.
+	let isFuelSelectable = hasFuelFilter && consumedItems.length > 0;
+	let fuelDefaults = FUEL_DEFAULTS[name] || null;
 
 	let eligible = false;
 	let isExcluded = false;
@@ -226,7 +212,8 @@ function getBlockInfo(block) {
 		isOverdrive: isOverdrive,
 		isCombustionGenerator: isCombustionGenerator,
 		isItemGenerator: isItemGenerator,
-		fuelWhitelist: whitelist || null,
+		isFuelSelectable: isFuelSelectable,
+		fuelDefaults: fuelDefaults,
 		ammoTypes: ammoTypes,
 		consumedItems: consumedItems,
 		eligible: eligible
@@ -276,6 +263,64 @@ function isBlockEligible(b) {
 	return info ? info.eligible : false;
 }
 
+// Every item a generator could take, the preferred ones first.
+function getDefaultFuelList(info) {
+	if (!info) return [];
+	let ordered = [];
+	let defaults = info.fuelDefaults || [];
+	for (let i = 0; i < defaults.length; i++) {
+		let it = Vars.content.item(defaults[i]);
+		if (it && info.consumedItems.indexOf(it) !== -1) ordered.push(it);
+	}
+	for (let i = 0; i < info.consumedItems.length; i++) {
+		if (ordered.indexOf(info.consumedItems[i]) === -1) ordered.push(info.consumedItems[i]);
+	}
+	return ordered;
+}
+
+// Makes sure a fuel-selectable block has its fuel list and the disabled set.
+function ensureFuelSettings(info, entry) {
+	if (!info || !info.isFuelSelectable) return;
+	if (!entry.fuelPriority || entry.fuelPriority.length === 0) {
+		let list = getDefaultFuelList(info);
+		entry.fuelPriority = [];
+		for (let i = 0; i < list.length; i++) entry.fuelPriority.push(String(list[i].name));
+	}
+	if (!entry.disabledFuel) entry.disabledFuel = {};
+	// Fresh list: the fuels the block prefers stay on, the rest starts off.
+	// A block without a preference keeps everything it could take.
+	if (!entry.fuelInitialized) {
+		let defaults = info.fuelDefaults || [];
+		if (defaults.length > 0) {
+			for (let i = 0; i < entry.fuelPriority.length; i++) {
+				if (defaults.indexOf(entry.fuelPriority[i]) === -1) {
+					entry.disabledFuel[entry.fuelPriority[i]] = true;
+				}
+			}
+		}
+		entry.fuelInitialized = true;
+	}
+}
+
+// The items a block should actually be filled with, in priority order.
+function getFillItems(info) {
+	if (!info) return [];
+	if (!info.isFuelSelectable) return info.consumedItems;
+	let entry = state.blockSettings[info.name];
+	if (!entry) return info.consumedItems;
+	let list = entry.fuelPriority && entry.fuelPriority.length ? entry.fuelPriority : info.consumedItems;
+	let out = [];
+	for (let i = 0; i < list.length; i++) {
+		let itemName = list[i];
+		if (entry.disabledFuel && entry.disabledFuel[itemName]) continue;
+		let it = Vars.content.item(itemName);
+		if (!it) continue;
+		if (info.consumedItems.indexOf(it) === -1) continue;
+		out.push(it);
+	}
+	return out;
+}
+
 function initBlockSettings() {
 	let allBlocks = Vars.content ? Vars.content.blocks() : null;
 	if (!allBlocks || allBlocks.size === 0) return false;
@@ -312,6 +357,8 @@ function initBlockSettings() {
 				}
 			}
 		}
+
+		ensureFuelSettings(info, state.blockSettings[name]);
 	}
 	return true;
 }
@@ -331,19 +378,21 @@ Events.on(WorldLoadEvent, () => {
 	lastActionTime = 0;
 });
 
-function showAmmoPriorityDialog(blockName) {
+// Shared list dialog: an ordered list of items with an on/off toggle per
+// entry. Used for turret ammo and for generator fuel.
+function showItemPriorityDialog(blockName, title, listKey, disabledKey, fallbackList) {
 	let blockObj = Vars.content.block(blockName);
 	if (!blockObj) return;
 
-	let d = new BaseDialog((blockObj.localizedName || blockName) + ' Ammo Priority');
+	let d = new BaseDialog((blockObj.localizedName || blockName) + ' ' + title);
 	d.addCloseButton();
 
 	let bSettings = state.blockSettings[blockName];
-	if (!bSettings.ammoPriority || bSettings.ammoPriority.length === 0) {
-		bSettings.ammoPriority = getTurretAmmoList(blockObj);
+	if (!bSettings[listKey] || bSettings[listKey].length === 0) {
+		bSettings[listKey] = fallbackList();
 	}
-	if (!bSettings.disabledAmmo) {
-		bSettings.disabledAmmo = {};
+	if (!bSettings[disabledKey]) {
+		bSettings[disabledKey] = {};
 	}
 
 	let root = new Table();
@@ -358,32 +407,32 @@ function showAmmoPriorityDialog(blockName) {
 		return card;
 	}
 
-	let card = createCard('Ammo Priority & Toggles (Top = First Loaded)', 'ffd37f');
+	let card = createCard(title + ' & Toggles (Top = First Loaded)', 'ffd37f');
 	let listTable = card.table().top().left().growX().get();
 
-	let rebuildAmmoRows = () => {
+	let rebuildRows = () => {
 		listTable.clearChildren();
-		let list = bSettings.ammoPriority;
+		let list = bSettings[listKey];
 
-		list.forEach((ammoName, idx) => {
-			let itemObj = Vars.content.item(ammoName);
+		list.forEach((itemName, idx) => {
+			let itemObj = Vars.content.item(itemName);
 			if (!itemObj) return;
 
 			let row = listTable.table().growX().pad(2).get();
 			row.left();
 
-			if (!bSettings.disabledAmmo) bSettings.disabledAmmo = {};
-			let isDisabled = !!bSettings.disabledAmmo[ammoName];
+			if (!bSettings[disabledKey]) bSettings[disabledKey] = {};
+			let isDisabled = !!bSettings[disabledKey][itemName];
 
 			row.check('', !isDisabled, b => {
-				if (!bSettings.disabledAmmo) bSettings.disabledAmmo = {};
+				if (!bSettings[disabledKey]) bSettings[disabledKey] = {};
 				if (!b) {
-					bSettings.disabledAmmo[ammoName] = true;
+					bSettings[disabledKey][itemName] = true;
 				} else {
-					delete bSettings.disabledAmmo[ammoName];
+					delete bSettings[disabledKey][itemName];
 				}
 				saveSettings();
-				rebuildAmmoRows();
+				rebuildRows();
 			}).padRight(8);
 
 			row.image(itemObj.uiIcon).size(32).padRight(10);
@@ -397,7 +446,7 @@ function showAmmoPriorityDialog(blockName) {
 					list[idx - 1] = list[idx];
 					list[idx] = temp;
 					saveSettings();
-				rebuildAmmoRows();
+				rebuildRows();
 				}
 			}).size(44, 34).disabled(idx === 0).padRight(6);
 
@@ -407,7 +456,7 @@ function showAmmoPriorityDialog(blockName) {
 					list[idx + 1] = list[idx];
 					list[idx] = temp;
 					saveSettings();
-				rebuildAmmoRows();
+				rebuildRows();
 				}
 			}).size(44, 34).disabled(idx === list.length - 1);
 
@@ -415,7 +464,7 @@ function showAmmoPriorityDialog(blockName) {
 		});
 	};
 
-	rebuildAmmoRows();
+	rebuildRows();
 	root.row();
 
 	let scroll = new ScrollPane(root);
@@ -427,6 +476,38 @@ function showAmmoPriorityDialog(blockName) {
 	d.cont.add(scroll).width(dw).height(dh).row();
 
 	d.show();
+}
+
+function showAmmoPriorityDialog(blockName) {
+	let blockObj = Vars.content.block(blockName);
+	if (!blockObj) return;
+	showItemPriorityDialog(
+		blockName,
+		'Ammo Priority',
+		'ammoPriority',
+		'disabledAmmo',
+		() => getTurretAmmoList(blockObj)
+	);
+}
+
+function showFuelPriorityDialog(blockName) {
+	let blockObj = Vars.content.block(blockName);
+	if (!blockObj) return;
+	let info = getBlockInfo(blockObj);
+	if (!info) return;
+	ensureFuelSettings(info, state.blockSettings[blockName]);
+	showItemPriorityDialog(
+		blockName,
+		'Fuel Priority',
+		'fuelPriority',
+		'disabledFuel',
+		() => {
+			let names = [];
+			let list = getDefaultFuelList(info);
+			for (let i = 0; i < list.length; i++) names.push(String(list[i].name));
+			return names;
+		}
+	);
 }
 
 function showSettingsDialog() {
@@ -511,6 +592,11 @@ function showSettingsDialog() {
 				showAmmoPriorityDialog(name);
 			}).size(76, 32).get();
 			ammoBtn.getLabel().setFontScale(0.85);
+		} else if (info && info.isFuelSelectable) {
+			let fuelBtn = row.button('Fuel', Styles.grayt, () => {
+				showFuelPriorityDialog(name);
+			}).size(76, 32).get();
+			fuelBtn.getLabel().setFontScale(0.85);
 		} else {
 			row.add('').width(76);
 		}
@@ -604,7 +690,7 @@ Events.run(Trigger.update, () => {
 				}
 			}
 		} else {
-			let consumed = info.consumedItems;
+			let consumed = getFillItems(info);
 			for (let i = 0; i < consumed.length; i++) {
 				let item = consumed[i];
 				let currentAmount = b.items ? b.items.get(item) : 0;
@@ -706,7 +792,7 @@ Events.run(Trigger.update, () => {
 				}
 			}
 		} else if (info) {
-			let allConsumed = info.consumedItems;
+			let allConsumed = getFillItems(info);
 			for (let j = 0; j < allConsumed.length; j++) {
 				let it = allConsumed[j];
 				let currentAmt = t.items ? t.items.get(it) : 0;
@@ -872,6 +958,12 @@ Events.run(Trigger.update, () => {
 			if (info && info.isTurret) {
 				let bSettings = state.blockSettings[t.block.name];
 				if (bSettings && bSettings.disabledAmmo && bSettings.disabledAmmo[stack.item.name]) {
+					continue;
+				}
+			}
+			if (info && info.isFuelSelectable) {
+				let bSettings = state.blockSettings[t.block.name];
+				if (bSettings && bSettings.disabledFuel && bSettings.disabledFuel[stack.item.name]) {
 					continue;
 				}
 			}

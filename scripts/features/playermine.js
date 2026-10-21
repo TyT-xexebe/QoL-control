@@ -5,16 +5,19 @@ const state = {
 	enabled: false,
 	minLimit: 100,
 	maxLimit: 1000,
+	cap: 0,
 	isMining: false,
 	currentMiningItem: null,
 	needsMining: { copper: false, lead: false },
 	savedBuildingState: true,
+	buildPaused: false,
 };
 
 try {
 	state.enabled = Core.settings.getBool('qol-playermine-enabled', false);
 	state.minLimit = Core.settings.getInt('qol-playermine-min', 100);
 	state.maxLimit = Core.settings.getInt('qol-playermine-max', 1000);
+	state.cap = Core.settings.getInt('qol-playermine-cap', 0);
 } catch (e) {}
 
 const getMiningItems = () => {
@@ -103,7 +106,29 @@ function showSettingsDialog() {
 			}
 		}).width(100);
 
-		t.add(limitsTable).padBottom(15).row();
+		t.add(limitsTable).padBottom(10).row();
+
+		let capTable = new Table();
+		capTable.add('[lightgray]Max amount to mine:[]').padRight(10);
+		capTable.field(String(state.cap), (val) => {
+			let n = parseInt(val);
+			if (!isNaN(n) && n >= 0) {
+				state.cap = n;
+				Core.settings.put('qol-playermine-cap', new java.lang.Integer(n));
+			}
+		}).width(100).padRight(10);
+		capTable.add('[lightgray](copper & lead, 0 = unlimited)[]').left();
+
+		t.add(capTable).padBottom(5).row();
+
+		t.add(
+			'[lightgray]Once the core holds that much of a resource, the unit stops digging it and picks it up again on its own once the amount drops back down.[lightgray]'
+		)
+			.width(460)
+			.wrap()
+			.left()
+			.padBottom(15)
+			.row();
 
 		let scroll = new ScrollPane(t);
 		d.cont.add(scroll).grow().row();
@@ -112,6 +137,28 @@ function showSettingsDialog() {
 	rebuild();
 	d.show();
 }
+
+// Drops the ore target and forgets what we were digging.
+const clearMiningTarget = (u) => {
+	if (u && !u.dead) u.mineTile = null;
+	state.isMining = false;
+	state.currentMiningItem = null;
+};
+
+// Hides the build mode from the player so the unit is free to dig.
+const pauseBuilding = () => {
+	if (state.buildPaused) return;
+	state.savedBuildingState = Vars.control.input.isBuilding;
+	Vars.control.input.isBuilding = false;
+	state.buildPaused = true;
+};
+
+// Gives the build mode back, but only if we were the ones who took it away.
+const resumeBuilding = () => {
+	if (!state.buildPaused) return;
+	Vars.control.input.isBuilding = state.savedBuildingState;
+	state.buildPaused = false;
+};
 
 let lastUpdate = 0;
 
@@ -122,44 +169,37 @@ Events.run(Trigger.update, () => {
 	if (lastUpdate < 5) return;
 	lastUpdate = 0;
 
+	let u = Vars.player.unit();
+
 	if (!state.enabled) {
-		if (state.isMining) {
-			let u = Vars.player.unit();
-			if (u && !u.dead) {
-				u.mineTile = null;
-			}
-			Vars.control.input.isBuilding = true;
-			state.isMining = false;
-			state.currentMiningItem = null;
-			state.needsMining.copper = false;
-			state.needsMining.lead = false;
+		if (state.isMining || state.currentMiningItem) {
+			clearMiningTarget(u);
+			resumeBuilding();
 		}
+		state.needsMining.copper = false;
+		state.needsMining.lead = false;
 		return;
 	}
 
-	let u = Vars.player.unit();
 	if (!u || u.dead || !u.canMine()) {
-		if (state.isMining) {
-			Vars.control.input.isBuilding = true;
-			state.isMining = false;
-			state.currentMiningItem = null;
-		}
+		if (state.isMining || state.currentMiningItem) clearMiningTarget(u);
+		resumeBuilding();
 		return;
 	}
 
 	let core = u.closestCore();
 	if (!core) {
-		if (state.isMining) {
-			u.mineTile = null;
-			Vars.control.input.isBuilding = true;
-			state.isMining = false;
-			state.currentMiningItem = null;
-		}
+		if (state.isMining || state.currentMiningItem) clearMiningTarget(u);
+		resumeBuilding();
 		return;
 	}
 
 	let items = getMiningItems();
-	if (!items.copper && !items.lead) return;
+	if (!items.copper && !items.lead) {
+		if (state.isMining || state.currentMiningItem) clearMiningTarget(u);
+		resumeBuilding();
+		return;
+	}
 
 	if (items.copper) {
 		let copperAmount = core.items.get(items.copper);
@@ -183,57 +223,70 @@ Events.run(Trigger.update, () => {
 		state.needsMining.lead = false;
 	}
 
-	if (state.isMining && state.currentMiningItem) {
-		let itemObj = state.currentMiningItem;
-		let stillNeeds = state.needsMining[itemObj.name];
-		let canMineObj = itemObj.hardness <= u.type.mineTier;
+	// The cap is a ceiling for the digging: once the core holds that much of a
+	// resource the unit stops digging it and picks it up again on its own once
+	// the amount drops back down. A shortage below the start threshold always
+	// wins, so the player is never left without resources.
+	let capAllows = (item) => {
+		if (state.cap <= 0) return true;
+		let amount = core.items.get(item);
+		if (amount < state.minLimit) return true;
+		return amount < state.cap;
+	};
 
-		if (stillNeeds && canMineObj) {
-			let oreTile = findClosestOreInMiningRange(u, itemObj);
-			if (oreTile) {
-				u.mineTile = oreTile;
-				return;
-			}
-		}
-
-		u.mineTile = null;
-		state.currentMiningItem = null;
-		state.isMining = false;
-		Vars.control.input.isBuilding = true;
+	// What to dig: first the resource we are short of, then whatever else is
+	// in reach, scarcest first.
+	let wanted = [];
+	if (state.needsMining.copper && items.copper && capAllows(items.copper)) {
+		wanted.push(items.copper);
 	}
+	if (state.needsMining.lead && items.lead && capAllows(items.lead)) {
+		wanted.push(items.lead);
+	}
+
+	let spare = [];
+	if (items.copper && !state.needsMining.copper && capAllows(items.copper)) {
+		spare.push(items.copper);
+	}
+	if (items.lead && !state.needsMining.lead && capAllows(items.lead)) {
+		spare.push(items.lead);
+	}
+	spare.sort((a, b) => core.items.get(a) - core.items.get(b));
+	wanted = wanted.concat(spare);
 
 	let targetItem = null;
-	if (state.needsMining.copper && items.copper && items.copper.hardness <= u.type.mineTier) {
-		targetItem = items.copper;
-	}
-	if (state.needsMining.lead && items.lead && items.lead.hardness <= u.type.mineTier) {
-		if (targetItem) {
-			let copperAmt = core.items.get(items.copper);
-			let leadAmt = core.items.get(items.lead);
-			if (leadAmt < copperAmt) {
-				targetItem = items.lead;
-			}
-		} else {
-			targetItem = items.lead;
+	let oreTile = null;
+	for (let i = 0; i < wanted.length; i++) {
+		let item = wanted[i];
+		if (!item || item.hardness > u.type.mineTier) continue;
+		let tile = findClosestOreInMiningRange(u, item);
+		if (tile) {
+			targetItem = item;
+			oreTile = tile;
+			break;
 		}
 	}
 
-	if (targetItem) {
-		let oreTile = findClosestOreInMiningRange(u, targetItem);
-		if (oreTile) {
-			state.savedBuildingState = Vars.control.input.isBuilding;
-			Vars.control.input.isBuilding = false;
-			state.isMining = true;
-			state.currentMiningItem = targetItem;
-			u.mineTile = oreTile;
-		}
+	if (!oreTile) {
+		if (state.isMining || state.currentMiningItem) clearMiningTarget(u);
+		resumeBuilding();
+		return;
+	}
+
+	// Keep the ore targeted either way, so the unit digs as soon as it is
+	// free to do so.
+	u.mineTile = oreTile;
+	state.currentMiningItem = targetItem;
+
+	// Building only gives way when the resource we dig is the one we are short of.
+	if (state.needsMining[targetItem.name]) {
+		// Short on resources: digging wins, building waits.
+		pauseBuilding();
+		state.isMining = true;
 	} else {
-		if (state.isMining) {
-			u.mineTile = null;
-			Vars.control.input.isBuilding = true;
-			state.isMining = false;
-			state.currentMiningItem = null;
-		}
+		// Core is stocked: building goes on, digging continues in between.
+		state.isMining = false;
+		resumeBuilding();
 	}
 });
 

@@ -107,6 +107,10 @@ Global autonomous distribution of unassigned friendly mining units across needed
 Automated player-unit mining for copper and lead with core stock balancing.
 - `!mine [1/0?]` — toggle player auto-mining.
 - `!mine settings` (or `!mine s`) — configure lower trigger threshold and upper fill limits in the core.
+- **Thresholds:** *Min core count to START* is the amount below which a resource counts as missing, *Max core count to STOP* is the amount at which it stops counting as missing (hysteresis in between).
+- **Max amount to mine (cap):** once the core holds that much copper/lead, the unit stops digging that resource entirely — and picks it up again on its own once the amount drops back down. `0` = no limit. A shortage below the START threshold is always dug, cap or no cap.
+- **Short on resources:** while copper/lead in the core is below the trigger threshold, building is paused and the unit digs the nearest ore in its mining range.
+- **Stocked up again:** building resumes immediately, and the unit keeps targeting nearby ore — it digs whenever it has no active build plan (the game never lets a unit mine and build at the same time).
 
 #### `!ai`
 Autonomous helper for building assistance, ore mining, and coordinate anchoring.
@@ -130,6 +134,8 @@ Nearby unit construction and repair assistance.
 Automatically feeds ammunition and production resources into turrets and factories within player radius from core or inventory.
 - `!autofill [1/0?]` — toggle auto-replenishment.
 - `!autofill settings` (or `!af s`) — open the interactive visual autofill control panel.
+- **Ammo & fuel config:** every turret and every item-burning generator gets its own list dialog (`Ammo` / `Fuel` button) with the item order (top = loaded first) and a per-item on/off switch.
+- **Generator fuel:** the combustion generator can burn coal, pyratite, spore-pod and blast-compound; the RTG generator burns thorium, phase-fabric and fissile matter. By default only coal / thorium + phase-fabric are enabled, the rest is listed but switched off.
 
 #### `!grab` | `!gr`
 Automatically pulls designated item from nearby blocks into your unit inventory.
