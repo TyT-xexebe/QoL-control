@@ -20,6 +20,11 @@
 //
 //   offset = -(size - 1) / 2, the tiles are (x + dx + offset, y + dy + offset)
 //
+// The block is kept only when it is exactly the one the plan wants, at the same
+// anchor: the same type shifted by a tile still overlaps the new block.
+// A block that cannot be broken stops the whole plan - the rest is left alone,
+// because such a plan could never be placed anyway.
+//
 // The demolition and the build are done by the player's unit, so the usual
 // rules apply: the unit has to be in range, the resources have to be there and
 // the build mode has to be on.
@@ -69,18 +74,34 @@ function canBreak(input, x, y) {
 	}
 }
 
-// Does the block on this tile have to go for the plan to be placed?
+// Whether the block on this tile is the very block the plan wants: the same
+// type at the same anchor. Such a block is already placed and has to stay.
 //
-//   - nothing there: no
-//   - the same block the schematic wants: no, the game places it by itself
-//   - a block the player cannot break: no, that plan can never be placed
-//   - anything else: yes, it has to be demolished first
-function needsDemolition(input, plan, x, y) {
+// A block of the same type at ANOTHER anchor only overlaps the plan - it still
+// has to be demolished. This matters for blocks bigger than 1x1: a 3x3 block
+// shifted by one tile covers a part of the new footprint, and the game cannot
+// place the plan over it.
+function sameBlock(plan, tile) {
+	return !!(
+		tile.build &&
+		tile.build.block == plan.block &&
+		tile.build.tileX() === plan.x &&
+		tile.build.tileY() === plan.y
+	);
+}
+
+// What stands on this tile and what to do about it:
+//
+//   null    - nothing in the way
+//   'keep'  - the very block the plan wants, it stays
+//   'clear' - a block the player can break, it has to go
+//   'stuck' - a block the player cannot break, the plan can never be placed
+function tileState(input, plan, x, y) {
 	let tile = Vars.world.tile(x, y);
-	if (!isOccupied(tile)) return false;
-	if (tile.build && tile.build.block == plan.block) return false;
-	if (!canBreak(input, x, y)) return false;
-	return true;
+	if (!isOccupied(tile)) return null;
+	if (sameBlock(plan, tile)) return 'keep';
+	if (!canBreak(input, x, y)) return 'stuck';
+	return 'clear';
 }
 
 // The tiles a planned block covers, counted the way the game counts them.
@@ -124,11 +145,26 @@ function currentPlans(input) {
 	let plans = input.selectPlans;
 	if (!plans) return out;
 
+	// The game shifts the held plans to the cursor in its own input update,
+	// which runs after this module (Trigger.update fires first). So the shift
+	// of this frame is added here, exactly like DesktopInput does it.
 	let dx = 0;
 	let dy = 0;
 	try {
-		dx = Math.floor(Vars.mouseWorld.x / 8) - input.schematicX;
-		dy = Math.floor(Vars.mouseWorld.y / 8) - input.schematicY;
+		let mouse = Core.input.mouseWorld();
+		let mx = Math.round(mouse.x / Vars.tilesize);
+		let my = Math.round(mouse.y / Vars.tilesize);
+		// schematicX/Y live on DesktopInput; on mobile they are missing, then the
+		// game's own shift is not available either and the plans are used as is
+		if (
+			isFinite(mx) &&
+			isFinite(my) &&
+			isFinite(input.schematicX) &&
+			isFinite(input.schematicY)
+		) {
+			dx = mx - input.schematicX;
+			dy = my - input.schematicY;
+		}
 	} catch (e) {}
 
 	for (let i = 0; i < plans.size; i++) {
@@ -172,26 +208,35 @@ function handlePlacement(input, unit) {
 
 		// Everything under the block has to go, not only the tile it starts on.
 		let tiles = footprint(plan);
-		let needDemolition = false;
+		let clear = [];
+		let stuck = false;
 		for (let t = 0; t < tiles.length; t++) {
-			if (!needsDemolition(input, plan, tiles[t].x, tiles[t].y)) continue;
-			needDemolition = true;
+			let state = tileState(input, plan, tiles[t].x, tiles[t].y);
+			// One block that can never be removed and the whole plan is dead:
+			// clearing the rest would only destroy the base for nothing.
+			if (state === 'stuck') {
+				stuck = true;
+				break;
+			}
+			if (state === 'clear') clear.push(tiles[t]);
+		}
 
-			// The block in the way gets demolished by the unit.
-			let tile = Vars.world.tile(tiles[t].x, tiles[t].y);
-			let bx = tile.build ? tile.build.tileX() : tiles[t].x;
-			let by = tile.build ? tile.build.tileY() : tiles[t].y;
+		// Nothing to clear: the plan is dropped for another reason (no tech,
+		// wrong team, ...) or the block that is already there is exactly the one
+		// the schematic wants. Either way there is nothing to wait for.
+		if (stuck || !clear.length) continue;
+
+		// The blocks in the way get demolished by the unit.
+		for (let t = 0; t < clear.length; t++) {
+			let tile = Vars.world.tile(clear[t].x, clear[t].y);
+			let bx = tile.build ? tile.build.tileX() : clear[t].x;
+			let by = tile.build ? tile.build.tileY() : clear[t].y;
 			try {
 				unit.addBuild(new BuildPlanClass(bx, by), false);
 			} catch (e) {
 				logger.err('[buildover] ' + e);
 			}
 		}
-
-		// Nothing to clear: the plan is dropped for another reason (no tech,
-		// wrong team, ...) or the block that is already there is exactly the one
-		// the schematic wants. Either way there is nothing to wait for.
-		if (!needDemolition) continue;
 		if (hasPending(plan.x, plan.y)) continue;
 
 		pending.push({
@@ -212,15 +257,41 @@ function processPending(unit, input) {
 	for (let i = pending.length - 1; i >= 0; i--) {
 		let plan = pending[i];
 		let tiles = footprint(plan);
-		let free = true;
+		let waiting = false;
+		let stuck = false;
 		for (let t = 0; t < tiles.length; t++) {
 			// Only the blocks that really have to go are waited for.
-			if (needsDemolition(input, plan, tiles[t].x, tiles[t].y)) {
-				free = false;
-				break;
-			}
+			let state = tileState(input, plan, tiles[t].x, tiles[t].y);
+			if (state === 'clear') waiting = true;
+			else if (state === 'stuck') stuck = true;
 		}
-		if (free) {
+
+		if (waiting) {
+			if (time - plan.time > timeout) pending.splice(i, 1);
+			continue;
+		}
+		if (stuck) {
+			pending.splice(i, 1);
+			continue;
+		}
+
+		// The whole footprint is free, but the game may still refuse the plan
+		// for another reason (deep water, tech, a queued plan on the same
+		// tiles, ...). Pushing it into the queue would only get it thrown away
+		// silently, so it is handed over only when the game accepts it.
+		let fits = true;
+		try {
+			fits = !!input.validPlace(
+				plan.x,
+				plan.y,
+				plan.block,
+				plan.rotation,
+				null,
+				true
+			);
+		} catch (e) {}
+
+		if (fits) {
 			try {
 				unit.addBuild(
 					new BuildPlanClass(
