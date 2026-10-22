@@ -5,12 +5,49 @@ let trackEnabled = Core.settings.getBool('qol-track-enabled', false);
 let trackRtsEnabled = Core.settings.getBool('qol-track-rts', true);
 let trackRecEnabled = Core.settings.getBool('qol-track-rec', true);
 let trackRtsNotify = Core.settings.getBool('qol-track-rts-notify', true);
+let trackRtsCircle = Core.settings.getBool('qol-track-rts-circle', true);
+// Reports the orders of the player himself as well - handy to see what his own
+// group is doing, and to test the alerts.
+let trackRtsOwn = Core.settings.getBool('qol-track-rts-own', true);
 let trackedPlayer = null;
 
 let unitCommanders = {};
 let unitScanTimer = 0;
 
 let rtsHistory = {};
+
+// The expanding alert circles of the enemy orders.
+let rtsAlerts = [];
+// How long a circle lives and how thick its line is.
+const ALERT_LIFE = 2400;
+const ALERT_STROKE = 8;
+// How often the same player may cause a circle / a chat message.
+const ALERT_COOLDOWN = 6000;
+const NOTIFY_COOLDOWN = 6000;
+const NOTIFY_UNITS_COOLDOWN = 30000;
+
+const alertColor = Color.valueOf('ff5555');
+
+// The radius a circle needs to cover the whole map from the given point, so
+// the ring sweeps over every part of the map and is seen no matter where the
+// player is looking.
+function mapRadius(x, y) {
+	try {
+		let w = Vars.world.width() * 8;
+		let h = Vars.world.height() * 8;
+		let corners = [0, 0, w, 0, 0, h, w, h];
+		let max = 0;
+		for (let i = 0; i < corners.length; i += 2) {
+			let dx = corners[i] - x;
+			let dy = corners[i + 1] - y;
+			let dist = Math.sqrt(dx * dx + dy * dy);
+			if (dist > max) max = dist;
+		}
+		return max + 200;
+	} catch (e) {
+		return 2000;
+	}
+}
 
 let rallyPoints = [];
 let rallyScanTimer = 0;
@@ -23,11 +60,26 @@ const getPlayerObj = (obj) => {
 	return null;
 };
 
+// The chat message about an order of another player.
+const notifyRts = (player, unitsStr, tx, ty) => {
+	let col = "[red]";
+	try {
+		let tc = player.team().color;
+		col = "[#" + tc.toString().substring(0, 6) + "]";
+	} catch (e) {}
+	notify(
+		col + Strings.stripColors(player.name) + "[] " +
+		"[lightgray]RTS: " + unitsStr +
+		" [lightgray]→ (" + tx + "," + ty + ")"
+	);
+};
+
 Events.on(WorldLoadEvent, () => {
 	unitCommanders = {};
 	rallyPoints = [];
 	rtsHistory = {};
 	lastRallyPoints = {};
+	rtsAlerts.length = 0;
 });
 
 Events.run(Trigger.update, () => {
@@ -40,8 +92,14 @@ Events.run(Trigger.update, () => {
 			let newCommanders = {};
 
 			let hasCommandAI = false;
+			let hasFormationAI = false;
 			try {
 				if (Packages.mindustry.ai.types.CommandAI) hasCommandAI = true;
+			} catch (e) {}
+			// The formation AI does not exist in every game version and asking for
+			// a missing class throws, so it is only used when it is really there.
+			try {
+				if (Packages.mindustry.ai.types.FormationAI) hasFormationAI = true;
 			} catch (e) {}
 
 			Groups.unit.each((u) => {
@@ -58,7 +116,7 @@ Events.run(Trigger.update, () => {
 					});
 				}
 
-				if (!p && ctrl instanceof Packages.mindustry.ai.types.FormationAI) {
+				if (!p && hasFormationAI && ctrl instanceof Packages.mindustry.ai.types.FormationAI) {
 					let leader = ctrl.leader;
 					if (leader && leader.isPlayer && leader.isPlayer())
 						p = getPlayerObj(leader);
@@ -79,11 +137,18 @@ Events.run(Trigger.update, () => {
 
 				if (p) {
 					let tx = null, ty = null;
+					// A real order is the position the AI was told to go to. It does
+					// not move while the order is executed, so it can be compared
+					// with the last one. The cursor of a player is not an order -
+					// it moves all the time and would report a new command on
+					// every scan.
+					let isOrder = false;
 					try {
-						if (ctrl instanceof Packages.mindustry.ai.types.FormationAI && ctrl.leader) {
-							tx = ctrl.leader.x; ty = ctrl.leader.y;
-						} else if (ctrl.targetPos && ctrl.targetPos.x !== undefined) {
+						if (ctrl.targetPos && ctrl.targetPos.x !== undefined) {
 							tx = ctrl.targetPos.x; ty = ctrl.targetPos.y;
+							isOrder = true;
+						} else if (hasFormationAI && ctrl instanceof Packages.mindustry.ai.types.FormationAI && ctrl.leader) {
+							tx = ctrl.leader.x; ty = ctrl.leader.y;
 						} else if (u.targetFlag && u.targetFlag.x !== undefined) {
 							tx = u.targetFlag.x; ty = u.targetFlag.y;
 						} else if (ctrl.target && ctrl.target.x !== undefined) {
@@ -96,101 +161,123 @@ Events.run(Trigger.update, () => {
 
 					if (tx !== null && ty !== null && !isMining && (tx !== 0 || ty !== 0)) {
 						if (Math.abs(u.x - tx) + Math.abs(u.y - ty) > 32) {
-							newCommanders[u.id] = { p: p, tx: tx, ty: ty, u: u };
+							newCommanders[u.id] = { p: p, tx: tx, ty: ty, u: u, isOrder: isOrder };
 						}
 					}
 				}
 			});
 
-			if (trackRtsNotify) {
-				try {
-					let myTeam = Vars.player.team();
-					let newPlayerUnits = {};
-					for (let uid in newCommanders) {
-						let d = newCommanders[uid];
-						if (!d.p || d.p.team() === myTeam) continue;
-						let pid = String(d.p.id);
-						if (!newPlayerUnits[pid]) newPlayerUnits[pid] = [];
-						newPlayerUnits[pid].push({ uid: uid, d: d });
+			try {
+				let myTeam = Vars.player.team();
+				let newPlayerUnits = {};
+				for (let uid in newCommanders) {
+					let d = newCommanders[uid];
+					if (!d || !d.p) continue;
+					if (d.p.team() === myTeam && !trackRtsOwn) continue;
+					let pid = String(d.p.id);
+					if (!newPlayerUnits[pid]) newPlayerUnits[pid] = [];
+					newPlayerUnits[pid].push({ uid: uid, d: d });
+				}
+
+				for (let pid in newPlayerUnits) {
+					let list = newPlayerUnits[pid];
+					let d = list[0].d;
+
+					// The order point of this player: the position his units were
+					// told to go to. Units that are only following the cursor of
+					// their owner have no order and are not reported.
+					let order = null;
+					for (let i = 0; i < list.length; i++) {
+						if (list[i].d.isOrder) {
+							order = list[i].d;
+							break;
+						}
 					}
 
-					for (let pid in newPlayerUnits) {
-						let list = newPlayerUnits[pid];
-						let d = list[0].d;
-						let tx = Math.floor(d.tx / 8);
-						let ty = Math.floor(d.ty / 8);
-
-						let counts = {};
-						list.forEach((item) => {
-							let typeName = String(item.d.u.type.name);
-							if (!counts[typeName]) {
-								counts[typeName] = { count: 0, emoji: "", name: typeName };
-								try {
-									let em = "";
-									if (typeof item.d.u.type.emoji === "function") {
-										em = String(item.d.u.type.emoji());
-									} else if (item.d.u.type.emoji !== undefined) {
-										em = String(item.d.u.type.emoji);
-									}
-									counts[typeName].emoji = em;
-								} catch (e) {}
-								try {
-									let ln = String(item.d.u.type.localizedName || item.d.u.type.name);
-									counts[typeName].name = ln;
-								} catch (e) {}
-							}
-							counts[typeName].count++;
-						});
-
-						let unitStrings = [];
-						for (let typeName in counts) {
-							let info = counts[typeName];
-							let iconPart = info.emoji ? info.emoji : info.name;
-							unitStrings.push("[accent]" + info.count + "[lightgray]" + iconPart);
-						}
-						let unitsStr = unitStrings.join(", ");
-
-						let hist = rtsHistory[pid] || { time: 0, tx: -999, ty: -999, unitsStr: "" };
-						let now = Time.millis();
-
-						let sameCoords = (Math.abs(tx - hist.tx) <= 2 && Math.abs(ty - hist.ty) <= 2);
-						let sameUnits = (unitsStr === hist.unitsStr);
-
-						let shouldNotify = false;
-
-						if (now - hist.time > 3000) {
-							if (!sameCoords) {
-								shouldNotify = true;
-							} else if (!sameUnits && now - hist.time > 8000) {
-								shouldNotify = true;
-							} else if (now - hist.time > 20000) {
-								shouldNotify = true;
-							}
-						}
-
-						if (shouldNotify) {
-							let col = "[red]";
+					let counts = {};
+					list.forEach((item) => {
+						let typeName = String(item.d.u.type.name);
+						if (!counts[typeName]) {
+							counts[typeName] = { count: 0, emoji: "", name: typeName };
 							try {
-								let tc = d.p.team().color;
-								col = "[#" + tc.toString().substring(0, 6) + "]";
+								let em = "";
+								if (typeof item.d.u.type.emoji === "function") {
+									em = String(item.d.u.type.emoji());
+								} else if (item.d.u.type.emoji !== undefined) {
+									em = String(item.d.u.type.emoji);
+								}
+								counts[typeName].emoji = em;
 							} catch (e) {}
+							try {
+								let ln = String(item.d.u.type.localizedName || item.d.u.type.name);
+								counts[typeName].name = ln;
+							} catch (e) {}
+						}
+						counts[typeName].count++;
+					});
 
-							notify(
-								col + Strings.stripColors(d.p.name) + "[] " +
-								"[lightgray]RTS: " + unitsStr +
-								" [lightgray]→ (" + tx + "," + ty + ")"
-							);
+					let unitStrings = [];
+					for (let typeName in counts) {
+						let info = counts[typeName];
+						let iconPart = info.emoji ? info.emoji : info.name;
+						unitStrings.push("[accent]" + info.count + "[lightgray]" + iconPart);
+					}
+					let unitsStr = unitStrings.join(", ");
 
-							rtsHistory[pid] = {
-								time: now,
-								tx: tx,
-								ty: ty,
-								unitsStr: unitsStr
-							};
+					let hist = rtsHistory[pid] || {
+						tx: -999,
+						ty: -999,
+						unitsStr: "",
+						// Far enough in the past that the first order of a
+						// player is reported right away.
+						notifyTime: -999999,
+						circleTime: -999999
+					};
+					let now = Time.millis();
+
+					if (order) {
+						let otx = Math.floor(order.tx / 8);
+						let oty = Math.floor(order.ty / 8);
+						let moved = Math.abs(otx - hist.tx) > 3 || Math.abs(oty - hist.ty) > 3;
+
+						if (moved) {
+							// The order point is remembered even when nothing is
+							// reported, so the same order is never reported twice.
+							hist.tx = otx;
+							hist.ty = oty;
+
+							// The circle on the map: the loudest sign that the
+							// enemy gave an order.
+							if (trackRtsCircle && now - hist.circleTime > ALERT_COOLDOWN) {
+								rtsAlerts.push({
+									x: order.tx,
+									y: order.ty,
+									time: now,
+									radius: mapRadius(order.tx, order.ty)
+								});
+								hist.circleTime = now;
+							}
+
+							if (trackRtsNotify && now - hist.notifyTime > NOTIFY_COOLDOWN) {
+								notifyRts(d.p, unitsStr, otx, oty);
+								hist.notifyTime = now;
+							}
 						}
 					}
-				} catch (e) {}
-			}
+
+					// The group changed (a unit joined or left). That is worth a
+					// message, but rarely.
+					if (unitsStr !== hist.unitsStr) {
+						hist.unitsStr = unitsStr;
+						if (trackRtsNotify && now - hist.notifyTime > NOTIFY_UNITS_COOLDOWN) {
+							notifyRts(d.p, unitsStr, Math.floor(d.tx / 8), Math.floor(d.ty / 8));
+							hist.notifyTime = now;
+						}
+					}
+
+					rtsHistory[pid] = hist;
+				}
+			} catch (e) {}
 
 			unitCommanders = newCommanders;
 		}
@@ -229,7 +316,10 @@ Events.run(Trigger.update, () => {
 
 							let sameRally = (rx === lastRx && ry === lastRy);
 
-							if ((!sameRally || now - lastPt.time > 15000) && now - lastPt.time > 4000) {
+							// Only a rally point that really moved is worth a
+							// message. The point is remembered every time, so the
+							// same rally does not report itself again and again.
+							if (!sameRally && now - lastPt.time > 4000) {
 								let blockName = String(b.block.localizedName || b.block.name);
 								let blockEmoji = "";
 								try {
@@ -253,8 +343,8 @@ Events.run(Trigger.update, () => {
 									"[lightgray]Rally: " + iconPart +
 									" [lightgray]→ (" + rx + "," + ry + ")"
 								);
-								lastRallyPoints[key] = { tx: tx, ty: ty, time: now };
 							}
+							lastRallyPoints[key] = { tx: tx, ty: ty, time: now };
 						}
 					}
 				}
@@ -327,6 +417,19 @@ function showTrackSettingsDialog() {
 			lastRallyPoints = {};
 		}
 		notify('[lightgray]RTS Notify ' + (b ? '[green]ON' : '[scarlet]OFF'));
+	}).pad(3).left().row();
+
+	c1.check('Red Alert Circle On Enemy Orders', trackRtsCircle, (b) => {
+		trackRtsCircle = b;
+		Core.settings.put('qol-track-rts-circle', b);
+		if (!b) rtsAlerts.length = 0;
+		notify('[lightgray]RTS Alert Circle ' + (b ? '[green]ON' : '[scarlet]OFF'));
+	}).pad(3).left().row();
+
+	c1.check('Also Report Own Orders', trackRtsOwn, (b) => {
+		trackRtsOwn = b;
+		Core.settings.put('qol-track-rts-own', b);
+		notify('[lightgray]Own Orders ' + (b ? '[green]ON' : '[scarlet]OFF'));
 	}).pad(3).left().row();
 
 	root.row();
@@ -420,6 +523,21 @@ interceptor.add('track', (args) => {
 		Core.settings.put('qol-track-rec', trackRecEnabled);
 		notify('[lightgray]Rally Tracking ' + (trackRecEnabled ? '[green]ON' : '[scarlet]OFF'));
 		if (!trackRecEnabled) rallyPoints = [];
+		return;
+	}
+
+	if (arg1 === 'circle' || arg1 === 'c') {
+		trackRtsCircle = interceptor.parseToggle(trackRtsCircle, args[2]);
+		Core.settings.put('qol-track-rts-circle', trackRtsCircle);
+		if (!trackRtsCircle) rtsAlerts.length = 0;
+		notify('[lightgray]RTS Alert Circle ' + (trackRtsCircle ? '[green]ON' : '[scarlet]OFF'));
+		return;
+	}
+
+	if (arg1 === 'own' || arg1 === 'o') {
+		trackRtsOwn = interceptor.parseToggle(trackRtsOwn, args[2]);
+		Core.settings.put('qol-track-rts-own', trackRtsOwn);
+		notify('[lightgray]Own Orders ' + (trackRtsOwn ? '[green]ON' : '[scarlet]OFF'));
 		return;
 	}
 
@@ -527,6 +645,34 @@ Events.run(Trigger.draw, () => {
 			Lines.dashLine(p.x, p.y, p.tx, p.ty, segments);
 			Lines.square(p.tx, p.ty, 4, 45);
 		});
+		Draw.reset();
+	}
+
+	// The alert circles: a red ring that spreads over the whole map from the
+	// order point, so it is noticed even when the chat is not looked at.
+	if (trackRtsCircle && rtsAlerts.length > 0) {
+		let now = Time.millis();
+		Draw.z(Layer.max);
+		for (let i = rtsAlerts.length - 1; i >= 0; i--) {
+			let alert = rtsAlerts[i];
+			let age = now - alert.time;
+			if (age >= ALERT_LIFE) {
+				rtsAlerts.splice(i, 1);
+				continue;
+			}
+			let t = age / ALERT_LIFE;
+			// The ring grows fast at first, so it covers the whole map before
+			// it fades away.
+			let grown = 1 - (1 - t) * (1 - t);
+			let radius = 8 + grown * alert.radius;
+			// It holds for a while and fades at the end.
+			let alpha = t < 0.1 ? t / 0.1 : t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+			alpha = alpha * 0.85;
+
+			Draw.color(alertColor, alpha);
+			Lines.stroke(ALERT_STROKE);
+			Lines.circle(alert.x, alert.y, radius);
+		}
 		Draw.reset();
 	}
 });

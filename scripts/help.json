@@ -33,7 +33,7 @@
   },
   "features/hp": {
     "cmd": "hp",
-    "desc": "[accent]!hp <name?> <1/0?>[lightgrey] - toggle HP/shield/DPS display of last shot unit; nickname sets priority target"
+    "desc": "[lightgrey]Damage numbers - every hit shows its damage above the target.\\nThe game fires a damage event for units and for buildings, so bullets, artillery, explosions and everything else that hurts is covered. Hits on the same target in a short time are added up into one number.\\n\\n[accent]!hp <1/0?>[lightgrey] - toggle the damage numbers\\n[accent]!hp <anything else>[lightgrey] - open the settings"
   },
   "features/autograb": {
     "cmd": "grab",
@@ -97,7 +97,7 @@
   },
   "features/track": {
     "cmd": "track",
-    "desc": "[lightgrey]Shows cursor and RTS control of players and unit factory's set path\n\n[accent]!track <name?>[lightgrey] - all players / selected by name\n[accent]!track <rts/rec>[lightgrey] - on/off displays of player rts/reconstructor rally\n[accent]!track <notify/n> <1/0?>[lightgrey] - toggle chat alerts for RTS and Rally moves"
+    "desc": "[lightgrey]Shows cursor and RTS control of players and unit factory's set path\\n\\n[accent]!track <name?>[lightgrey] - all players / selected by name\\n[accent]!track <rts/rec>[lightgrey] - on/off displays of player rts/reconstructor rally\\n[accent]!track <notify/n> <1/0?>[lightgrey] - toggle chat alerts for RTS and Rally moves\\n[accent]!track <circle/c> <1/0?>[lightgrey] - toggle the red alert circle on enemy orders"
   },
   "features/wave": {
     "cmd": "wave",

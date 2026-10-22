@@ -85,7 +85,8 @@ Replaces water extractors that would sit on liquid with 1x1 mechanical pumps whi
   - **all 4 cells dry** — the extractor is left alone;
   - **exactly 1 cell wet** — a `rotary-pump` (also 2x2) goes on the same spot;
   - **2, 3 or 4 cells wet** — a `mechanical-pump` goes on every wet cell.
-- **Reversible:** back over dry ground the extractor returns and the pumps disappear.
+- **When:** the work is done once, right after the schematic is placed — the extractors are replaced in the build queue of the player. The schematic itself is never touched, so the preview is honest and nothing shifts when it is rotated, mirrored or dragged.
+- **Fully flooded extractors:** an extractor standing entirely on water is thrown away by the game and never reaches the queue. The module remembers it at the placement and adds its pumps directly.
 - **What it leaves alone:** extractors on solid ground, mechanical pumps, and every other block.
 
 #### Build Plan Keeper
@@ -94,6 +95,15 @@ Restores the build plan that is lost when the player's unit dies and respawns at
 - **The bug it fixes:** the build plan lives on the unit, so a unit that dies takes its plan with it. The unit that spawns at the core starts with an empty plan, and a queued layout is gone - sometimes only half of it, when the game hands the player a nearby unit of the same type that still carries a plan of its own.
 - **What it does:** a snapshot of the plan is kept while the player is alive and written back onto the new unit right after the respawn, replacing whatever plan that unit came with.
 - **What it leaves alone:** a plan the player edits by hand is never touched - the restore only fires for a unit that actually replaced the dead one.
+
+#### Build Over
+Places a schematic over blocks that are already standing there.
+- **No command.** It works whenever the module is enabled in the mod settings.
+- **The problem it fixes:** the vanilla drops the plans of a schematic for every tile that is occupied, so a layout can only be placed on a clean spot. Every block in the way has to be found with the mouse and cleared by hand first.
+- **What it does:** the plans that do not fit are kept instead of dropped. The blocks in the way are marked for demolition, the unit breaks them on its own, and the plans go back into the build queue as soon as the tiles are free.
+- **Big blocks:** a block bigger than 1x1 clears everything under its whole footprint, not just the tile it starts on.
+- **Careful:** the demolition is a real one - the blocks are gone for good. Turn the module off in the mod settings if that is not what you want.
+- **The usual rules apply:** the unit has to be in range, the resources have to be there and the build mode has to be on.
 
 ---
 
@@ -186,8 +196,13 @@ Advanced combat aimbot with target priority filters, lead prediction, and heal t
 - `!urange [1/0?]` — weapon range circles around all enemy units.
 
 #### `!hp`
-- `!hp [1/0?]` — health and shield bars above targeted units and buildings.
-- `!hp [player_name] [1/0?]` — track a specific player with a line and health HUD.
+Floating damage numbers above everything that gets hit.
+- `!hp [1/0?]` — toggle the damage numbers.
+- `!hp [anything else]` — open the settings (max numbers, lifetime, merge window, minimum damage).
+- **What it covers:** the game fires a damage event for units and for buildings, so bullets, artillery, explosions and anything else that hurts is covered. The events fire on the client as well, so the numbers show up for the whole map and not only around the player.
+- **The amount:** measured from the health the target lost, so armor, explosions and other indirect damage show their real value. For the first hit on a unit (nothing to compare with yet) and for buildings (they do not change their health on the client) the bullet damage is converted exactly as the game applies it — `applyArmor` first (`max(dmg - armor, 0.1·dmg)`) with the block's armor for buildings and the unit's armor for units, then the health multipliers (`healthMultiplier × rules.unitHealth` for units, `rules.blockHealth` for buildings). Bullets with `pierceArmor` skip the armor the same way the game does.
+- **Merging:** hits on the same target within the merge window are added up into one number, so a stream of bullets does not turn into a wall of digits.
+- **Performance:** the number of numbers on screen is capped (the oldest is dropped), a hit only pushes a small record into a list and the drawing happens in one pass per frame.
 
 ---
 
@@ -284,6 +299,9 @@ Real-time player cursor and RTS command path visualizer.
 - `!track ui` (or `!track settings`) — open tracking configuration dialog.
 - `!track [rts / rec]` — toggle visual RTS path lines or factory rally lines.
 - `!track notify [1/0]` — chat notifications when players issue RTS commands.
+- `!track circle [1/0]` — the red alert circle on the map.
+- **No more spam:** only a real new order is reported, the same order is never reported twice and units that just follow the cursor of their owner are not an order at all.
+- **Alert circle:** when the enemy gives an order, a red ring spreads over the map from the order point (a few seconds per player), so the order is noticed even when the chat is not looked at. Toggle it in the settings or with `!track circle 0`.
 
 #### `!bind` | `!binds`
 Keyboard shortcut manager for chat commands and text macros with multi-key combos and server IP filtering.

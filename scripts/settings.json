@@ -5,7 +5,7 @@
   "core/bind": false,
   "core/colors": false,
   "core/logicfix": false,
-  "features/hp": false,
+  "features/hp": true,
   "features/trange": false,
   "features/urange": false,
   "features/lookat": false,
@@ -45,5 +45,6 @@
   "ui/units": false,
   "features/spec": true,
   "features/plansaver": true,
+  "features/buildover": true,
   "features/pumpfix": true
 }
