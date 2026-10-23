@@ -1,36 +1,28 @@
 // features/buildover - place a schematic over blocks that are already there.
 //
-// The vanilla silently drops the plans of a schematic for tiles that are
-// occupied. You cannot build over an existing block, so the layout has to be
-// cleared by hand first, and every block that sits in the way has to be found
-// with the mouse one by one.
+// Port of the game-side BuildOverModule. The game calls it right before the
+// schematic plans are flushed, with the plans already shifted to the cursor.
+// A script cannot hook that call, so the press is caught on the click frame
+// and the plans are handled on the next tick: by then the game has shifted
+// them to the cursor, exactly as the game-side module sees them.
 //
-// This module keeps those plans instead:
-//
-//   - when a schematic is placed, every plan of it that lands on an occupied
-//     tile is remembered instead of being dropped;
-//   - the block that stands there is marked for demolition, so the unit breaks
-//     it on its own;
-//   - as soon as the tile is free the remembered plan goes back into the build
-//     queue and the unit builds it.
+// The vanilla drops the plans of a schematic for occupied tiles. This module
+// keeps them: the blocks in the way are marked for demolition and the plans go
+// back into the build queue as soon as their footprint is free.
 //
 // A block bigger than 1x1 covers more than one tile, so every tile under it is
-// looked at and everything that stands there is cleared - the same way the
-// game counts the footprint of a block:
+// looked at, the same way the game counts the footprint:
 //
 //   offset = -(size - 1) / 2, the tiles are (x + dx + offset, y + dy + offset)
 //
-// The block is kept only when it is exactly the one the plan wants, at the same
-// anchor: the same type shifted by a tile still overlaps the new block.
-// A block that cannot be broken stops the whole plan - the rest is left alone,
-// because such a plan could never be placed anyway.
+// A block of the same type at ANOTHER anchor only overlaps the plan, so it is
+// demolished like any other block in the way. A block that cannot be broken
+// stops the whole plan - the rest is left alone, because such a plan could
+// never be placed anyway.
 //
 // The demolition and the build are done by the player's unit, so the usual
 // rules apply: the unit has to be in range, the resources have to be there and
 // the build mode has to be on.
-//
-// The demolition is a real demolition - the blocks are gone for good. The
-// module is controlled by its on/off toggle in the mod settings.
 
 const logger = require('qol-control/core/logger');
 
@@ -38,7 +30,6 @@ const BindingClass = Packages.mindustry.input.Binding;
 const BuildPlanClass = Packages.mindustry.entities.units.BuildPlan;
 
 let enabled = true;
-// How long a plan waits for its tile before it is given up on (ms).
 let timeout = 60000;
 
 try {
@@ -46,41 +37,32 @@ try {
 	timeout = Core.settings.getInt('qol-buildover-timeout', 60000);
 } catch (e) {}
 
-// Plans that wait for their tile to be freed.
+// Plans that wait for their footprint to be freed.
 let pending = [];
-// Signatures of the plans the unit had in its queue, to spot a new placement.
-let lastQueue = {};
+// The select button state of the previous frame, to catch a press once.
+let lastSelect = false;
+// A press was caught on the previous frame; its plans are handled now.
+let placement = false;
 
 function now() {
 	return Time.millis();
 }
 
+function reset() {
+	pending.length = 0;
+	lastSelect = false;
+	placement = false;
+}
+
 // A tile is taken when a building stands on it or a wall blocks it.
-function isOccupied(tile) {
+function occupied(tile) {
 	if (!tile) return false;
 	if (tile.build) return true;
 	let block = tile.block();
 	return !!(block && block.solid);
 }
 
-// Whether the player is allowed to break the block on this tile. Walls and
-// other unbreakable blocks would only make the unit waste its time.
-function canBreak(input, x, y) {
-	try {
-		return !!input.validBreak(x, y);
-	} catch (e) {
-		// No answer from the game: assume it can be broken, like the vanilla.
-		return true;
-	}
-}
-
-// Whether the block on this tile is the very block the plan wants: the same
-// type at the same anchor. Such a block is already placed and has to stay.
-//
-// A block of the same type at ANOTHER anchor only overlaps the plan - it still
-// has to be demolished. This matters for blocks bigger than 1x1: a 3x3 block
-// shifted by one tile covers a part of the new footprint, and the game cannot
-// place the plan over it.
+// The block the plan wants, at the same anchor, is already placed and stays.
 function sameBlock(plan, tile) {
 	return !!(
 		tile.build &&
@@ -90,93 +72,20 @@ function sameBlock(plan, tile) {
 	);
 }
 
-// What stands on this tile and what to do about it:
-//
-//   null    - nothing in the way
-//   'keep'  - the very block the plan wants, it stays
-//   'clear' - a block the player can break, it has to go
-//   'stuck' - a block the player cannot break, the plan can never be placed
-function tileState(input, plan, x, y) {
-	let tile = Vars.world.tile(x, y);
-	if (!isOccupied(tile)) return null;
-	if (sameBlock(plan, tile)) return 'keep';
-	if (!canBreak(input, x, y)) return 'stuck';
-	return 'clear';
-}
-
-// The tiles a planned block covers, counted the way the game counts them.
-function footprint(plan) {
-	let size = plan.block && plan.block.size ? plan.block.size : 1;
-	let offset = -Math.floor((size - 1) / 2);
-	let out = [];
-	for (let dx = 0; dx < size; dx++) {
-		for (let dy = 0; dy < size; dy++) {
-			out.push({ x: plan.x + dx + offset, y: plan.y + dy + offset });
-		}
-	}
-	return out;
-}
-
 function signature(plan) {
-	if (!plan) return '';
-	return (
-		plan.x +
-		',' +
-		plan.y +
-		',' +
-		(plan.block ? String(plan.block.name) : 'break')
-	);
+	return plan.x + ',' + plan.y + ',' + (plan.block ? plan.block.name : '');
 }
 
-function queueSignatures(unit) {
+// The plans the game already put into the queue: the valid ones were flushed
+// on the click frame, so they must not be handled as blocked.
+function queued(unit) {
 	let out = {};
 	if (!unit || !unit.plans) return out;
 	for (let i = 0; i < unit.plans.size; i++) {
-		out[signature(unit.plans.get(i))] = true;
-	}
-	return out;
-}
-
-// The plans of the schematic that is currently held, with the shift to the
-// current cursor position applied: the game moves them every frame, so they
-// can be a frame behind.
-function currentPlans(input) {
-	let out = [];
-	let plans = input.selectPlans;
-	if (!plans) return out;
-
-	// The game shifts the held plans to the cursor in its own input update,
-	// which runs after this module (Trigger.update fires first). So the shift
-	// of this frame is added here, exactly like DesktopInput does it.
-	let dx = 0;
-	let dy = 0;
-	try {
-		let mouse = Core.input.mouseWorld();
-		let mx = Math.round(mouse.x / Vars.tilesize);
-		let my = Math.round(mouse.y / Vars.tilesize);
-		// schematicX/Y live on DesktopInput; on mobile they are missing, then the
-		// game's own shift is not available either and the plans are used as is
-		if (
-			isFinite(mx) &&
-			isFinite(my) &&
-			isFinite(input.schematicX) &&
-			isFinite(input.schematicY)
-		) {
-			dx = mx - input.schematicX;
-			dy = my - input.schematicY;
+		let plan = unit.plans.get(i);
+		if (plan && !plan.breaking && plan.block) {
+			out[signature(plan)] = true;
 		}
-	} catch (e) {}
-
-	for (let i = 0; i < plans.size; i++) {
-		let plan = plans.get(i);
-		if (!plan || !plan.block) continue;
-		out.push({
-			x: plan.x + dx,
-			y: plan.y + dy,
-			rotation: plan.rotation,
-			block: plan.block,
-			config: plan.config,
-		});
 	}
 	return out;
 }
@@ -188,55 +97,82 @@ function hasPending(x, y) {
 	return false;
 }
 
-// Marks the blocks that are in the way and remembers the plans of the
-// schematic for the tiles they stand on.
-function handlePlacement(input, unit) {
-	let plans = currentPlans(input);
-	if (!plans.length) return;
+// The plans of the held schematic, already shifted to the cursor by the game.
+function heldPlans(input) {
+	let out = [];
+	let plans = input.selectPlans;
+	if (!plans) return out;
+	for (let i = 0; i < plans.size; i++) {
+		let plan = plans.get(i);
+		if (!plan || !plan.block || plan.breaking) continue;
+		out.push({
+			x: plan.x,
+			y: plan.y,
+			rotation: plan.rotation,
+			block: plan.block,
+			config: plan.config,
+		});
+	}
+	return out;
+}
+
+// Port of BuildOverModule.beforePlacement.
+function beforePlacement(unit, input, plans) {
+	let inQueue = queued(unit);
 
 	for (let i = 0; i < plans.length; i++) {
 		let plan = plans[i];
+		if (inQueue[signature(plan)]) continue;
 
-		// Everything that fits is placed by the game itself.
-		let fits = false;
+		let fits = true;
 		try {
-			fits = input.validPlace(plan.x, plan.y, plan.block, plan.rotation, null, true);
-		} catch (e) {
-			fits = true;
-		}
+			fits = !!input.validPlace(
+				plan.x,
+				plan.y,
+				plan.block,
+				plan.rotation,
+				null,
+				true
+			);
+		} catch (e) {}
 		if (fits) continue;
 
-		// Everything under the block has to go, not only the tile it starts on.
-		let tiles = footprint(plan);
+		let size = plan.block.size;
+		let offset = -Math.floor((size - 1) / 2);
 		let clear = [];
 		let stuck = false;
-		for (let t = 0; t < tiles.length; t++) {
-			let state = tileState(input, plan, tiles[t].x, tiles[t].y);
-			// One block that can never be removed and the whole plan is dead:
-			// clearing the rest would only destroy the base for nothing.
-			if (state === 'stuck') {
-				stuck = true;
-				break;
+
+		for (let dx = 0; dx < size && !stuck; dx++) {
+			for (let dy = 0; dy < size; dy++) {
+				let tile = Vars.world.tile(
+					plan.x + dx + offset,
+					plan.y + dy + offset
+				);
+				if (!occupied(tile)) continue;
+				if (sameBlock(plan, tile)) continue;
+				if (!input.validBreak(tile.x, tile.y)) {
+					stuck = true;
+					break;
+				}
+				clear.push({ x: tile.x, y: tile.y });
 			}
-			if (state === 'clear') clear.push(tiles[t]);
 		}
 
-		// Nothing to clear: the plan is dropped for another reason (no tech,
-		// wrong team, ...) or the block that is already there is exactly the one
-		// the schematic wants. Either way there is nothing to wait for.
+		// One block that can never be removed and the whole plan is dead:
+		// clearing the rest would only destroy the base for nothing.
 		if (stuck || !clear.length) continue;
 
-		// The blocks in the way get demolished by the unit.
-		for (let t = 0; t < clear.length; t++) {
-			let tile = Vars.world.tile(clear[t].x, clear[t].y);
-			let bx = tile.build ? tile.build.tileX() : clear[t].x;
-			let by = tile.build ? tile.build.tileY() : clear[t].y;
+		for (let c = 0; c < clear.length; c++) {
+			let tile = Vars.world.tile(clear[c].x, clear[c].y);
+			let bx = tile && tile.build ? tile.build.tileX() : clear[c].x;
+			let by = tile && tile.build ? tile.build.tileY() : clear[c].y;
 			try {
 				unit.addBuild(new BuildPlanClass(bx, by), false);
 			} catch (e) {
 				logger.err('[buildover] ' + e);
 			}
 		}
+
 		if (hasPending(plan.x, plan.y)) continue;
 
 		pending.push({
@@ -250,20 +186,32 @@ function handlePlacement(input, unit) {
 	}
 }
 
-// Puts the remembered plans back into the queue as soon as their tile is free.
+// Port of BuildOverModule.processPending.
 function processPending(unit, input) {
 	if (!pending.length) return;
 	let time = now();
+
 	for (let i = pending.length - 1; i >= 0; i--) {
 		let plan = pending[i];
-		let tiles = footprint(plan);
+		let size = plan.block.size;
+		let offset = -Math.floor((size - 1) / 2);
 		let waiting = false;
 		let stuck = false;
-		for (let t = 0; t < tiles.length; t++) {
-			// Only the blocks that really have to go are waited for.
-			let state = tileState(input, plan, tiles[t].x, tiles[t].y);
-			if (state === 'clear') waiting = true;
-			else if (state === 'stuck') stuck = true;
+
+		for (let dx = 0; dx < size && !stuck; dx++) {
+			for (let dy = 0; dy < size; dy++) {
+				let tile = Vars.world.tile(
+					plan.x + dx + offset,
+					plan.y + dy + offset
+				);
+				if (!occupied(tile)) continue;
+				if (sameBlock(plan, tile)) continue;
+				if (!input.validBreak(tile.x, tile.y)) {
+					stuck = true;
+					break;
+				}
+				waiting = true;
+			}
 		}
 
 		if (waiting) {
@@ -275,11 +223,7 @@ function processPending(unit, input) {
 			continue;
 		}
 
-		// The whole footprint is free, but the game may still refuse the plan
-		// for another reason (deep water, tech, a queued plan on the same
-		// tiles, ...). Pushing it into the queue would only get it thrown away
-		// silently, so it is handed over only when the game accepts it.
-		let fits = true;
+		let fits = false;
 		try {
 			fits = !!input.validPlace(
 				plan.x,
@@ -314,66 +258,57 @@ function processPending(unit, input) {
 
 function tick() {
 	if (!enabled) {
-		pending.length = 0;
-		lastQueue = {};
+		reset();
 		return;
 	}
-	if (!Vars.state || !Vars.state.isGame()) return;
+	if (!Vars.state || !Vars.state.isGame()) {
+		reset();
+		return;
+	}
 
 	let player = Vars.player;
 	if (!player || player.dead()) {
-		pending.length = 0;
-		lastQueue = {};
+		reset();
 		return;
 	}
+
 	let unit = player.unit();
-	if (!unit || !unit.plans) return;
-
 	let input = Vars.control ? Vars.control.input : null;
-	if (!input || !input.selectPlans) return;
+	if (!unit || !input || !input.selectPlans) return;
 
-	let queue = queueSignatures(unit);
-	let added = [];
-	for (let key in queue) {
-		if (!lastQueue[key]) added.push(key);
+	processPending(unit, input);
+
+	// The plans of the previous press are shifted to the cursor by now.
+	if (placement) {
+		placement = false;
+		beforePlacement(unit, input, heldPlans(input));
 	}
-	lastQueue = queue;
 
-	let clicked = false;
+	// The game places the held schematic on the press of the select button and
+	// only when the cursor is over the world. The press is tracked by the mouse
+	// state, because keyTap is already consumed by the game by then.
+	let down = false;
 	try {
-		clicked = Core.input.keyTap(BindingClass.select);
+		down = Core.input.keyDown(BindingClass.select);
 	} catch (e) {}
 
-	// A placement happened when the player clicked, or when the queue grew
-	// with a plan of the schematic that is held.
-	let placed = false;
-	if (input.selectPlans.size > 0) {
-		if (clicked) {
-			placed = true;
-		} else if (added.length > 0) {
-			let held = currentPlans(input);
-			for (let i = 0; i < added.length; i++) {
-				for (let h = 0; h < held.length; h++) {
-					if (
-						added[i] ===
-						held[h].x +
-							',' +
-							held[h].y +
-							',' +
-							String(held[h].block.name)
-					) {
-						placed = true;
-						break;
-					}
-				}
-				if (placed) break;
-			}
+	let clicked = down && !lastSelect;
+	lastSelect = down;
+
+	if (clicked && input.selectPlans.size > 0) {
+		let allowed = false;
+		try {
+			allowed =
+				!Core.scene.hasMouse() &&
+				!Core.input.keyDown(BindingClass.breakBlock);
+		} catch (e) {}
+		if (allowed) {
+			placement = true;
 		}
 	}
-
-	if (placed) handlePlacement(input, unit);
-	processPending(unit, input);
 }
+
+Events.on(WorldLoadEvent, () => reset());
 
 Events.run(Trigger.update, () => {
 	try {
@@ -382,12 +317,3 @@ Events.run(Trigger.update, () => {
 		logger.err('[buildover] ' + e);
 	}
 });
-
-module.exports = {
-	tick: tick,
-	pending: () => pending,
-	reset: () => {
-		pending.length = 0;
-		lastQueue = {};
-	},
-};
