@@ -9,6 +9,7 @@ const interceptor = require('qol-control/core/interceptor');
 const PREVIEW_BASE_PX = 184;
 const PREVIEW_SCALE_MIN = 50;
 const PREVIEW_SCALE_MAX = 300;
+const MAX_PAGES = 32;
 
 var cfg = {
 	rows: Core.settings.getInt('qol-schem-rows', 4),
@@ -17,7 +18,10 @@ var cfg = {
 	enabled: Core.settings.getBool('qol-schem-enabled', false),
 	preview: Core.settings.getBool('qol-schem-preview', true),
 	previewScale: Core.settings.getInt('qol-schem-preview-scale', 100),
-	slots: {},
+	// One entry per page, each a slot map keyed by the cell index inside the
+	// current rows x cols grid. The old flat slot map becomes page 1.
+	pages: [{}],
+	page: 0,
 };
 
 // Guard against a hand-edited settings file: the tooltip must never be built
@@ -25,11 +29,60 @@ var cfg = {
 if (!(cfg.previewScale >= PREVIEW_SCALE_MIN)) cfg.previewScale = 100;
 if (cfg.previewScale > PREVIEW_SCALE_MAX) cfg.previewScale = PREVIEW_SCALE_MAX;
 
+var legacySlots = {};
 try {
-	cfg.slots = JSON.parse(Core.settings.getString('qol-schem-slots', '{}'));
+	legacySlots =
+		JSON.parse(Core.settings.getString('qol-schem-slots', '{}')) || {};
 } catch (e) {
-	cfg.slots = {};
+	legacySlots = {};
 }
+
+var loadedPages = null;
+try {
+	if (Core.settings.has('qol-schem-pages')) {
+		loadedPages = JSON.parse(
+			Core.settings.getString('qol-schem-pages', '')
+		);
+	}
+} catch (e) {
+	loadedPages = null;
+}
+
+if (Array.isArray(loadedPages) && loadedPages.length) {
+	cfg.pages = loadedPages.map((p) =>
+		p && typeof p === 'object' ? p : {}
+	);
+} else {
+	cfg.pages = [legacySlots];
+}
+
+cfg.page = Core.settings.getInt('qol-schem-page', 0);
+
+// Resolves the active page and repairs a settings file that lost its page
+// list (or points past the last one), so every caller can use it blindly.
+var currentPage = () => {
+	if (!Array.isArray(cfg.pages) || !cfg.pages.length) {
+		cfg.pages = [{}];
+		cfg.page = 0;
+	}
+
+	if (!(cfg.page >= 0)) cfg.page = 0;
+	if (cfg.page >= cfg.pages.length) cfg.page = cfg.pages.length - 1;
+
+	if (!cfg.pages[cfg.page] || typeof cfg.pages[cfg.page] !== 'object') {
+		cfg.pages[cfg.page] = {};
+	}
+
+	return cfg.pages[cfg.page];
+};
+
+var getSlot = (idx) => currentPage()[idx];
+var setSlot = (idx, slot) => {
+	currentPage()[idx] = slot;
+};
+var deleteSlot = (idx) => {
+	delete currentPage()[idx];
+};
 
 // The settings window needs the live HUD table, so it is defined inside the
 // client-load closure below. The registry is filled at module scope (before
@@ -46,7 +99,13 @@ var saveCfg = () => {
 		'qol-schem-preview-scale',
 		new java.lang.Integer(cfg.previewScale)
 	);
-	Core.settings.put('qol-schem-slots', JSON.stringify(cfg.slots));
+	Core.settings.put('qol-schem-pages', JSON.stringify(cfg.pages));
+	Core.settings.put('qol-schem-page', new java.lang.Integer(cfg.page));
+	// Kept in sync so a downgraded build still finds the first page.
+	Core.settings.put(
+		'qol-schem-slots',
+		JSON.stringify(cfg.pages[0] || {})
+	);
 };
 
 var getIcon = (name, typeStr) => {
@@ -111,8 +170,12 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 	let uiTable = new Table(Styles.black5);
 	uiTable.margin(0);
 
+	let tabsTable = new Table();
+	tabsTable.margin(0);
+
 	let gridTable = new Table();
 	gridTable.margin(0);
+	uiTable.add(tabsTable).padBottom(4).row();
 	uiTable.add(gridTable);
 
 	let dragHandler = null,
@@ -205,7 +268,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 	};
 
 	const liftIcon = (idx, stageX, stageY) => {
-		const slot = cfg.slots[idx];
+		const slot = getSlot(idx);
 		if (!slot) return;
 
 		dropGhost();
@@ -228,17 +291,17 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 	const commitDrop = (from, to) => {
 		if (from < 0 || to < 0 || from === to) return;
 
-		const src = cfg.slots[from];
+		const src = getSlot(from);
 		if (!src) return;
 
-		const dst = cfg.slots[to];
+		const dst = getSlot(to);
 
 		if (dst) {
-			cfg.slots[from] = dst;
-			cfg.slots[to] = src;
+			setSlot(from, dst);
+			setSlot(to, src);
 		} else {
-			cfg.slots[to] = src;
-			delete cfg.slots[from];
+			setSlot(to, src);
+			deleteSlot(from);
 		}
 
 		saveCfg();
@@ -251,7 +314,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		const idx = slotAt(stageX, stageY);
 		if (idx < 0) return -1;
 
-		const slot = cfg.slots[idx];
+		const slot = getSlot(idx);
 		if (!slot || (!slot.schem && !slot.icon)) return -1;
 
 		return idx;
@@ -341,7 +404,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		let dialog = new BaseDialog('');
 		dialog.addCloseButton();
 
-		let slot = cfg.slots[idx] || {
+		let slot = getSlot(idx) || {
 			schem: '',
 			icon: null,
 			type: null,
@@ -392,11 +455,11 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 		dialog.buttons
 			.button('@ok', Icon.ok, () => {
-				cfg.slots[idx] = {
+				setSlot(idx, {
 					schem: currentSchem,
 					icon: currentIconName,
 					type: currentIconType,
-				};
+				});
 
 				saveCfg();
 				rebuildGrid();
@@ -406,7 +469,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 		dialog.buttons
 			.button('@cancel', Icon.cancel, () => {
-				delete cfg.slots[idx];
+				deleteSlot(idx);
 				saveCfg();
 				rebuildGrid();
 				dialog.hide();
@@ -666,6 +729,163 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 	Vars.ui.hudGroup.addChild(previewOverlay);
 
+	// -----------------------------------------------------------------------
+	// Pages (tabs)
+	// -----------------------------------------------------------------------
+	let tabButtons = [];
+
+	const refreshTabs = () => {
+		for (let i = 0; i < tabButtons.length; i++) {
+			if (tabButtons[i]) tabButtons[i].setChecked(i === cfg.page);
+		}
+	};
+
+	const selectPage = (idx) => {
+		if (idx < 0 || idx >= cfg.pages.length) {
+			refreshTabs();
+			return;
+		}
+
+		if (idx !== cfg.page) {
+			cfg.page = idx;
+			// The double-click detector is index based; a page switch makes the
+			// previous index meaningless.
+			lastClickTime = 0;
+			lastClickSlot = -1;
+			saveCfg();
+			rebuildGrid();
+		}
+
+		// Always re-sync the tab highlight: the Button toggles its own checked
+		// state on click, so clicking the already active tab would leave it
+		// unchecked without this.
+		refreshTabs();
+	};
+
+	const addPage = () => {
+		if (cfg.pages.length >= MAX_PAGES) {
+			notify('[scarlet]Page limit reached: ' + MAX_PAGES);
+			return;
+		}
+
+		cfg.pages.push({});
+		cfg.page = cfg.pages.length - 1;
+		lastClickTime = 0;
+		lastClickSlot = -1;
+		saveCfg();
+		rebuildTabs();
+		rebuildGrid();
+		notify('[lightgray]Added page ' + cfg.pages.length);
+	};
+
+	const removePage = (idx) => {
+		if (cfg.pages.length <= 1) {
+			notify('[scarlet]The table needs at least one page');
+			return;
+		}
+
+		if (idx < 0 || idx >= cfg.pages.length) return;
+
+		cfg.pages.splice(idx, 1);
+
+		// Deleting a page before the active one shifts the active index; the
+		// vanished active page falls back to the last one.
+		if (idx < cfg.page) cfg.page--;
+		if (cfg.page >= cfg.pages.length) cfg.page = cfg.pages.length - 1;
+		lastClickTime = 0;
+		lastClickSlot = -1;
+
+		saveCfg();
+		rebuildTabs();
+		rebuildGrid();
+		notify('[lightgray]Page deleted (' + cfg.pages.length + ' left)');
+	};
+
+	const clearPage = (idx) => {
+		if (idx < 0 || idx >= cfg.pages.length) return;
+
+		cfg.pages[idx] = {};
+		saveCfg();
+		rebuildGrid();
+
+		notify('[lightgray]Page ' + (idx + 1) + ' [green]CLEARED');
+	};
+
+	// Tabs wrap after a dozen, so even a full 32-page table stays inside the
+	// panel instead of running off the screen.
+	const TABS_PER_ROW = 12;
+
+	// The index is captured through a function argument on purpose. Rhino does
+	// not give every `for (let i = ...)` iteration its own binding, so a plain
+	// closure over the loop variable made all tabs act on the last page index.
+	const makeTabListener = (idx) => {
+		let downButton = null;
+
+		return extend(InputListener, {
+			touchDown(event, x, y, pointer, button) {
+				const KC = Packages.arc.input.KeyCode;
+
+				if (button !== KC.mouseLeft && button !== KC.mouseRight) {
+					return false;
+				}
+
+				downButton = button;
+
+				// The panel drag listens for RMB on uiTable; a right-click on a
+				// tab must delete the page instead of starting a drag.
+				if (button === KC.mouseRight) event.stop();
+
+				return true;
+			},
+
+			touchUp(event, x, y, pointer, button) {
+				const KC = Packages.arc.input.KeyCode;
+				const pressed = downButton;
+
+				downButton = null;
+				if (pressed === null) return false;
+
+				if (pressed === KC.mouseRight) {
+					event.stop();
+					removePage(idx);
+				} else {
+					selectPage(idx);
+				}
+
+				return true;
+			},
+		});
+	};
+
+	const rebuildTabs = () => {
+		// Repairs a saved page index that points past the last page before the
+		// checked state is decided.
+		currentPage();
+		tabsTable.clear();
+		tabButtons = [];
+
+		for (let i = 0; i < cfg.pages.length; i++) {
+			let btn = tabsTable
+				.button(String(i + 1), Styles.clearTogglet, null)
+				.size(30, 26)
+				.padRight(2)
+				.get();
+
+			btn.setChecked(i === cfg.page);
+			btn.addListener(makeTabListener(i));
+			tabButtons[i] = btn;
+
+			if ((i + 1) % TABS_PER_ROW === 0) tabsTable.row();
+		}
+
+		tabsTable
+			.button('+', Styles.grayt, () => addPage())
+			.size(26, 26)
+			.padLeft(4);
+
+		uiTable.pack();
+	};
+
 	const rebuildGrid = () => {
 		cancelIconDrag();
 		hideSlotPreview();
@@ -677,7 +897,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		for (let r = 0; r < cfg.rows; r++) {
 			for (let c = 0; c < cfg.cols; c++) {
 				let idx = r * cfg.cols + c;
-				let slot = cfg.slots[idx];
+				let slot = getSlot(idx);
 
 				let btn = gridTable
 					.button(
@@ -926,6 +1146,75 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 		root.row();
 
+		let c3 = createCard('Pages', '8be9fd');
+
+		let confirm = (title, text, act) => {
+			let cd = new BaseDialog(title);
+
+			cd.cont
+				.add(text)
+				.width(hintW)
+				.wrap()
+				.pad(10)
+				.row();
+			cd.addCloseButton();
+			cd.buttons
+				.button('@ok', Icon.ok, () => {
+					act();
+					cd.hide();
+				})
+				.size(140, 46);
+
+			cd.show();
+		};
+
+		let pageRow = c3.table().left().get();
+		// Three buttons share the card, so they shrink with the dialog instead
+		// of running past the edge of a small screen.
+		let pageBtnW = Math.max(70, Math.min(140, Math.floor((hintW - 20) / 3)));
+
+		pageRow
+			.button('Add Page', Icon.add, Styles.grayt, () => addPage())
+			.size(pageBtnW, 34)
+			.padRight(6);
+
+		pageRow
+			.button('Clear Page', Icon.trash, Styles.grayt, () => {
+				confirm(
+					'Clear Page',
+					'[lightgray]Remove every schematic from page ' +
+						(cfg.page + 1) +
+						'?[]',
+					() => clearPage(cfg.page)
+				);
+			})
+			.size(pageBtnW, 34)
+			.padRight(6);
+
+		pageRow
+			.button('Delete Page', Icon.cancel, Styles.grayt, () => {
+				confirm(
+					'Delete Page',
+					'[lightgray]Delete page ' +
+						(cfg.page + 1) +
+						' and every schematic on it?[]',
+					() => removePage(cfg.page)
+				);
+			})
+			.size(pageBtnW, 34);
+
+		c3.add(
+			'[gray]LMB on a numbered tab switches the page; RMB on a tab deletes that page. New pages start empty; only the first page is kept as the legacy slot list.[]'
+		)
+			.fontScale(0.85)
+			.width(hintW)
+			.wrap()
+			.left()
+			.padTop(6)
+			.row();
+
+		root.row();
+
 		let actCard = root
 			.table(Styles.black6)
 			.growX()
@@ -947,9 +1236,11 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 				// Preview on/off is a display preference, not table geometry —
 				// it stays whatever the user picked; only its scale is reset.
 				cfg.previewScale = 100;
-				cfg.slots = {};
+				cfg.pages = [{}];
+				cfg.page = 0;
 
 				saveCfg();
+				rebuildTabs();
 				rebuildGrid();
 
 				rowsCtrl.set(4);
@@ -1011,14 +1302,52 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 			return;
 		}
 
+		if (sub === 'page' || sub === 'p' || sub === 'pages') {
+			if (args[2] === undefined || String(args[2]).trim() === '') {
+				notify(
+					'[lightgray]Page ' +
+						(cfg.page + 1) +
+						' / ' +
+						cfg.pages.length
+				);
+				return;
+			}
+
+			let page = parseInt(args[2], 10);
+
+			if (!(page >= 1) || page > cfg.pages.length) {
+				notify(
+					'[scarlet]Page must be between 1 and ' +
+						cfg.pages.length
+				);
+				return;
+			}
+
+			selectPage(page - 1);
+
+			notify(
+				'[lightgray]Page ' + page + ' / ' + cfg.pages.length
+			);
+			return;
+		}
+
+		if (sub === 'addpage' || sub === 'ap' || sub === 'newpage') {
+			addPage();
+			return;
+		}
+
 		if (sub === 'help') {
 			notify(
 				'[lightgray]!table - toggle the table\n' +
-					'[accent]!table settings[lightgray] (or [accent]!table s[lightgray]) - open the settings window\n\n' +
+					'[accent]!table settings[lightgray] (or [accent]!table s[lightgray]) - open the settings window\n' +
+					'[accent]!table page <n>[lightgray] - switch to page n\n' +
+					'[accent]!table addpage[lightgray] - add an empty page and switch to it\n\n' +
 					'[accent]Shift+LMB[] on a filled slot - drag the icon: drop on an empty slot to move it, on another icon to swap. Drop outside to cancel.\n' +
 					'[accent]RMB[] - moves the whole panel.\n' +
 					'[accent]Hover[] - shows a schematic preview (toggleable in [accent]!table ui[]).\n' +
-					'LMB / double click - place schematic / open the slot config.'
+					'LMB / double click - place schematic / open the slot config.\n' +
+					'LMB on a page tab - switch page.\n' +
+					'RMB on a page tab - delete that page.'
 			);
 			return;
 		}
@@ -1040,6 +1369,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		);
 	});
 
+	rebuildTabs();
 	rebuildGrid();
 	Vars.ui.hudGroup.addChild(uiTable);
 
