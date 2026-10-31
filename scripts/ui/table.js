@@ -108,6 +108,25 @@ var saveCfg = () => {
 	);
 };
 
+// Deleted pages are kept for a while so an accidental RMB on a tab can be
+// undone with !table restorepage. The last entry is restored first.
+const MAX_TRASH_PAGES = 5;
+
+var loadPageTrash = () => {
+	try {
+		let list = JSON.parse(
+			Core.settings.getString('qol-schem-page-trash', '[]')
+		);
+		return Array.isArray(list) ? list : [];
+	} catch (e) {
+		return [];
+	}
+};
+
+var savePageTrash = (list) => {
+	Core.settings.put('qol-schem-page-trash', JSON.stringify(list));
+};
+
 var getIcon = (name, typeStr) => {
 	if (!name) return Icon.add.getRegion();
 
@@ -778,13 +797,47 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		notify('[lightgray]Added page ' + cfg.pages.length);
 	};
 
-	const removePage = (idx) => {
-		if (cfg.pages.length <= 1) {
-			notify('[scarlet]The table needs at least one page');
-			return;
+	// Shared confirmation box. The page tab handler and the settings card use
+	// the same dialog so both paths behave identically.
+	const confirmDialog = (title, text, onOk) => {
+		let d = new BaseDialog(title);
+
+		d.cont.add(text).width(420).wrap().pad(12).row();
+		d.addCloseButton();
+		d.buttons
+			.button('@ok', Icon.ok, () => {
+				d.hide();
+				onOk();
+			})
+			.size(140, 46);
+
+		d.show();
+	};
+
+	const pageSlotCount = (idx) => {
+		let page = cfg.pages[idx];
+
+		if (!page || typeof page !== 'object') return 0;
+
+		let count = 0;
+
+		for (let key in page) {
+			if (Object.prototype.hasOwnProperty.call(page, key)) count++;
 		}
 
+		return count;
+	};
+
+	const removePageNow = (idx) => {
 		if (idx < 0 || idx >= cfg.pages.length) return;
+
+		// Keep the removed page in the trash so it can be restored. The slot
+		// map is stored as-is; control settings live outside it.
+		let trash = loadPageTrash();
+
+		trash.push({ index: idx, slots: cfg.pages[idx] || {} });
+		while (trash.length > MAX_TRASH_PAGES) trash.shift();
+		savePageTrash(trash);
 
 		cfg.pages.splice(idx, 1);
 
@@ -799,6 +852,67 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 		rebuildTabs();
 		rebuildGrid();
 		notify('[lightgray]Page deleted (' + cfg.pages.length + ' left)');
+	};
+
+	const removePage = (idx) => {
+		if (cfg.pages.length <= 1) {
+			notify('[scarlet]The table needs at least one page');
+			return;
+		}
+
+		if (idx < 0 || idx >= cfg.pages.length) return;
+
+		let count = pageSlotCount(idx);
+
+		// Empty pages have nothing to lose, so they are removed at once. A
+		// page with schematics asks first.
+		if (count === 0) {
+			removePageNow(idx);
+			return;
+		}
+
+		confirmDialog(
+			'Delete Page',
+			'[lightgray]Page ' +
+				(idx + 1) +
+				' contains ' +
+				count +
+				' schematic' +
+				(count === 1 ? '' : 's') +
+				'. Delete it?[]',
+			() => removePageNow(idx)
+		);
+	};
+
+	const restorePage = () => {
+		let trash = loadPageTrash();
+
+		if (!trash.length) {
+			notify('[scarlet]No deleted pages to restore');
+			return;
+		}
+
+		if (cfg.pages.length >= MAX_PAGES) {
+			notify('[scarlet]Page limit reached: ' + MAX_PAGES);
+			return;
+		}
+
+		let entry = trash.pop();
+		let idx = entry.index;
+
+		savePageTrash(trash);
+
+		if (!(idx >= 0) || idx > cfg.pages.length) idx = cfg.pages.length;
+
+		cfg.pages.splice(idx, 0, entry.slots || {});
+		cfg.page = idx;
+		lastClickTime = 0;
+		lastClickSlot = -1;
+
+		saveCfg();
+		rebuildTabs();
+		rebuildGrid();
+		notify('[lightgray]Restored page ' + (idx + 1));
 	};
 
 	const clearPage = (idx) => {
@@ -1148,26 +1262,6 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 		let c3 = createCard('Pages', '8be9fd');
 
-		let confirm = (title, text, act) => {
-			let cd = new BaseDialog(title);
-
-			cd.cont
-				.add(text)
-				.width(hintW)
-				.wrap()
-				.pad(10)
-				.row();
-			cd.addCloseButton();
-			cd.buttons
-				.button('@ok', Icon.ok, () => {
-					act();
-					cd.hide();
-				})
-				.size(140, 46);
-
-			cd.show();
-		};
-
 		let pageRow = c3.table().left().get();
 		// Three buttons share the card, so they shrink with the dialog instead
 		// of running past the edge of a small screen.
@@ -1180,7 +1274,7 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 		pageRow
 			.button('Clear Page', Icon.trash, Styles.grayt, () => {
-				confirm(
+				confirmDialog(
 					'Clear Page',
 					'[lightgray]Remove every schematic from page ' +
 						(cfg.page + 1) +
@@ -1193,18 +1287,28 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 
 		pageRow
 			.button('Delete Page', Icon.cancel, Styles.grayt, () => {
-				confirm(
-					'Delete Page',
-					'[lightgray]Delete page ' +
-						(cfg.page + 1) +
-						' and every schematic on it?[]',
-					() => removePage(cfg.page)
-				);
+				// Empty pages are deleted at once; pages with schematics ask
+				// for confirmation inside removePage.
+				removePage(cfg.page);
 			})
 			.size(pageBtnW, 34);
 
+		c3.row();
+
+		let restoreRow = c3.table().left().get();
+
+		restoreRow
+			.button(
+				'Restore Deleted Page',
+				Icon.undo,
+				Styles.grayt,
+				() => restorePage()
+			)
+			.size(Math.max(160, Math.min(240, hintW)), 34)
+			.padTop(6);
+
 		c3.add(
-			'[gray]LMB on a numbered tab switches the page; RMB on a tab deletes that page. New pages start empty; only the first page is kept as the legacy slot list.[]'
+			'[gray]LMB on a numbered tab switches the page; RMB on a tab deletes that page. A page with schematics asks for confirmation; empty pages are removed at once. Deleted pages can be restored with [accent]!table restorepage[]. New pages start empty; only the first page is kept as the legacy slot list.[]'
 		)
 			.fontScale(0.85)
 			.width(hintW)
@@ -1336,12 +1440,23 @@ Events.on(EventType.ClientLoadEvent, (e) => {
 			return;
 		}
 
+		if (
+			sub === 'restorepage' ||
+			sub === 'restore' ||
+			sub === 'undo' ||
+			sub === 'rp'
+		) {
+			restorePage();
+			return;
+		}
+
 		if (sub === 'help') {
 			notify(
 				'[lightgray]!table - toggle the table\n' +
 					'[accent]!table settings[lightgray] (or [accent]!table s[lightgray]) - open the settings window\n' +
 					'[accent]!table page <n>[lightgray] - switch to page n\n' +
-					'[accent]!table addpage[lightgray] - add an empty page and switch to it\n\n' +
+					'[accent]!table addpage[lightgray] - add an empty page and switch to it\n' +
+					'[accent]!table restorepage[lightgray] - bring back the last deleted page\n\n' +
 					'[accent]Shift+LMB[] on a filled slot - drag the icon: drop on an empty slot to move it, on another icon to swap. Drop outside to cancel.\n' +
 					'[accent]RMB[] - moves the whole panel.\n' +
 					'[accent]Hover[] - shows a schematic preview (toggleable in [accent]!table ui[]).\n' +

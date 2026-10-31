@@ -234,7 +234,8 @@ Draggable schematic palette HUD for one-click placement.
 - `!table settings` (or `!table s`) — configure rows, columns, button sizes, pages, hover preview (on/off + scale), and resets.
 - `!table page <n>` — switch to page n.
 - `!table addpage` (or `!table ap`) — add an empty page and switch to it.
-- **Pages:** the numbered tabs above the table switch pages on LMB; RMB on a tab deletes that page, and the `+` tab adds a new one. Every page has its own slot grid, and pages can also be added, cleared or deleted in settings.
+- `!table restorepage` (or `!table undo`) — bring back the last deleted page (up to 5 are kept).
+- **Pages:** the numbered tabs above the table switch pages on LMB; RMB on a tab deletes that page, and the `+` tab adds a new one. Deleting a page with schematics asks for confirmation; empty pages are removed immediately. Every page has its own slot grid, and pages can also be added, cleared or deleted in settings.
 - **Interactions:**
   - Left-Click: select and place schematic.
   - Double-Click: open slot configuration.
