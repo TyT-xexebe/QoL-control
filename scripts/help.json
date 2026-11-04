@@ -69,7 +69,7 @@
   },
   "ui/table": {
     "cmd": "table",
-    "desc": "desc: '[lightgrey]Schematic table\\n\\n[accent]!table <1/0?>[lightgrey] - on/off\\n[accent]!table settings[lightgrey] (or !table s) - opens the settings window: rows, columns, button size (slider + type-in box), reset',"
+    "desc": "desc: '[lightgrey]Schematic table\\n\\n[accent]!table <1/0?>[lightgrey] - on/off\\n[accent]!table settings[lightgrey] (or !table s) - opens the settings window: rows, columns, button size (slider + type-in box), pages, reset\\n[accent]!table page <n>[lightgrey] - switch to page n\\n[accent]!table addpage[lightgrey] - add an empty page and switch to it\\n[accent]!table restorepage[lightgrey] - bring back the last deleted page\\nLMB on a page tab switches the page; RMB on a tab deletes it. A page with schematics asks for confirmation, empty pages are removed at once.',"
   },
   "features/logger": {
     "cmd": "log",
